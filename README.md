@@ -55,7 +55,7 @@ hermes setup
 # 3. 安装 Foreign Trade Assistant
 git clone --branch main https://github.com/chefroger/foreign-trade-assistant.git ~/.trade/foreign-trade-assistant
 cd ~/.trade/foreign-trade-assistant
-pip install -e "."
+pip install -e ".[docs]"    # [docs] 安装文档解析依赖（PDF/Word/Excel/PPT）
 
 # 4. 安装 B2B skills 到 Hermes
 install-trade-skills
@@ -229,7 +229,7 @@ server.py                   FastAPI 入口
 ## 开发
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev,docs]"       # dev 工具 + 文档解析依赖
 python -m pytest tests/ -v       # 运行 127 个测试
 ruff check trade/ server.py      # 代码检查
 ruff check --fix .               # 自动修复

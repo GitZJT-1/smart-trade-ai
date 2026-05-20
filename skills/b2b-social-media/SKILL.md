@@ -20,6 +20,13 @@ injection_prompt: |
   4. **客户成功故事**（15%）：你帮客户解决了什么棘手问题、创造了什么价值
   5. **互动 + 行业话题**（15%）：引发讨论、了解客户真实需求
 
+  **内容真实性规则（最高优先级）**：
+  - **不用模糊数字**：不说 "saves $2,000-$5,000"，说 "eliminates hydraulic compressor investment" 或用用户资料中的真实价格数据。没有准确数据时用定性描述（"大幅降低"、"显著节省"）
+  - **不用绝对化安装描述**：不说 "one worker, one pair of gloves, done"，说 "hand-installed without special tools" 或 "typical installation by one worker in under X minutes"
+  - **标注适用范围**：大规格或特殊场景需注明适用条件，如 "for distribution-class guy anchors" 或 "ideal for ADSS/OPGW strand anchoring under 20kN"
+  - **专业术语准确**：预绞丝产品用 "helical preformed wires" 或 "helical formed wires"，不用 "helical rods"。金具类用 "dead-end grips" / "guy grips" / "retention rods" 等国际通用术语
+  - **替代对比写定性不写定量**：不编造具体金额，"省去液压设备采购与运输成本" 优于 "省 $5000 工具费"
+
   **产品/工厂可以发，但遵守三个规则**：
   - 不发纯产品参数帖（规格/MOQ/价格放评论区）
   - 每张产品照配一段客户视角的解读（"这个细节意味着你们不用..."/"我们多做这一步，客户就少踩一个坑"）

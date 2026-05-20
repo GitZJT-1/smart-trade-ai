@@ -376,20 +376,25 @@ def build_query(
                 lib_names = "、".join(l["name"] for l in linked_libs)
                 customer_context += f"关联文档库：{lib_names}。"
 
-    # 3. Library document context — 文档库信息放在客户上下文之后
+    # 3. Order context — 按 3 层优先级搜索订单并注入
+    order_context = ""
+    if company_id:
+        from trade.order import search_orders
+        order_text = search_orders(company_id, query)
+        if order_text:
+            order_context = order_text
+
+    # 4. Library document context
     doc_context = ""
     if library_id:
-        # 有文档库 ID 时查询文档库信息，告知 AI 用户所在的文档目录
         lib = _lib.get(library_id, company_id=company_id)
         if lib:
-            # 文档库存在则构造路径上下文，提示 AI 使用 read_file 读取文件
             doc_context = (
                 f"\n[上下文] 用户正在文档库「{lib['name']}」({lib['root_path']}) "
                 "中提问。必要时使用 read_file 读取目录中的文件。"
             )
 
-    # 4. Skill system hint — OSINT 类 skill 的注入指令作为 system 层独立传入
-    #    与 user message 分层处理，避免注入指令混入用户消息
+    # 6. Skill system hint — OSINT 类 skill 的注入指令作为 system 层独立传入
     skill_system_hint: str | None = None
     if matched_name in _OSINT_SKILL_NAMES and matched_skill:
         # 加载 skill 的 injection_prompt 作为 system 层指令
@@ -407,7 +412,7 @@ def build_query(
         # 再拼 [SKILL AUGMENTATION] 块。用原始 query 替代。
         augmented_query = query
 
-    # 5. History block — OSINT 类 skill 不注入历史，每次背调目标是独立的
+    # 7. History block — OSINT 类 skill 不注入历史，每次背调目标是独立的
     #    非 OSINT 场景注入最近对话历史，帮助 AI 保持上下文连续
     history_block = ""
     if matched_name not in _OSINT_SKILL_NAMES:
@@ -418,8 +423,8 @@ def build_query(
         )
         history_block, _ = _get_history_block(company_id, pre_history_chars)
 
-    # 6. Assemble final user message — 按顺序拼接：system → 客户 → 文档库 → 历史 → 当前查询
-    final_prompt = system_prompt + customer_context + doc_context
+    # 8. Assemble final user message：system → 客户 → 订单 → 文档库 → 历史 → 查询
+    final_prompt = system_prompt + customer_context + order_context + doc_context
     if history_block:
         # 有历史时才注入，避免多余空行
         final_prompt = f"{final_prompt}\n\n{history_block}"

@@ -131,8 +131,36 @@ CREATE TABLE IF NOT EXISTS conversations (
     extra3      TEXT    DEFAULT '{}'   -- spare: {"tools_used":[], "iterations":0}
 );
 
+-- Orders (lightweight order tracking per customer)
+CREATE TABLE IF NOT EXISTS orders (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id      INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id     INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    order_no        TEXT    DEFAULT '',     -- user-defined order number
+    product_name    TEXT    NOT NULL,        -- e.g. "预绞丝 / ADSS光缆"
+    quantity        REAL    DEFAULT 0,
+    unit            TEXT    DEFAULT '',      -- 套 / 米 / 吨
+    unit_price      REAL    DEFAULT 0,
+    currency        TEXT    DEFAULT 'USD',
+    total_amount    REAL    DEFAULT 0,
+    status          TEXT    DEFAULT '报价中', -- 报价中 / 已下单 / 已出货 / 已完成
+    delivery_date   TEXT    DEFAULT '',
+    payment_terms   TEXT    DEFAULT '',
+    notes           TEXT    DEFAULT '',
+    created_at      TEXT    DEFAULT (datetime('now', 'localtime')),
+    updated_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS order_libraries (
+    order_id   INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    library_id INTEGER NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
+    PRIMARY KEY (order_id, library_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_libraries_company   ON libraries(company_id);
 CREATE INDEX IF NOT EXISTS idx_customers_company    ON customers(company_id);
+CREATE INDEX IF NOT EXISTS idx_orders_company      ON orders(company_id);
+CREATE INDEX IF NOT EXISTS idx_orders_customer     ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_company ON conversations(company_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_library ON conversations(library_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_created  ON conversations(created_at);

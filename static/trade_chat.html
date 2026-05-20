@@ -1420,6 +1420,10 @@ async function showCustomerDetail(cid) {
             </div>
         </div>
         <div class="panel-section">
+            <div class="panel-section-title">📦 订单 (<span id="detail-order-count">-</span>) <button class="btn-xs" style="margin-left:8px;" onclick="showOrderModal(${c.id})">+ 新增订单</button></div>
+            <div id="detail-orders"><div class="loading-row"><div class="spinner"></div>加载订单...</div></div>
+        </div>
+        <div class="panel-section">
             <div class="panel-section-title">💬 最近对话 (${recentConvs.length})</div>
             <div id="detail-convs">
                 ${recentConvs.length ? recentConvs.map(conv => `
@@ -1439,6 +1443,8 @@ async function showCustomerDetail(cid) {
     const sel = $('detail-link-lib');
     if (sel) sel.innerHTML = '<option value="">— 选择文档库 —</option>' +
         allLibs.filter(l=>!linkedIds.includes(l.id)).map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
+    // 异步加载订单
+    loadOrdersForCustomer(cid);
 }
 
 function closeCustomerDetail() {
@@ -1486,6 +1492,137 @@ function startChatWithCustomer(cid, name) {
     currentChatName = '客户: ' + name;
     saveState();
     navToView('chat', 'lead', '客户: ' + name);
+}
+
+// ── Order List / Modal ─────────────────────────────────────
+
+async function loadOrdersForCustomer(cid) {
+    const container = $('detail-orders');
+    if (!container) return;
+    try {
+        const orders = await api('GET', `/api/trade/customers/${cid}/orders`) || [];
+        $('detail-order-count').textContent = orders.length;
+        if (!orders.length) {
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">暂无订单，点击「新增订单」添加。</p>';
+            return;
+        }
+        container.innerHTML = orders.map(o => {
+            const stColor = o.status==='已下单'?'var(--accent-green)':o.status==='已出货'?'var(--primary)':o.status==='已完成'?'var(--text-muted)':'var(--accent)';
+            return `<div style="padding:6px 0;border-bottom:1px solid var(--border-light);font-size:12px;cursor:pointer;" onclick="showOrderEditModal(${o.id})">
+                <span style="color:${stColor};font-weight:500;">● ${esc(o.status)}</span>
+                <b>${esc(o.product_name)}</b>
+                ${o.quantity ? '<span style="color:var(--text-secondary);">'+esc(o.quantity)+(o.unit||'')+'</span>' : ''}
+                ${o.total_amount ? '<span style="color:var(--accent);font-weight:500;"> '+esc(o.total_amount)+' '+esc(o.currency||'USD')+'</span>' : ''}
+                ${o.order_no ? '<span style="color:var(--text-muted);margin-left:8px;">#'+esc(o.order_no)+'</span>' : ''}
+            </div>`;
+        }).join('');
+    } catch(e) { container.innerHTML = '<p style="color:var(--accent-red);font-size:12px;">订单加载失败</p>'; }
+}
+
+function showOrderModal(cid) { showOrderEditModal(null, cid); }
+
+function showOrderEditModal(oid, presetCid) {
+    const isEdit = !!oid;
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.onclick = e => { if (e.target===backdrop) backdrop.remove(); };
+    backdrop.innerHTML = `<div class="modal" style="max-width:520px;width:95%;" onclick="event.stopPropagation()">
+        <h3>${isEdit ? '编辑订单' : '新增订单'}</h3>
+        <input type="hidden" id="order-edit-id" value="${oid||''}">
+        <input type="hidden" id="order-cust-id" value="${presetCid||''}">
+        <div id="order-cust-row" style="display:${presetCid?'none':'block'};">
+            <div class="form-group"><label>客户 *</label><select id="order-cust-sel"></select></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>品名 *</label><input type="text" id="order-product" placeholder="如：预绞丝"></div>
+            <div class="form-group"><label>订单号</label><input type="text" id="order-no" placeholder="如：PO-2026-001"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>数量</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>
+            <div class="form-group"><label>单位</label><input type="text" id="order-unit" value="套"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>单价</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>
+            <div class="form-group"><label>币种</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>总金额</label><input type="number" id="order-total" placeholder="3500" step="any"></div>
+            <div class="form-group"><label>状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option></select></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>交期</label><input type="date" id="order-delivery"></div>
+            <div class="form-group"><label>付款方式</label><input type="text" id="order-payment" placeholder="T/T 30/70"></div>
+        </div>
+        <div class="form-group"><label>备注</label><textarea id="order-notes" style="min-height:50px;" placeholder="备注信息"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+            ${isEdit?'<button class="btn btn-danger" onclick="deleteOrder('+oid+')">🗑 删除</button>':''}
+            <button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()">取消</button>
+            <button class="btn btn-primary" onclick="saveOrder()">💾 保存</button>
+        </div>
+    </div>`;
+    document.body.appendChild(backdrop);
+
+    if (isEdit) {
+        api('GET', `/api/trade/orders/${oid}`).then(o => {
+            if (!o) return;
+            $('order-product').value = o.product_name||'';
+            $('order-no').value = o.order_no||'';
+            $('order-qty').value = o.quantity||'';
+            $('order-unit').value = o.unit||'套';
+            $('order-price').value = o.unit_price||'';
+            $('order-currency').value = o.currency||'USD';
+            $('order-total').value = o.total_amount||'';
+            $('order-status').value = o.status||'报价中';
+            $('order-delivery').value = (o.delivery_date||'').slice(0,10);
+            $('order-payment').value = o.payment_terms||'';
+            $('order-notes').value = o.notes||'';
+        });
+    }
+    // 加载客户下拉
+    if (!presetCid) {
+        api('GET', '/api/trade/customers').then(list => {
+            const sel = $('order-cust-sel');
+            sel.innerHTML = '<option value="">-- 选择客户 --</option>' + (list||[]).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+        });
+    }
+}
+
+async function saveOrder() {
+    const editId = $('order-edit-id').value;
+    const custId = $('order-cust-id').value || $('order-cust-sel').value;
+    const product = $('order-product').value.trim();
+    if (!custId || !product) { toast('请选择客户并填写品名'); return; }
+    const body = {
+        customer_id: parseInt(custId), product_name: product,
+        order_no: $('order-no').value.trim(),
+        quantity: parseFloat($('order-qty').value)||0,
+        unit: $('order-unit').value.trim(),
+        unit_price: parseFloat($('order-price').value)||0,
+        currency: $('order-currency').value,
+        total_amount: parseFloat($('order-total').value)||0,
+        status: $('order-status').value,
+        delivery_date: $('order-delivery').value,
+        payment_terms: $('order-payment').value.trim(),
+        notes: $('order-notes').value.trim(),
+    };
+    if (editId) {
+        await api('PUT', `/api/trade/orders/${editId}`, body);
+    } else {
+        await api('POST', '/api/trade/orders', body);
+    }
+    document.querySelector('.modal-backdrop')?.remove();
+    loadOrdersForCustomer(custId);
+    toast(editId ? '订单已更新' : '订单已创建');
+}
+
+async function deleteOrder(oid) {
+    if (!confirm('确定删除此订单？')) return;
+    await api('DELETE', `/api/trade/orders/${oid}`);
+    document.querySelector('.modal-backdrop')?.remove();
+    // 刷新当前打开的客户详情
+    const custId = $('order-cust-id').value;
+    if (custId) loadOrdersForCustomer(custId);
+    toast('订单已删除');
 }
 
 // ── Customer CRUD Modal ──────────────────────────────────────

@@ -95,6 +95,39 @@ class CustomerUpdate(BaseModel):
     wechat: str | None = Field(None, description="微信")
 
 
+# ── Order ─────────────────────────────────────────────────────────────────────
+
+
+class OrderCreate(BaseModel):
+    customer_id: int = Field(..., description="客户 ID")
+    product_name: str = Field(..., description="品名")
+    order_no: str | None = Field(None, description="订单号")
+    quantity: float | None = Field(None, description="数量")
+    unit: str | None = Field(None, description="单位")
+    unit_price: float | None = Field(None, description="单价")
+    currency: str | None = Field(None, description="币种")
+    total_amount: float | None = Field(None, description="总金额")
+    status: str | None = Field(None, description="状态")
+    delivery_date: str | None = Field(None, description="交期")
+    payment_terms: str | None = Field(None, description="付款方式")
+    notes: str | None = Field(None, description="备注")
+
+
+class OrderUpdate(BaseModel):
+    customer_id: int | None = Field(None, description="客户 ID")
+    product_name: str | None = Field(None, description="品名")
+    order_no: str | None = Field(None, description="订单号")
+    quantity: float | None = Field(None, description="数量")
+    unit: str | None = Field(None, description="单位")
+    unit_price: float | None = Field(None, description="单价")
+    currency: str | None = Field(None, description="币种")
+    total_amount: float | None = Field(None, description="总金额")
+    status: str | None = Field(None, description="状态")
+    delivery_date: str | None = Field(None, description="交期")
+    payment_terms: str | None = Field(None, description="付款方式")
+    notes: str | None = Field(None, description="备注")
+
+
 # ── Conversation ───────────────────────────────────────────────────────────────
 
 class ConversationSave(BaseModel):

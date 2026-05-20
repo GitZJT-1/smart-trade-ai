@@ -17,6 +17,7 @@ from trade.api.deps import opt_company, require_company, require_session
 from trade.api.libraries import router as libraries_router
 from trade.api.memory import router as memory_router
 from trade.api.onboarding import router as onboarding_router
+from trade.api.orders import router as orders_router
 
 # 所有 /api/trade/* 路由默认要求 session token
 router = APIRouter(tags=["trade"], dependencies=[Depends(require_session)])
@@ -24,6 +25,7 @@ router = APIRouter(tags=["trade"], dependencies=[Depends(require_session)])
 # 按业务域挂载子路由
 router.include_router(companies_router)
 router.include_router(onboarding_router)
+router.include_router(orders_router)
 router.include_router(libraries_router)
 router.include_router(customers_router)
 router.include_router(conversations_router)

@@ -503,7 +503,8 @@ Tel: [Phone]
 
 ## Quality Standards
 
-1. **Data accuracy**: Keep all customer records up to date — contact info, terms, preferences
+1. **内容真实性**：报价、价格调整通知中的具体金额/百分比必须基于用户提供的真实数据，不编造数值
+2. **Data accuracy**: Keep all customer records up to date — contact info, terms, preferences
 2. **Timely follow-up**: Respond to customer communications within 24 hours
 3. **Document everything**: Log all significant interactions in the customer record
 4. **Consistency**: Apply pricing terms and policies uniformly

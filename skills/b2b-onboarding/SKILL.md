@@ -299,12 +299,13 @@ At the end of onboarding, deliver:
 
 ## Quality Standards
 
-1. **No placeholders in final output**: All content must be complete and ready to use
-2. **Language consistency**: One document, one language (all-English or all-Chinese)
-3. **Industry-specific**: All content adapted to user's actual products and industry
-4. **Visual-ready**: Content designed to work with the images/materials user has
-5. **Actionable**: Every document should have clear next steps
-6. **Professional quality**: Business-appropriate tone and formatting
+1. **内容真实性**：不编造公司成立年份、员工规模、服务客户数量。无用户提供数据时留白或用「超过 X 年」「多家客户」等定性表述
+2. **No placeholders in final output**: All content must be complete and ready to use
+3. **Language consistency**: One document, one language (all-English or all-Chinese)
+4. **Industry-specific**: All content adapted to user's actual products and industry
+5. **Visual-ready**: Content designed to work with the images/materials user has
+6. **Actionable**: Every document should have clear next steps
+7. **Professional quality**: Business-appropriate tone and formatting
 
 ## Common Pitfalls
 

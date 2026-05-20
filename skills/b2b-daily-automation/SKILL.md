@@ -437,7 +437,8 @@ After each task execution:
 
 ## Quality Standards
 
-1. **Relevance**: Every piece of content must be specific to the user's industry and products
+1. **内容真实性**：KPI 数据、询盘数量、业绩统计必须来自数据库查询或用户提供，不编造任何指标值。无数据时标注 "N/A — 数据待补充"
+2. **Relevance**: Every piece of content must be specific to the user's industry and products
 2. **Timeliness**: Posts go out during optimal engagement windows for target audiences
 3. **Personalization**: Outbound messages reference specific prospect details
 4. **Completeness**: Generated content is ready to use — no editing needed

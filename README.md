@@ -177,6 +177,7 @@ trade/                     B2B 业务层
 │   ├── companies.py         公司管理
 │   ├── libraries.py         文档库管理
 │   ├── customers.py         客户管理
+│   ├── orders.py            订单管理
 │   ├── conversations.py     对话记录
 │   ├── memory.py            Hindsight 记忆 + LLM 提供商
 │   ├── onboarding.py        首次引导
@@ -194,7 +195,8 @@ trade/                     B2B 业务层
 ├── database.py             SQLite 连接 + schema + 迁移
 ├── company.py              公司 CRUD + 桌面工作目录
 ├── library.py              文档库 CRUD
-├── customer.py             客户 CRUD
+├── customer.py             客户 CRUD（多联系人）
+├── order.py                订单 CRUD（3 层上下文查询）
 ├── chat_memory.py          对话记录 + Hindsight 桥接
 ├── memory.py               Hindsight 客户端
 ├── helpers.py              Provider 检查 + Agent 工厂 + Prompt 构建
@@ -202,6 +204,7 @@ trade/                     B2B 业务层
 ├── prompts.py              Prompt 文件加载器（mtime 缓存）
 ├── skill_router.py         Skill 匹配引擎 + 注入
 ├── skill_registry.py       14 个 skill 注册表（纯数据）
+├── license.py              系统校验管理
 ├── onboarding.py           首次引导逻辑
 ├── email_intel.py          holehe 邮箱平台检测
 └── post_install.py         Skills 安装到 Hermes
@@ -242,6 +245,8 @@ python -m trade.database          # 初始化/检查数据库
 - [外贸业务方法总结](外贸业务方法总结.md)
 - [Trade 数据目录结构设计](Trade数据目录结构设计.md)
 - [COMPATIBILITY.md](COMPATIBILITY.md) — Hermes 版本兼容性记录
+- [数据库 Schema](docs/database-schema.md) — 8 张表完整字段说明
+- [数据库关系图](docs/database-relationships.drawio) — draw.io 可编辑
 
 ## 联系作者
 

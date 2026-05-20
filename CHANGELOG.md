@@ -2,7 +2,36 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
-## [Unreleased]
+## [0.4.2] — 2026-05-20
+
+### Added
+- **轻量订单系统**：orders 表（13 字段）+ order_libraries 关联表，支持 3 层上下文查询
+- **数据库文档**：8 张表的完整字段说明 + 关系图（draw.io / PNG）
+- **客户列表两行布局**：公司名 + 联系人 + 等级/职位/联系方式/跟进项目一目了然
+- **客户表单新增联系人字段**，注入到 AI 上下文
+- **6 个 skill 增加内容真实性约束**：防编造数字、专业术语规范化
+- **到期页面显示微信名片**
+
+### Changed
+- 客户列表从 8 列缩减为 3 列，信息密度提升
+- 移除微信字段（外国客户不需要）
+- `trade update` 后自动重启服务时补全 PATH
+
+### Fixed
+- **OSINT 网络测试加 pytest.skip 防 flaky**
+- 美元符号 bug（多个 `$$` 导致 JS 模板解析错误）
+- `agent_identity.md` vs `agent-identity.md` 文件名不一致
+- launchctl 在非标准 PATH 下找不到的问题
+
+## [0.4.1] — 2026-05-19
+
+### Changed
+- backup_trade 无数据时以非零退出码退出
+- README 测试数、项目结构、开发命令更新
+- SECURITY.md 支持版本更新到 0.4.x
+- Roger Lau → Roger Lococo
+
+## [0.4.0] — 2026-05-19
 
 ### Added
 - **Hermes v0.14 适配**：config.model 从嵌套 dict 变为扁平字符串，Trade 自动兼容两种格式

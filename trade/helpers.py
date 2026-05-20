@@ -8,7 +8,13 @@ Trade AI Assistant — 共享辅助函数。
 import json
 import os
 
+from trade import chat_memory as _cm
+from trade import company as _company
+from trade import customer as _cust
+from trade import library as _lib
 from trade import prompts as _prompts
+from trade import skill_router as _skill_router
+from trade.order import search_orders
 
 
 def _json_loads(raw):
@@ -261,8 +267,6 @@ def _get_history_block(company_id: int | None, total_prompt_chars: int) -> tuple
     if not company_id:  # None, 0, 空 — company_id 从 1 开始自增，0 不可能有效
         return "", 0
 
-    from trade import chat_memory as _cm
-
     # Token thresholds (hard-coded, not user-visible)
     if total_prompt_chars < 80_000:      # ~< 20k tokens — 上下文充足，注入最近 20 条
         limit = 20
@@ -314,17 +318,13 @@ def build_query(
     library_id 可选地添加文档库上下文。
     customer_id 可选地添加客户上下文（客户名称、关联文档库）。
     """
-    from trade import company as _company
-    from trade import customer as _cust
-    from trade import library as _lib
-    from trade import skill_router
 
     # 0. Skill auto-detection — 在组装 prompt 之前必须先匹配 skill，这样即使用户
     #    描述模糊，LLM 也知道该调用哪个工具/函数
-    matched_skill = skill_router.match_skill(query)
+    matched_skill = _skill_router.match_skill(query)
     matched_name = matched_skill["name"] if matched_skill else None
 
-    augmented_query = skill_router.augment_query(
+    augmented_query = _skill_router.augment_query(
         query, company_id=company_id
     )
 
@@ -378,7 +378,6 @@ def build_query(
     # 3. Order context — 按 3 层优先级搜索订单并注入
     order_context = ""
     if company_id:
-        from trade.order import search_orders
         order_text = search_orders(company_id, query)
         if order_text:
             order_context = order_text
@@ -397,8 +396,7 @@ def build_query(
     skill_system_hint: str | None = None
     if matched_name in _OSINT_SKILL_NAMES and matched_skill:
         # 加载 skill 的 injection_prompt 作为 system 层指令
-        from trade.skill_router import _load_injection_prompt
-        augment = _load_injection_prompt(matched_name)
+        augment = _skill_router._load_injection_prompt(matched_name)
         if augment is None:
             # 如果从 SKILL.md 加载失败，回退到 skill_registry 中的 augment_prompt
             augment = matched_skill.get("augment_prompt", "")

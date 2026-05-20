@@ -65,17 +65,38 @@ async def trade_chat(
 
     full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)
 
+    _MAX_AGENT_RETRIES = 2  # 最多重试 2 次（共 3 次尝试）
+
     def _call_agent():
-        try:
-            agent = create_agent(ephemeral_system_prompt=skill_hint)
-            return agent.chat(full_query) or "Agent 返回了空响应。"
-        except ImportError:
-            return "⚠️ AI Agent 模块未加载。"
-        except RuntimeError as e:
-            return f"⚠️ {e}"
-        except Exception:
-            _log.exception("Agent call failed")
-            return "⚠️ Agent 调用失败，请稍后重试。"
+        last_error = None
+        for attempt in range(_MAX_AGENT_RETRIES + 1):
+            try:
+                agent = create_agent(ephemeral_system_prompt=skill_hint)
+                result = agent.chat(full_query)
+                if result:
+                    return result
+                # agent 返回空字符串时，也视为需要重试
+                if attempt < _MAX_AGENT_RETRIES:
+                    _log.warning("Agent returned empty, retry %d/%d", attempt + 1, _MAX_AGENT_RETRIES)
+                    time.sleep(2 ** attempt)  # 指数退避：0s, 2s, 4s
+                    continue
+                return "Agent 返回了空响应。"
+            except ImportError:
+                return "⚠️ AI Agent 模块未加载。"
+            except RuntimeError as e:
+                last_error = str(e)
+                if attempt < _MAX_AGENT_RETRIES:
+                    _log.warning("Agent RuntimeError, retry %d/%d: %s", attempt + 1, _MAX_AGENT_RETRIES, e)
+                    time.sleep(2 ** attempt)
+                    continue
+                return f"⚠️ {e}"
+            except Exception:
+                last_error = f"Agent call failed (attempt {attempt + 1})"
+                _log.exception(last_error)
+                if attempt < _MAX_AGENT_RETRIES:
+                    time.sleep(2 ** attempt)
+                    continue
+        return "⚠️ Agent 调用失败，请稍后重试。"
 
     loop = asyncio.get_running_loop()
     try:
@@ -155,44 +176,65 @@ async def trade_chat_stream(
             "tool_call_id": tc_id, "name": name, "result_preview": preview,
         })
 
+    _MAX_AGENT_RETRIES = 2
+
     def _run_agent() -> str | None:
-        try:
-            _emit_threadsafe("thinking", {"message": "正在分析问题..."})
-            agent = create_agent(
-                tool_start_callback=_tool_start,
-                tool_complete_callback=_tool_complete,
-                ephemeral_system_prompt=skill_hint,
-            )
-            start = time.time()
-            result = agent.chat(full_query)
-            elapsed = time.time() - start
-
-            _emit_threadsafe("response", {
-                "text": result or "Agent 返回了空响应。",
-                "elapsed_sec": round(elapsed, 1),
-            })
-
-            lib_name = ""
-            if payload.library_id:
-                lib = library_module.get(payload.library_id, company_id=cid)
-                if lib:
-                    lib_name = lib["name"]
+        for attempt in range(_MAX_AGENT_RETRIES + 1):
             try:
-                chat_memory.save_with_context(
-                    company_id=cid, library_id=payload.library_id,
-                    query=query, response=result or "",
-                    library_name=lib_name,
+                if attempt == 0:
+                    _emit_threadsafe("thinking", {"message": "正在分析问题..."})
+                else:
+                    _emit_threadsafe("thinking", {"message": f"正在重试（第 {attempt} 次）..."})
+                agent = create_agent(
+                    tool_start_callback=_tool_start,
+                    tool_complete_callback=_tool_complete,
+                    ephemeral_system_prompt=skill_hint,
                 )
+                start = time.time()
+                result = agent.chat(full_query)
+                elapsed = time.time() - start
+
+                if not result and attempt < _MAX_AGENT_RETRIES:
+                    _log.warning("Agent returned empty in stream, retry %d/%d", attempt + 1, _MAX_AGENT_RETRIES)
+                    time.sleep(2 ** attempt)
+                    continue
+
+                _emit_threadsafe("response", {
+                    "text": result or "Agent 返回了空响应。",
+                    "elapsed_sec": round(elapsed, 1),
+                })
+
+                lib_name = ""
+                if payload.library_id:
+                    lib = library_module.get(payload.library_id, company_id=cid)
+                    if lib:
+                        lib_name = lib["name"]
+                try:
+                    chat_memory.save_with_context(
+                        company_id=cid, library_id=payload.library_id,
+                        query=query, response=result or "",
+                        library_name=lib_name,
+                    )
+                except Exception:
+                    _log.exception("save_with_context failed in stream")
+                return result
+            except ImportError:
+                _emit_threadsafe("error", {"message": "AI Agent 模块未加载。"})
+                return None
+            except RuntimeError as e:
+                if attempt < _MAX_AGENT_RETRIES:
+                    _log.warning("Agent RuntimeError in stream, retry %d/%d: %s", attempt + 1, _MAX_AGENT_RETRIES, e)
+                    time.sleep(2 ** attempt)
+                    continue
+                _emit_threadsafe("error", {"message": str(e)})
+                return None
             except Exception:
-                _log.exception("save_with_context failed in stream")
-            return result
-        except ImportError:
-            _emit_threadsafe("error", {"message": "AI Agent 模块未加载。"})
-        except RuntimeError as e:
-            _emit_threadsafe("error", {"message": str(e)})
-        except Exception:
-            _log.exception("Agent stream failed")
-            _emit_threadsafe("error", {"message": "Agent 调用失败，请稍后重试。"})
+                _log.exception("Agent stream failed (attempt %d)", attempt + 1)
+                if attempt < _MAX_AGENT_RETRIES:
+                    time.sleep(2 ** attempt)
+                    continue
+                _emit_threadsafe("error", {"message": "Agent 调用失败，请稍后重试。"})
+                return None
         return None
 
     async def _event_stream():

@@ -274,6 +274,7 @@ def _restart_trade_service() -> None:
     重启失败不阻塞更新流程——只是提示。
     """
     import platform
+    import shutil
     import subprocess as _sp
 
     sys_name = platform.system()
@@ -299,13 +300,15 @@ def _restart_trade_service() -> None:
     if sys_name == "Darwin":
         plist = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
         if plist.exists():
+            # macOS launchctl 可能在 /bin 而非 /usr/bin；用完整路径确保找到
+            _launchctl = shutil.which("launchctl") or "/bin/launchctl"
             try:
                 _sp.run(
-                    ["launchctl", "unload", str(plist)],
+                    [_launchctl, "unload", str(plist)],
                     capture_output=True, timeout=5, env=_env,
                 )
                 _sp.run(
-                    ["launchctl", "load", str(plist)],
+                    [_launchctl, "load", str(plist)],
                     capture_output=True, timeout=5, env=_env,
                 )
                 print("  ↻ Trade 后台服务已自动重启")

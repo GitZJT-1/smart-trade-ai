@@ -55,6 +55,26 @@ def _slugify(name: str) -> str:
     return slug.strip("-") or "company"
 
 
+def _validate_slug(slug: str) -> str:
+    """校验 slug 是否合法（仅含字母数字和连字符，且不包含路径穿越）。
+
+    Returns:
+        合法的 slug
+
+    Raises:
+        ValueError: slug 包含非法字符或可能造成路径穿越
+    """
+    if not slug or not slug.strip():
+        raise ValueError("Slug cannot be empty")
+    slug = slug.strip().lower()
+    # 禁止路径穿越字符
+    if ".." in slug or "/" in slug or "\\" in slug:
+        raise ValueError("Slug contains invalid characters")
+    if not re.match(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", slug):
+        raise ValueError("Slug must contain only lowercase letters, digits, and hyphens")
+    return slug
+
+
 def _ensure_data_dir(slug: str) -> Path:
     """创建并返回公司 slug 对应的数据目录路径。
 
@@ -297,6 +317,8 @@ def create(
     if not slug:
         # 未提供 slug 时，从公司名自动生成
         slug = _slugify(name)
+    # 校验 slug 合法性（防止路径穿越、非法字符）
+    slug = _validate_slug(slug)
     # 确保 slug 唯一
     conn = get_connection()
     try:
@@ -385,7 +407,13 @@ def update(
 
 
 def delete(company_id: int) -> bool:
-    """删除公司及其级联关联的所有文档库、客户、对话记录。"""
+    """删除公司及其级联关联的所有文档库、客户、对话记录，同时清理文件系统上的数据目录。"""
+    # 先获取 slug 和数据目录，用于后续文件系统清理
+    tc = get_trade_company(company_id)
+    company = get(company_id)
+    slug = company["slug"] if company else None
+    data_dir_str = tc["data_dir"] if tc else None
+
     conn = get_connection()
     try:
         # trade_companies 通过外键自动级联删除
@@ -393,6 +421,23 @@ def delete(company_id: int) -> bool:
             "DELETE FROM companies WHERE id = ?", (company_id,)
         ).rowcount
         conn.commit()
+        if n > 0:
+            # 清理文件系统上的数据目录
+            if data_dir_str:
+                data_path = Path(data_dir_str)
+                if data_path.exists():
+                    try:
+                        shutil.rmtree(data_path)
+                    except OSError:
+                        pass  # 目录可能被占用，不阻塞删除流程
+            # 清理 TRADE_HOME 下该 slug 的数据目录（如果与 data_dir 不同）
+            if slug:
+                slug_dir = TRADE_HOME / slug
+                if slug_dir.exists():
+                    try:
+                        shutil.rmtree(slug_dir)
+                    except OSError:
+                        pass
         return n > 0
     finally:
         conn.close()

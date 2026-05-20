@@ -11,8 +11,8 @@ Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales 
 ```bash
 # Start server (also auto-starts Hermes Gateway for cron scheduling)
 python server.py                    # default http://127.0.0.1:9119/trade
-python server.py --port 8080
-python server.py --no-browser
+python server.py --port 8080 --host 0.0.0.0  # custom port & bind
+python server.py --no-browser       # don't open browser on startup
 python server.py --no-gateway       # skip auto-launching Hermes Gateway
 
 # Install (editable) + install B2B skills into Hermes
@@ -28,23 +28,29 @@ trade-backup                        # backup ~/.trade/ data to tar.gz
 # Pre-install compatibility check
 python pre_install_check.py
 
-# Initialize/check database
+# Initialize/check database (creates tables + spare columns if missing)
 python -m trade.database
 ```
+
+The server requires `HERMES_YOLO_MODE=true` in the environment (set by Hermes .env, or export manually). Without it, the AI agent will prompt for human approval on every tool call — unworkable for this product's target users (SECURITY.md).
 
 ## Testing & Linting
 
 ```bash
-# Run all tests (asyncio_mode=auto, 127 tests)
+# Run all tests (asyncio_mode=auto, configured in pyproject.toml [tool.pytest.ini_options])
 python -m pytest tests/ -v
 
 # Run a single test file
 python -m pytest tests/test_business.py -v
+python -m pytest tests/test_api.py -v
+python -m pytest tests/test_database.py -v
+python -m pytest tests/test_chat_smoke.py -v
+python -m pytest tests/test_osint.py -v
 
 # Run a single test
 python -m pytest tests/test_business.py::test_function_name -v
 
-# Lint
+# Lint (rules configured in pyproject.toml [tool.ruff])
 ruff check .
 ruff check --fix .                 # auto-fix
 

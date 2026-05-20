@@ -70,6 +70,8 @@ async def osint_full_check(
     }
 
     # ── 确定用于域名查询的目标 ──
+    loop = asyncio.get_running_loop()
+
     if target_type == "email":
         # 从邮箱提取域名，用于后续各层检测
         domain_from_email = target.split("@", 1)[1]
@@ -91,8 +93,8 @@ async def osint_full_check(
         # 非邮箱目标，跳过邮箱注册检测
         report["layers"]["email_registration"] = None
 
-    # ── Layer 2: WHOIS 域名查询 ─────────────────────────────────────────
-    whois_result = domain_whois(lookup_domain)
+    # ── Layer 2: WHOIS 域名查询（放入 executor 避免阻塞事件循环）─────────
+    whois_result = await loop.run_in_executor(None, domain_whois, lookup_domain)
     report["layers"]["domain_intel"] = whois_result
 
     if whois_result.get("age_category") == "new":
@@ -105,7 +107,8 @@ async def osint_full_check(
     # ── Layer 3: 企业邮箱验证 ───────────────────────────────────────────
     if target_type == "email":
         # 目标为邮箱时，验证是否为企业邮箱
-        email_verify_result = verify_corporate_email(target)
+        # 放入 executor 以避免 DNS socket 调用阻塞事件循环
+        email_verify_result = await loop.run_in_executor(None, verify_corporate_email, target)
         report["layers"]["email_verification"] = email_verify_result
 
         if email_verify_result.get("risk_flag"):
@@ -118,7 +121,8 @@ async def osint_full_check(
     # ── Layer 4 (可选): 技术栈检测 ─────────────────────────────────────
     if include_tech_stack and lookup_domain:
         # 用户选择检测技术栈且存在可查询域名时，执行 BuiltWith 风格检测
-        tech_result = detect_tech_stack(f"https://{lookup_domain}")
+        # 放入 executor 以避免 HTTP 请求阻塞事件循环
+        tech_result = await loop.run_in_executor(None, detect_tech_stack, f"https://{lookup_domain}")
         report["layers"]["tech_stack"] = tech_result
 
         if tech_result.get("is_free_platform"):
@@ -132,7 +136,8 @@ async def osint_full_check(
     if include_sanctions:
         # 用户选择制裁筛查时，用域名或原始目标进行匹配
         sanctions_name = domain_from_email or target
-        sanctions_result = check_sanctions(sanctions_name)
+        # 制裁筛查可能涉及文件下载，放入 executor
+        sanctions_result = await loop.run_in_executor(None, check_sanctions, sanctions_name)
         report["layers"]["sanctions"] = sanctions_result
 
         if sanctions_result.get("is_sanctioned"):

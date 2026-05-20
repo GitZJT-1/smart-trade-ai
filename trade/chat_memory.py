@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def save(
-    company_id: int | None,
+    company_id: int,
     query: str,
     response: str = "",
     library_id: int | None = None,
     files_read: list[dict] | None = None,
 ) -> dict:
     """保存一条对话记录，作用域限定到指定公司。返回新插入的行，以字典形式呈现。"""
+    if company_id is None:
+        raise ValueError("company_id is required for conversation isolation")
     conn = get_connection()
     try:
         cur = conn.execute(

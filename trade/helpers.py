@@ -251,15 +251,14 @@ def _estimate_tokens(text: str) -> int:
     return int(cjk_chars / 1.5 + other_chars / 4.0)
 
 
-def _get_history_block(company_id: int, total_prompt_chars: int) -> tuple[str, int]:
+def _get_history_block(company_id: int | None, total_prompt_chars: int) -> tuple[str, int]:
     """根据 prompt 总大小构造历史对话注入块。
 
     上下文越长，注入的历史条数越少，防止超出 token 预算。
     返回 (history_block, history_token_count)。
-    当 company_id 为 None 时 history_block 为空字符串。
+    当 company_id 为 None 或 0 时 history_block 为空字符串。
     """
-    if not company_id:
-        # 没有关联公司则不注入历史
+    if not company_id:  # None, 0, 空 — company_id 从 1 开始自增，0 不可能有效
         return "", 0
 
     from trade import chat_memory as _cm

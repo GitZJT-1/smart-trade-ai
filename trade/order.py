@@ -72,44 +72,61 @@ def list_by_company(company_id: int, limit: int = 50) -> list[dict]:
         conn.close()
 
 
-def get(order_id: int) -> dict | None:
-    """根据 ID 获取订单。"""
+def get(order_id: int, *, company_id: int | None = None) -> dict | None:
+    """根据 ID 获取订单。指定 company_id 时进行多租户隔离检验。"""
     conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM orders WHERE id = ?", (order_id,)
-        ).fetchone()
+        if company_id is not None:
+            row = conn.execute(
+                "SELECT * FROM orders WHERE id = ? AND company_id = ?",
+                (order_id, company_id),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM orders WHERE id = ?", (order_id,)
+            ).fetchone()
         return _row_to_dict(row) if row else None
     finally:
         conn.close()
 
 
-def update(order_id: int, **kwargs) -> dict | None:
-    """部分更新订单字段。"""
+def update(order_id: int, *, company_id: int | None = None, **kwargs) -> dict | None:
+    """部分更新订单字段。指定 company_id 时进行多租户隔离检验。"""
     allowed = {"order_no", "product_name", "quantity", "unit", "unit_price",
                "currency", "total_amount", "status", "delivery_date",
                "payment_terms", "notes", "customer_id"}
     updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
     if not updates:
-        return get(order_id)
+        return get(order_id, company_id=company_id)
 
     conn = get_connection()
     try:
         set_clause = ", ".join(f"{k} = ?" for k in updates)
-        values = list(updates.values()) + [order_id]
-        sql = f"UPDATE orders SET {set_clause}, updated_at = datetime('now','localtime') WHERE id = ?"
+        values = list(updates.values())
+        if company_id is not None:
+            values.extend([order_id, company_id])
+            sql = f"UPDATE orders SET {set_clause}, updated_at = datetime('now','localtime') WHERE id = ? AND company_id = ?"
+        else:
+            values.append(order_id)
+            sql = f"UPDATE orders SET {set_clause}, updated_at = datetime('now','localtime') WHERE id = ?"
         n = conn.execute(sql, values).rowcount
         conn.commit()
-        return get(order_id) if n > 0 else None
+        return get(order_id, company_id=company_id) if n > 0 else None
     finally:
         conn.close()
 
 
-def delete(order_id: int) -> bool:
-    """删除订单。"""
+def delete(order_id: int, *, company_id: int | None = None) -> bool:
+    """删除订单。指定 company_id 时进行多租户隔离检验。"""
     conn = get_connection()
     try:
-        cur = conn.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+        if company_id is not None:
+            cur = conn.execute(
+                "DELETE FROM orders WHERE id = ? AND company_id = ?",
+                (order_id, company_id),
+            )
+        else:
+            cur = conn.execute("DELETE FROM orders WHERE id = ?", (order_id,))
         conn.commit()
         return cur.rowcount > 0
     finally:
@@ -119,10 +136,18 @@ def delete(order_id: int) -> bool:
 # ── 订单-文档库关联 ───────────────────────────────────────────────────────────
 
 
-def link_library(order_id: int, library_id: int) -> bool:
-    """关联文档库到订单。"""
+def link_library(order_id: int, library_id: int, *, company_id: int | None = None) -> bool:
+    """关联文档库到订单。指定 company_id 时先校验订单归属。"""
     conn = get_connection()
     try:
+        if company_id is not None:
+            # 校验订单属于该公司
+            row = conn.execute(
+                "SELECT 1 FROM orders WHERE id = ? AND company_id = ?",
+                (order_id, company_id),
+            ).fetchone()
+            if not row:
+                return False
         conn.execute(
             "INSERT OR IGNORE INTO order_libraries (order_id, library_id) VALUES (?,?)",
             (order_id, library_id),
@@ -133,10 +158,17 @@ def link_library(order_id: int, library_id: int) -> bool:
         conn.close()
 
 
-def unlink_library(order_id: int, library_id: int) -> bool:
-    """取消订单的文档库关联。"""
+def unlink_library(order_id: int, library_id: int, *, company_id: int | None = None) -> bool:
+    """取消订单的文档库关联。指定 company_id 时先校验订单归属。"""
     conn = get_connection()
     try:
+        if company_id is not None:
+            row = conn.execute(
+                "SELECT 1 FROM orders WHERE id = ? AND company_id = ?",
+                (order_id, company_id),
+            ).fetchone()
+            if not row:
+                return False
         cur = conn.execute(
             "DELETE FROM order_libraries WHERE order_id = ? AND library_id = ?",
             (order_id, library_id),

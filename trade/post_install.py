@@ -382,9 +382,9 @@ def update_trade() -> None:
     else:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
 
-    # 2. pip install — 更新包注册
+    # 2. pip install — 更新包及其依赖
     print("→ Step 2/4: pip install ...")
-    pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir), "--no-deps", "--quiet"]
+    pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir)]
     result = subprocess.run(pip_args, capture_output=True, text=True)
     if result.returncode != 0:
         # pip 安装失败时标记错误但不退出

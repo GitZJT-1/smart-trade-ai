@@ -50,41 +50,41 @@ def create_order(payload: OrderCreate, cid: int = Depends(require_company)):
 
 
 @router.get("/orders/{order_id}")
-def get_order(order_id: int):
+def get_order(order_id: int, cid: int = Depends(require_company)):
     """获取订单详情。"""
-    o = order_module.get(order_id)
+    o = order_module.get(order_id, company_id=cid)
     if not o:
         raise HTTPException(status_code=404, detail="Order not found")
     return o
 
 
 @router.put("/orders/{order_id}")
-def update_order(order_id: int, payload: OrderUpdate):
+def update_order(order_id: int, payload: OrderUpdate, cid: int = Depends(require_company)):
     """更新订单。"""
-    result = order_module.update(order_id, **payload.model_dump(exclude_none=True))
+    result = order_module.update(order_id, company_id=cid, **payload.model_dump(exclude_none=True))
     if not result:
         raise HTTPException(status_code=404, detail="Order not found")
     return result
 
 
 @router.delete("/orders/{order_id}")
-def delete_order(order_id: int):
+def delete_order(order_id: int, cid: int = Depends(require_company)):
     """删除订单。"""
-    if not order_module.delete(order_id):
+    if not order_module.delete(order_id, company_id=cid):
         raise HTTPException(status_code=404, detail="Order not found")
     return {"ok": True}
 
 
 @router.post("/orders/{order_id}/libraries/{library_id}")
-def link_order_library(order_id: int, library_id: int):
+def link_order_library(order_id: int, library_id: int, cid: int = Depends(require_company)):
     """关联文档库到订单。"""
-    order_module.link_library(order_id, library_id)
+    order_module.link_library(order_id, library_id, company_id=cid)
     return {"ok": True}
 
 
 @router.delete("/orders/{order_id}/libraries/{library_id}")
-def unlink_order_library(order_id: int, library_id: int):
+def unlink_order_library(order_id: int, library_id: int, cid: int = Depends(require_company)):
     """取消订单的文档库关联。"""
-    if not order_module.unlink_library(order_id, library_id):
+    if not order_module.unlink_library(order_id, library_id, company_id=cid):
         raise HTTPException(status_code=404, detail="Association not found")
     return {"ok": True}

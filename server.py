@@ -110,16 +110,18 @@ def _check_hermes_version():
     _max_v = Version(_MAX_HERMES_VERSION)
 
     if not (_min_v <= _current < _max_v):
-        # 当前 Hermes 版本不在兼容范围内，打印版本不匹配信息并退出
+        # 当前 Hermes 版本不在兼容范围内，打印版本不匹配信息
         print(f"  ✗ Hermes version {_hv} is not compatible with this release.")
         print(f"    Foreign Trade Assistant requires hermes-agent >={_MIN_HERMES_VERSION},<{_MAX_HERMES_VERSION}.")
         print(f"    Installed: {_hv}")
         print(f"    Run: pip install 'hermes-agent>={_MIN_HERMES_VERSION},<{_MAX_HERMES_VERSION}'")
-        sys.exit(1)
+        return False
 
     print(f"  ✓ Hermes {_hv} (compatible: >={_MIN_HERMES_VERSION},<{_MAX_HERMES_VERSION})")
+    return True
 
 _check_hermes_version()
+
 
 # Load Hermes .env before any other imports (AIAgent depends on it)
 from hermes_cli.env_loader import load_hermes_dotenv
@@ -342,6 +344,10 @@ def main() -> None:
     parser.add_argument("--no-gateway", action="store_true", help="不检查/启动 Hermes Gateway")
     args = parser.parse_args()
 
+    # 版本校验已在模块级执行，main() 中再次确认；若失败则退出
+    if not _check_hermes_version():
+        sys.exit(1)
+
     _install_cors(args.port)
 
     if not args.no_gateway:
@@ -350,7 +356,7 @@ def main() -> None:
 
     url = f"http://{args.host}:{args.port}/trade"
     print(f"\n  Foreign Trade Assistant → {url}")
-    print(f"  Session token: {_SESSION_TOKEN[:16]}...")
+    print(f"  Session token: {_SESSION_TOKEN[:8]}...（完整 token 已注入 API 页面）")
     print()
 
     if not args.no_browser:

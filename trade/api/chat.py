@@ -52,7 +52,7 @@ async def trade_chat(
 ):
     """同步聊天。"""
     from trade.license import check_license
-    lic_ok, lic_msg = check_license()
+    lic_ok, lic_msg = check_license(cid)
     if not lic_ok:
         raise HTTPException(status_code=402, detail=lic_msg)
 
@@ -133,7 +133,7 @@ async def trade_chat_stream(
     每条 SSE 连接只占用 1 条线程。客户端断连时通过 CancelledError 取消 agent。
     """
     from trade.license import check_license
-    lic_ok, lic_msg = check_license()
+    lic_ok, lic_msg = check_license(cid)
     if not lic_ok:
         raise HTTPException(status_code=402, detail=lic_msg)
 

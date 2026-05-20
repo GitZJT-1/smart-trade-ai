@@ -226,13 +226,21 @@ def reflect(
         return None
 
 
+def _bank_id(company_id: int | None) -> str:
+    """构造按公司隔离的 bank_id。"""
+    if company_id:
+        return f"trade-company-{company_id}"
+    return "trade-default"
+
+
 def retain_conversation(
     query: str,
     response: str,
     *,
     library_name: str = "",
     customer_name: str = "",
-    bank_id: str = "trade",
+    company_id: int | None = None,
+    bank_id: str = "trade-default",
 ) -> bool:
     """将完整的对话轮次推送到 Hindsight 记忆。
 
@@ -240,14 +248,15 @@ def retain_conversation(
     """
     content_parts = [f"Q: {query}", f"A: {response}"]
     context = "B2B trade conversation"
-    # 如果提供了资料库名称，加入上下文
+    if company_id:
+        context += f" — company: {company_id}"
     if library_name:
         context += f" — library: {library_name}"
-    # 如果提供了客户名称，加入上下文
     if customer_name:
         context += f" — customer: {customer_name}"
     content = "\n".join(content_parts)
-    return retain(content, context=context, bank_id=bank_id)
+    bid = _bank_id(company_id) if company_id else bank_id
+    return retain(content, context=context, bank_id=bid)
 
 
 def retain_to_hermes_memory(

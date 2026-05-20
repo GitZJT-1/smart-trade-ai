@@ -79,10 +79,7 @@ async def osint_full_check(
         # 非邮箱目标，无需从邮箱提取域名
         domain_from_email = None
 
-    lookup_domain = (
-        domain_from_email or
-        target.replace("https://", "").replace("http://", "").replace("www.", "")
-    )
+    lookup_domain = _extract_lookup_domain(target, target_type, domain_from_email)
 
     # ── Layer 1: Email registration (holehe) ─────────────────────────────
     if target_type == "email":
@@ -94,15 +91,18 @@ async def osint_full_check(
         report["layers"]["email_registration"] = None
 
     # ── Layer 2: WHOIS 域名查询（放入 executor 避免阻塞事件循环）─────────
-    whois_result = await loop.run_in_executor(None, domain_whois, lookup_domain)
-    report["layers"]["domain_intel"] = whois_result
+    if lookup_domain:
+        whois_result = await loop.run_in_executor(None, domain_whois, lookup_domain)
+        report["layers"]["domain_intel"] = whois_result
 
-    if whois_result.get("age_category") == "new":
-        # 域名注册时间短（新注册），标记为红旗
-        report["flags"].append("domain_age_new")
-    if whois_result.get("days_old") and whois_result["days_old"] > 3650:
-        # 域名注册超过 10 年，标记为久经考验
-        report["flags"].append("domain_age_old")
+        if whois_result.get("age_category") == "new":
+            report["flags"].append("domain_age_new")
+        if whois_result.get("days_old") and whois_result["days_old"] > 3650:
+            report["flags"].append("domain_age_old")
+    else:
+        report["layers"]["domain_intel"] = {
+            "skipped": True, "reason": "Company target — domain discovery requires web search first"
+        }
 
     # ── Layer 3: 企业邮箱验证 ───────────────────────────────────────────
     if target_type == "email":
@@ -174,6 +174,28 @@ async def osint_full_check(
 # ─────────────────────────────────────────────────────────────────────────────
 # 内部 helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _extract_lookup_domain(target: str, target_type: str, domain_from_email: str | None) -> str | None:
+    """从目标中提取用于 WHOIS / 技术栈检测的域名。
+
+    公司名无法直接提取域名（需先搜索发现官网），返回 None。
+    URL 使用 urllib.parse 精确解析，避免路径参数残留。
+    """
+    if domain_from_email:
+        return domain_from_email
+
+    if target_type == "url":
+        from urllib.parse import urlparse
+        parsed = urlparse(target)
+        netloc = parsed.netloc.lower().removeprefix("www.")
+        return netloc or None
+
+    if target_type == "domain":
+        return target.lower().removeprefix("www.")
+
+    # company / unknown — 无法直接提取域名
+    return None
+
 
 def _detect_target_type(target: str) -> str:
     """自动识别目标类型：email / domain / url / company。

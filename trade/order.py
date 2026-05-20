@@ -12,6 +12,15 @@ from __future__ import annotations
 from trade.database import get_connection
 
 
+def _customer_in_company(conn, customer_id: int, company_id: int) -> bool:
+    """校验客户是否属于指定公司。"""
+    row = conn.execute(
+        "SELECT 1 FROM customers WHERE id = ? AND company_id = ?",
+        (customer_id, company_id),
+    ).fetchone()
+    return row is not None
+
+
 def create(
     company_id: int,
     customer_id: int,
@@ -28,9 +37,11 @@ def create(
     payment_terms: str = "",
     notes: str = "",
 ) -> dict:
-    """创建一条订单记录。"""
+    """创建一条订单记录。校验 customer 必须属于指定公司。"""
     conn = get_connection()
     try:
+        if not _customer_in_company(conn, customer_id, company_id):
+            raise ValueError(f"customer {customer_id} does not belong to company {company_id}")
         cur = conn.execute(
             "INSERT INTO orders (company_id, customer_id, order_no, product_name, "
             "quantity, unit, unit_price, currency, total_amount, status, "
@@ -41,19 +52,29 @@ def create(
              delivery_date, payment_terms, notes),
         )
         conn.commit()
-        return get(cur.lastrowid)
+        return get(cur.lastrowid, company_id=company_id)
     finally:
         conn.close()
 
 
-def list_by_customer(customer_id: int) -> list[dict]:
-    """返回指定客户的所有订单，按创建时间倒序。"""
+def list_by_customer(customer_id: int, *, company_id: int | None = None) -> list[dict]:
+    """返回指定客户的所有订单，按创建时间倒序。
+
+    提供 company_id 时增加租户隔离校验。
+    """
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC",
-            (customer_id,),
-        ).fetchall()
+        if company_id is not None:
+            rows = conn.execute(
+                "SELECT * FROM orders WHERE customer_id = ? AND company_id = ? "
+                "ORDER BY created_at DESC",
+                (customer_id, company_id),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC",
+                (customer_id,),
+            ).fetchall()
         return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()
@@ -91,7 +112,10 @@ def get(order_id: int, *, company_id: int | None = None) -> dict | None:
 
 
 def update(order_id: int, *, company_id: int | None = None, **kwargs) -> dict | None:
-    """部分更新订单字段。指定 company_id 时进行多租户隔离检验。"""
+    """部分更新订单字段。指定 company_id 时进行多租户隔离检验。
+
+    如果传入了 customer_id，校验新 customer 必须属于同一公司。
+    """
     allowed = {"order_no", "product_name", "quantity", "unit", "unit_price",
                "currency", "total_amount", "status", "delivery_date",
                "payment_terms", "notes", "customer_id"}
@@ -101,6 +125,11 @@ def update(order_id: int, *, company_id: int | None = None, **kwargs) -> dict | 
 
     conn = get_connection()
     try:
+        # 如果更新了 customer_id 且提供了 company_id，校验新客户归属
+        if "customer_id" in updates and company_id is not None:
+            if not _customer_in_company(conn, updates["customer_id"], company_id):
+                return None
+
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values())
         if company_id is not None:
@@ -137,16 +166,21 @@ def delete(order_id: int, *, company_id: int | None = None) -> bool:
 
 
 def link_library(order_id: int, library_id: int, *, company_id: int | None = None) -> bool:
-    """关联文档库到订单。指定 company_id 时先校验订单归属。"""
+    """关联文档库到订单。指定 company_id 时校验订单和文档库都属于该公司。"""
     conn = get_connection()
     try:
         if company_id is not None:
             # 校验订单属于该公司
-            row = conn.execute(
+            order_ok = conn.execute(
                 "SELECT 1 FROM orders WHERE id = ? AND company_id = ?",
                 (order_id, company_id),
             ).fetchone()
-            if not row:
+            # 校验文档库也属于该公司
+            lib_ok = conn.execute(
+                "SELECT 1 FROM libraries WHERE id = ? AND company_id = ?",
+                (library_id, company_id),
+            ).fetchone()
+            if not order_ok or not lib_ok:
                 return False
         conn.execute(
             "INSERT OR IGNORE INTO order_libraries (order_id, library_id) VALUES (?,?)",

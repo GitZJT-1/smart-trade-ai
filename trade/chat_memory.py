@@ -161,6 +161,7 @@ def save_with_context(
                     response=response,
                     library_name=library_name,
                     customer_name=customer_name,
+                    company_id=company_id,
                 )
                 if retained:
                     # 成功保留日志后记录调试信息，便于排查记忆同步问题

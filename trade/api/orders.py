@@ -22,7 +22,7 @@ def list_customer_orders(customer_id: int, cid: int = Depends(require_company)):
     c = cust_module.get(customer_id, company_id=cid)
     if not c:
         raise HTTPException(status_code=404, detail="Customer not found")
-    return order_module.list_by_customer(customer_id)
+    return order_module.list_by_customer(customer_id, company_id=cid)
 
 
 @router.post("/orders")

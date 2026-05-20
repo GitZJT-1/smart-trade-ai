@@ -32,7 +32,7 @@ We do not currently run a bug bounty program.
 
 | Version | Supported |
 |---------|-----------|
-| 0.4.2   | ✅ Active |
+| 0.4.3   | ✅ Active |
 | < 0.4   | ❌ Unsupported |
 
 ## 法律与合规声明

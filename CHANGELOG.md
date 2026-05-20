@@ -2,6 +2,29 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
+## [0.4.3] — 2026-05-20
+
+### Added
+- **Skill 开发指南**：`docs/skill-development-guide.md`，覆盖 frontmatter 规范、触发词设计原则、injection_prompt 最佳实践、14 个 skill 快速参考
+- **Agent 重试机制**：sync 和 SSE 双端点均支持，RuntimeError / 空响应自动重试（最多 2 次，指数退避）
+
+### Changed
+- **License 安全加固**：移除硬编码 HMAC 密钥，强制 `TRADE_LICENSE_SECRET`；新增 `generate-secret` CLI；激活码支持 company_id 隔离；暴力破解限流（60s 内 10 次）
+- **helpers.py 重构**：所有函数体内 import 提升到模块级别
+- **Chat 端点增加输入长度限制**（max 10000 字符）和内存限流（60s 内 20 次请求）
+
+### Fixed
+- **订单 API 多租户隔离缺失**：GET/PUT/DELETE /orders/{id} + link/unlink 全部补上 company_id 校验
+- **chat-memory skill 触发词为空**：补充 35 个中文触发词，原先永不被匹配
+- **License 跨公司共享**：`_get_license_data` / `_save_license_data` 改为按 company_id 隔离
+- **slug 路径穿越风险**：`_validate_slug()` 禁止 `..`、`/`、`\` 字符
+- **company.delete() 文件残留**：删除时清理 `~/.trade/{slug}/` 和桌面工作目录
+- **OSINT 同步调用阻塞事件循环**：WHOIS/邮箱验证/制裁/技术栈 4 个调用放入 `run_in_executor`
+- **update_trade 缺少依赖更新**：恢复 pip install（移除 `--no-deps`）
+- **session token 日志泄露**：从打印前 16 字符缩减到 8 字符
+- **_check_hermes_version import 时 sys.exit(1)**：改为返回 bool，退出逻辑移至 main()
+- **前端定时任务列表一直显示加载中**：`loadActiveCronJobs` 改用 `document.getElementById`
+
 ## [0.4.2] — 2026-05-20
 
 ### Added

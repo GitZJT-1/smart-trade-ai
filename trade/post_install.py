@@ -274,54 +274,69 @@ def _restart_trade_service() -> None:
     重启失败不阻塞更新流程——只是提示。
     """
     import platform
-    import shutil
     import subprocess as _sp
 
     sys_name = platform.system()
     label = "com.trade.assistant"
 
+    # 确保系统命令在 PATH 中（macOS Python 子进程 PATH 可能不含 /usr/bin）
+    _env = os.environ.copy()
+    _path = _env.get("PATH", "")
+    _extra_paths = []
     if sys_name == "Darwin":
-        # macOS launchd — bootstrap + unload + load
+        for _p in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
+            if _p not in _path:
+                _extra_paths.append(_p)
+    elif sys_name == "Linux":
+        for _p in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
+            if _p not in _path:
+                _extra_paths.append(_p)
+    elif sys_name == "Windows":
+        _extra_paths.append(r"C:\Windows\System32")
+    if _extra_paths:
+        _env["PATH"] = _path + os.pathsep + os.pathsep.join(_extra_paths)
+
+    if sys_name == "Darwin":
         plist = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
         if plist.exists():
             try:
                 _sp.run(
                     ["launchctl", "unload", str(plist)],
-                    capture_output=True, timeout=5,
+                    capture_output=True, timeout=5, env=_env,
                 )
                 _sp.run(
                     ["launchctl", "load", str(plist)],
-                    capture_output=True, timeout=5,
+                    capture_output=True, timeout=5, env=_env,
                 )
-                print("  ↻ Trade 后台服务已自动重启（页面更新已生效）")
+                print("  ↻ Trade 后台服务已自动重启")
             except Exception:
                 print("  ⚠ 自动重启失败，请手动执行: launchctl unload ~/Library/LaunchAgents/com.trade.assistant.plist && launchctl load ~/Library/LaunchAgents/com.trade.assistant.plist")
             return
 
     if sys_name == "Linux":
-        # systemd 或手动
-        if shutil.which("systemctl"):
-            try:
-                _sp.run(["systemctl", "--user", "restart", label], capture_output=True, timeout=5)
+        # systemctl --user 优先，失败则 sudo systemctl
+        for _cmd in (
+            ["systemctl", "--user", "restart", label],
+            ["sudo", "systemctl", "restart", label],
+        ):
+            r = _sp.run(_cmd, capture_output=True, timeout=5, env=_env)
+            if r.returncode == 0:
                 print("  ↻ Trade 后台服务已自动重启")
                 return
-            except Exception:
-                pass
-        # 尝试 systemctl（全局）
-        if shutil.which("systemctl"):
-            try:
-                _sp.run(["sudo", "systemctl", "restart", label], capture_output=True, timeout=5)
-                print("  ↻ Trade 后台服务已自动重启")
-                return
-            except Exception:
-                pass
 
-    # 无法自动重启 — 提醒用户
-    print("  💡 请在终端中重启 Trade 服务以应用前端页面更新：")
+    if sys_name == "Windows":
+        # Windows 无标准服务管理器，提示用户
+        print("  💡 Windows 请手动重启 Trade：关闭当前窗口后重新运行 trade 命令")
+        return
+
+    # 无法自动重启
+    print("  💡 请在终端中重启 Trade 服务以应用更新：")
     if sys_name == "Darwin":
         print(f"     launchctl unload ~/Library/LaunchAgents/{label}.plist")
         print(f"     launchctl load ~/Library/LaunchAgents/{label}.plist")
-        print("     或手动运行: trade")
+    elif sys_name == "Linux":
+        print(f"     systemctl --user restart {label}")
+        print(f"     或 sudo systemctl restart {label}")
 
 
 def update_trade() -> None:

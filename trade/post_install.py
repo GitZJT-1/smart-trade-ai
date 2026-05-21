@@ -466,6 +466,31 @@ def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
         prompts_dst.chmod(0o644)
 
 
+def _guess_running_project_dir() -> Path | None:
+    """推断当前运行中的 Trade 项目目录。
+
+    通过 server.py 的 __file__ 路径推断（开发环境 / 桌面安装）。
+    如果 server.py 在 site-packages 中（pip install 方式），返回 None。
+    """
+    # 最可靠：通过检查运行中的 server 模块的 __file__ 路径
+    # post_install.py 位于 trade/ 包中，向上找项目根
+    # 但如果是从 pip install -e 安装的开发版本，这里返回的是安装源目录
+    self_dir = Path(__file__).resolve().parent.parent  # post_install.py -> trade/ -> project root
+    if (self_dir / "server.py").is_file() and (self_dir / ".git").is_dir():
+        return self_dir
+
+    # 尝试通过 sys.modules 寻找已加载的 server 模块
+    import sys as _sys
+    for _mod_name in ("server", "__main__"):
+        _mod = _sys.modules.get(_mod_name)
+        if _mod and hasattr(_mod, "__file__") and _mod.__file__:
+            _p = Path(_mod.__file__).resolve().parent
+            if (_p / "server.py").is_file() and (_p / ".git").is_dir():
+                return _p
+
+    return None
+
+
 def update_trade() -> None:
     """一键更新 Foreign Trade Assistant 系统。
 
@@ -482,7 +507,12 @@ def update_trade() -> None:
     """
     import subprocess
 
-    trade_dir = _get_trade_home() / "foreign-trade-assistant"
+    # 优先使用当前运行 server.py 所在的项目目录（开发环境/桌面安装），
+    # 确保更新的是正在运行的代码而非其他安装副本
+    _running_dir = _guess_running_project_dir()
+    trade_dir = (_running_dir
+                 if _running_dir and (_running_dir / ".git").is_dir()
+                 else _get_trade_home() / "foreign-trade-assistant")
     if not trade_dir.is_dir():
         print("[update_trade] ERROR: Trade install directory not found.", file=sys.stderr)
         print(f"  Expected: {trade_dir}", file=sys.stderr)

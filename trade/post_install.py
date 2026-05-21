@@ -223,40 +223,50 @@ def update_skills() -> None:
         dest_dir = hermes_skills_dir / skill_name
         dest_file = dest_dir / "SKILL.md"
 
-        try:
-            # 下载 GitHub 上的最新 SKILL.md
-            req = urllib.request.Request(
-                raw_url,
-                headers={"User-Agent": "Trade-Skills-Updater/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                remote_content = resp.read().decode("utf-8")
+        # 最多重试 3 次（应对 GitHub 偶发的 SSL 超时/丢包）
+        _MAX_TRIES = 3
+        _tried = 0
+        _last_error = None
+        while _tried < _MAX_TRIES:
+            _tried += 1
+            try:
+                # 下载 GitHub 上的最新 SKILL.md
+                req = urllib.request.Request(
+                    raw_url,
+                    headers={"User-Agent": "Trade-Skills-Updater/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    remote_content = resp.read().decode("utf-8")
 
-            # 比较 hash，相同则跳过
-            remote_hash = hashlib.sha256(remote_content.encode()).hexdigest()
-            if dest_file.is_file():
-                # 如果本地文件存在，比较 hash 判断是否有更新
-                local_hash = hashlib.sha256(dest_file.read_bytes()).hexdigest()
-                if local_hash == remote_hash:
-                    # hash 相同，无需更新
-                    print(f"  ✓ {skill_name} (already up-to-date)")
-                    skipped += 1
+                # 比较 hash，相同则跳过
+                remote_hash = hashlib.sha256(remote_content.encode()).hexdigest()
+                if dest_file.is_file():
+                    local_hash = hashlib.sha256(dest_file.read_bytes()).hexdigest()
+                    if local_hash == remote_hash:
+                        print(f"  ✓ {skill_name} (already up-to-date)")
+                        skipped += 1
+                        break
+
+                # hash 不同或本地文件不存在，写入新内容
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest_file.write_text(remote_content, encoding="utf-8")
+                print(f"  ↻ {skill_name} (updated)")
+                updated += 1
+                break
+
+            except urllib.error.HTTPError as e:
+                print(f"  ✗ {skill_name} (HTTP {e.code}: {raw_url})", file=sys.stderr)
+                failed += 1
+                break  # HTTP 错误（如 404）不需要重试
+            except Exception as e:
+                _last_error = e
+                if _tried < _MAX_TRIES:
+                    import time as _time
+                    _time.sleep(1.0 * _tried)  # 递增退避：1s, 2s
                     continue
-
-            # hash 不同或本地文件不存在，写入新内容
-            dest_dir.mkdir(parents=True, exist_ok=True)
-            dest_file.write_text(remote_content, encoding="utf-8")
-            print(f"  ↻ {skill_name} (updated)")
-            updated += 1
-
-        except urllib.error.HTTPError as e:
-            # HTTP 错误（如 404 表示 GitHub 上不存在该 skill）
-            print(f"  ✗ {skill_name} (HTTP {e.code}: {raw_url})", file=sys.stderr)
-            failed += 1
-        except Exception as e:
-            # 其他网络或 IO 错误
-            print(f"  ✗ {skill_name} (error: {e})", file=sys.stderr)
-            failed += 1
+                # 重试耗尽
+                print(f"  ✗ {skill_name} (error after {_MAX_TRIES} retries: {_last_error})", file=sys.stderr)
+                failed += 1
 
     print(f"\n[update_skills] Done. {updated} updated, {skipped} skipped, {failed} failed.")
     if updated > 0:

@@ -78,7 +78,8 @@ def delete_order(order_id: int, cid: int = Depends(require_company)):
 @router.post("/orders/{order_id}/libraries/{library_id}")
 def link_order_library(order_id: int, library_id: int, cid: int = Depends(require_company)):
     """关联文档库到订单。"""
-    order_module.link_library(order_id, library_id, company_id=cid)
+    if not order_module.link_library(order_id, library_id, company_id=cid):
+        raise HTTPException(status_code=404, detail="Order or library not found")
     return {"ok": True}
 
 

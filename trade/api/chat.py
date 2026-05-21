@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json as _json
 import logging
+import threading
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -31,17 +32,20 @@ router = APIRouter(tags=["chat"])
 _MAX_CHAT_PER_MINUTE = 20
 _WINDOW_SECONDS = 60.0
 _chat_timestamps: list[float] = []
+_rate_limit_lock = threading.Lock()
 
 
 def _check_chat_rate_limit() -> bool:
     """检查是否超过 chat 限流阈值。返回 True 表示允许继续。"""
     global _chat_timestamps
     now = time.time()
-    _chat_timestamps = [t for t in _chat_timestamps if now - t < _WINDOW_SECONDS]
-    if len(_chat_timestamps) >= _MAX_CHAT_PER_MINUTE:
-        return False
-    _chat_timestamps.append(now)
-    return True
+    # 线程安全：执行器线程和主线程可能同时访问
+    with _rate_limit_lock:
+        _chat_timestamps = [t for t in _chat_timestamps if now - t < _WINDOW_SECONDS]
+        if len(_chat_timestamps) >= _MAX_CHAT_PER_MINUTE:
+            return False
+        _chat_timestamps.append(now)
+        return True
 
 # ── 同步聊天 ──────────────────────────────────────────────────────────────
 
@@ -68,17 +72,16 @@ async def trade_chat(
     _MAX_AGENT_RETRIES = 2  # 最多重试 2 次（共 3 次尝试）
 
     def _call_agent():
-        last_error = None
+        last_error = ""
         for attempt in range(_MAX_AGENT_RETRIES + 1):
             try:
                 agent = create_agent(ephemeral_system_prompt=skill_hint)
                 result = agent.chat(full_query)
                 if result:
                     return result
-                # agent 返回空字符串时，也视为需要重试
                 if attempt < _MAX_AGENT_RETRIES:
                     _log.warning("Agent returned empty, retry %d/%d", attempt + 1, _MAX_AGENT_RETRIES)
-                    time.sleep(2 ** attempt)  # 指数退避：0s, 2s, 4s
+                    time.sleep(2 ** attempt)
                     continue
                 return "Agent 返回了空响应。"
             except ImportError:
@@ -96,7 +99,7 @@ async def trade_chat(
                 if attempt < _MAX_AGENT_RETRIES:
                     time.sleep(2 ** attempt)
                     continue
-        return "⚠️ Agent 调用失败，请稍后重试。"
+        return f"⚠️ Agent 调用失败: {last_error}" if last_error else "⚠️ Agent 调用失败，请稍后重试。"
 
     loop = asyncio.get_running_loop()
     try:
@@ -179,6 +182,7 @@ async def trade_chat_stream(
     _MAX_AGENT_RETRIES = 2
 
     def _run_agent() -> str | None:
+        last_error = ""
         for attempt in range(_MAX_AGENT_RETRIES + 1):
             try:
                 if attempt == 0:
@@ -222,19 +226,22 @@ async def trade_chat_stream(
                 _emit_threadsafe("error", {"message": "AI Agent 模块未加载。"})
                 return None
             except RuntimeError as e:
+                last_error = str(e)
                 if attempt < _MAX_AGENT_RETRIES:
                     _log.warning("Agent RuntimeError in stream, retry %d/%d: %s", attempt + 1, _MAX_AGENT_RETRIES, e)
                     time.sleep(2 ** attempt)
                     continue
-                _emit_threadsafe("error", {"message": str(e)})
+                _emit_threadsafe("error", {"message": last_error})
                 return None
             except Exception:
-                _log.exception("Agent stream failed (attempt %d)", attempt + 1)
+                last_error = f"Agent stream failed (attempt {attempt + 1})"
+                _log.exception(last_error)
                 if attempt < _MAX_AGENT_RETRIES:
                     time.sleep(2 ** attempt)
                     continue
-                _emit_threadsafe("error", {"message": "Agent 调用失败，请稍后重试。"})
+                _emit_threadsafe("error", {"message": f"⚠️ {last_error}"})
                 return None
+        _emit_threadsafe("error", {"message": "Agent 重试耗尽，请稍后重试。"})
         return None
 
     async def _event_stream():

@@ -50,8 +50,14 @@ def create_company(payload: CompanyCreate):
 
 
 @router.get("/companies/{company_id}")
-def get_company(company_id: int):
-    """根据 ID 获取公司详情。"""
+def get_company(
+    company_id: int,
+    x_company_id: int = Depends(require_company),
+):
+    """根据 ID 获取公司详情。仅允许查询自己的公司。"""
+    if x_company_id != company_id:
+        # 不允许查询其他公司——即使本地运行也做数据隔离
+        raise HTTPException(status_code=404, detail="Company not found")
     c = company_module.get(company_id)
     if not c:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -94,8 +100,13 @@ def delete_company(
 # ── Agent 身份 ─────────────────────────────────────────────────────────────
 
 @router.get("/companies/{company_id}/agent-identity")
-def get_company_agent_identity(company_id: int):
-    """获取公司的 Agent 身份文本（优先文件，其次 DB 缓存）。"""
+def get_company_agent_identity(
+    company_id: int,
+    x_company_id: int = Depends(require_company),
+):
+    """获取公司的 Agent 身份文本（优先文件，其次 DB 缓存）。仅允许查自己的。"""
+    if x_company_id != company_id:
+        raise HTTPException(status_code=404, detail="Company not found")
     identity = company_module.get_agent_identity(company_id)
     return {"company_id": company_id, "agent_identity_md": identity}
 

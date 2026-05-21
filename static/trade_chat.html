@@ -2537,8 +2537,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (currentCompanyId) {
         saveState();
+        // 更新下拉框显示当前选中的公司名
+        const sel = $('company-select');
+        if (sel) sel.value = currentCompanyId;
         navToView('chat', 'daily', '今日简报');
-        startCronPolling();  // 全局轮询：无论用户在哪个页面，定时任务结果都会推送
+        startCronPolling();
     } else {
         renderNoCompanyPage();
     }

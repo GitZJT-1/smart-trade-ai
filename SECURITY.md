@@ -2,7 +2,7 @@
 
 ## HERMES_YOLO_MODE
 
-Foreign Trade Assistant runs with `HERMES_YOLO_MODE=true`. AI Agent tool calls
+Smart Trade AI runs with `HERMES_YOLO_MODE=true`. AI Agent tool calls
 (read/write files, terminal commands) execute **without human approval**.
 
 ### Why
@@ -62,7 +62,7 @@ We do not currently run a bug bounty program.
 
 | 组件 | 许可证 | 兼容性 |
 |------|--------|:------:|
-| Foreign Trade Assistant | MIT | — |
+| Smart Trade AI | MIT | — |
 | Hermes Agent | MIT | ✅ 完全兼容 |
 | FastAPI / uvicorn / beautifulsoup4 | MIT / BSD | ✅ 完全兼容 |
 | PyMuPDF | AGPL | ⚠️ pip install 使用无传染风险；PyInstaller 打包分发时需评估 |

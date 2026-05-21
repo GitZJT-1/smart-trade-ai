@@ -196,7 +196,7 @@ _WORK_DIR_CATEGORIES: list[tuple[str, str]] = [
 def _setup_work_directory(company_name: str, slug: str, suggested_name: str = "") -> tuple[Path, bool]:
     """在桌面创建公司工作目录，包含外贸业务流程分类子目录。
 
-    如果目标目录已存在，尝试加数字后缀（如 "科辰电力-2"）。
+    如果目标目录已存在，尝试加数字后缀（如 "我的公司-2"）。
 
     Args:
         company_name: 公司名称

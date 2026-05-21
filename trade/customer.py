@@ -394,7 +394,7 @@ if __name__ == "__main__":
     init_db()
 
     # Create
-    cust = create("科辰电力", "contact@kechen.com", "电力金具客户", company_id=1)
+    cust = create("示例贸易公司", "contact@example.com", "测试客户", company_id=1)
     print("Created:", json.dumps(cust, indent=2, ensure_ascii=False))
 
     # List by company

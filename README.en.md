@@ -156,6 +156,8 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 - Bound to `127.0.0.1` — only accessible from your local browser
 - **Auto-backup before upgrades** → `~/.trade/backups/`
 
+> **Disclaimer**: Alibaba, LinkedIn, Facebook, Instagram, TikTok, YouTube, WhatsApp and other platform names mentioned in this documentation are trademarks of their respective owners. This tool provides analysis assistance for these platforms and is not affiliated with them. Sanctions data is sourced from OFAC/UN/EU public datasets — results are for reference only and do not constitute legal advice. See [SECURITY.md](SECURITY.md) for details.
+
 ---
 
 ## Tech Stack

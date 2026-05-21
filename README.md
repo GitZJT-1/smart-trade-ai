@@ -156,6 +156,8 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 - 绑定 `127.0.0.1`，仅本机浏览器可访问
 - **升级前自动备份数据库**到 `~/.trade/backups/`
 
+> **免责声明**：文档中提及的 Alibaba、LinkedIn、Facebook、Instagram、TikTok、YouTube、WhatsApp 等均为其各自所有者的商标。本工具仅提供对这些平台数据的分析辅助，与上述平台无关联。制裁名单数据来源于 OFAC/UN/EU 公开数据，结果仅供参考，不构成法律意见。详见 [SECURITY.md](SECURITY.md)。
+
 ---
 
 ## 技术栈

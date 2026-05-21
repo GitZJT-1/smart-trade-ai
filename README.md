@@ -4,17 +4,47 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
-外贸公司的 AI 销售助手 — 覆盖「引流 → 转化」全链路的智能销售系统。
+<div align="center">
+  <h3>外贸业务员的 AI 助手</h3>
+  <p>本地运行 · 14 项专业能力 · 数据不出电脑</p>
+</div>
 
-基于 [Hermes Agent](https://github.com/NousResearch/hermes-agent)，
-为外贸业务员提供 B2B 平台诊断、社媒获客、客户背调、开发信生成、报价谈判、文档分析、
-定时任务自动化等 14 项专业能力。
+**你的外贸团队每天花 3 小时写开发信、查客户背景、维护 B2B 平台？这个工具帮你把重复劳动压缩到 10 分钟。**
+
+让你专注于最重要的那件事——跟客户谈生意。
 
 ---
 
-## 空白电脑从头安装
+<p align="center">
+  <img src="docs/screenshot-1.png" alt="AI Chat Interface" width="75%">
+  <br>
+  <em>AI 对话界面 — 自动调用 web_search / read_file / database 工具</em>
+</p>
 
-以下步骤适用于 **macOS / Linux / WSL2**。Windows 原生安装见下方。
+---
+
+## 为什么外贸人需要这个？
+
+| 痛点 | 不用这个工具 | 用了之后 |
+|------|-------------|---------|
+| 早安简报 | 每天打开 5 个网站查汇率/金价/新闻 | 自动生成，含实时汇率+大宗商品行情+客户跟进提醒 |
+| 客户背调 | 手动 Google → LinkedIn → WHOIS | 一键 6 层验证：邮箱注册检测→WHOIS→制裁名单→邮箱验证→技术栈→LinkedIn |
+| 开发信 | 每封手动写，客户多了记不清 | 根据客户画像自动生成，带具体痛点引用 |
+| B2B 平台 | 每天登录阿里国际站/中国制造网看数据 | 定时自动检查，新询盘/待跟进报价一目了然 |
+| LinkedIn | 不知道发什么内容 | AI 按周生成内容日历，轮换行业洞察/产品案例/互动提问 |
+| 客户资料 | 散落在 Excel/微信/邮件里 | 统一管理，A/B/C 分级，关联文档库 |
+
+---
+
+<p align="center">
+  <img src="docs/screenshot-2.png" alt="Customer & Cron Panel" width="75%">
+  <br>
+  <em>客户管理 + 定时任务面板</em>
+</p>
+
+---
+
+## 3 分钟上手
 
 ### 方式一：一键安装（推荐）
 
@@ -22,149 +52,97 @@
 curl -fsSL https://raw.githubusercontent.com/chefroger/foreign-trade-assistant/main/scripts/install.sh | bash
 ```
 
-脚本会自动完成：
-1. 检查 Python >= 3.11
-2. 安装 hermes-agent
-3. 安装 foreign-trade-assistant
-4. 安装 14 个 B2B skills 到 Hermes
-5. 初始化数据库和数据目录
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 14 个 skills → 数据库初始化。
 
 ### 方式二：手动安装
 
-#### 前置条件
-
-| 软件 | 版本 | 安装方式 |
-|------|------|---------|
-| Python | >= 3.11 | `brew install python@3.12` (macOS) 或 `apt install python3.12` (Ubuntu) |
-| Git | 任意 | 系统自带 或 `apt install git` |
-| LLM API Key | — | 自备（OpenAI / Anthropic / DeepSeek 等），配置在 `~/.hermes/.env` |
-
-#### 步骤
+**前置条件**：Python >= 3.11 · Git · LLM API Key（OpenAI / Anthropic / DeepSeek / MiniMax 等）
 
 ```bash
-# 1. 安装 hermes-agent
+# 1. 安装 Hermes Agent（AI 引擎）
 git clone --branch main https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
-cd ~/.hermes/hermes-agent
-pip install -e "."
+cd ~/.hermes/hermes-agent && pip install -e "."
 
-# 2. 配置 Hermes（选择 LLM 提供商和模型）
-hermes setup
-# 按提示选择 provider、填入 API Key
-# 或手动编辑 ~/.hermes/config.yaml 和 ~/.hermes/.env
+# 2. 配置 LLM
+hermes setup      # 按提示选择 provider、填入 API Key
 
 # 3. 安装 Foreign Trade Assistant
 git clone --branch main https://github.com/chefroger/foreign-trade-assistant.git ~/.trade/foreign-trade-assistant
-cd ~/.trade/foreign-trade-assistant
-pip install -e ".[docs]"    # [docs] 安装文档解析依赖（PDF/Word/Excel/PPT）
+cd ~/.trade/foreign-trade-assistant && pip install -e ".[docs]"
 
-# 4. 安装 B2B skills 到 Hermes
+# 4. 安装 skills 并启动
 install-trade-skills
-
-# 5. 启动
 python server.py
 # → 浏览器打开 http://127.0.0.1:9119/trade
 ```
 
-### Windows 原生安装
+### Windows
 
 ```powershell
-# PowerShell（以普通用户运行，无需管理员）
-# 1. 安装 hermes-agent
 git clone --branch main https://github.com/NousResearch/hermes-agent.git $env:LOCALAPPDATA\hermes\hermes-agent
-cd $env:LOCALAPPDATA\hermes\hermes-agent
-pip install -e "."
-hermes setup
+cd $env:LOCALAPPDATA\hermes\hermes-agent; pip install -e "."; hermes setup
 
-# 2. 安装 Foreign Trade Assistant
 git clone --branch main https://github.com/chefroger/foreign-trade-assistant.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
-cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
-pip install -e "."
-install-trade-skills
+cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-trade-skills
 
-# 3. 启动
 python server.py
 ```
 
----
-
-## 启动
-
-```bash
-cd ~/.trade/foreign-trade-assistant   # 或项目目录
-python server.py                       # 默认 http://127.0.0.1:9119/trade
-python server.py --port 8080           # 自定义端口
-python server.py --no-browser          # 不自动打开浏览器
-```
-
-## 打包为独立应用（无需命令行）
+### 打包为独立应用（双击运行，无需终端）
 
 ```bash
 pip install pyinstaller
 ./scripts/build.sh          # macOS → dist/Foreign Trade Assistant.app
-# Windows:
-powershell -File scripts/build.ps1  # → dist/Foreign Trade Assistant.exe
+powershell -File scripts/build.ps1  # Windows → dist/Foreign Trade Assistant.exe
 ```
-
-打包后可双击启动，不依赖终端。
 
 ---
 
-## 数据存储位置
+## 14 项专业能力
 
-| 数据 | macOS / Linux | Windows |
-|------|--------------|---------|
-| 数据库 | `~/.trade/data/trade.db` | `%LOCALAPPDATA%\trade\data\trade.db` |
-| 公司数据 | `~/.trade/companies/{slug}/` | `%LOCALAPPDATA%\trade\companies\{slug}\` |
-| 桌面工作目录 | `~/Desktop/{公司名}/` | `%USERPROFILE%\Desktop\{公司名}\` |
-| Skills | `~/.hermes/skills/b2b-*/` | `%LOCALAPPDATA%\hermes\skills\b2b-*\` |
-| Hermes 配置 | `~/.hermes/config.yaml` | `%LOCALAPPDATA%\hermes\config.yaml` |
-| LLM API Key | `~/.hermes/.env` | `%LOCALAPPDATA%\hermes\.env` |
+### 获客引流
+| 能力 | 说明 |
+|------|------|
+| 平台诊断 | 分析阿里国际站/中国制造网产品页面，输出优化建议 |
+| 社媒营销 | 生成 Facebook/Instagram/TikTok/YouTube 内容日历 |
+| LinkedIn 运营 | Profile 优化 + 内容策略 + InMail 模板 |
+| 海关数据 | 分析进出口数据，筛选高价值采购商 |
+| 客户开发 | 根据目标市场+产品生成开发信和跟进序列 |
 
-所有用户数据存储在本地，不上传任何服务器（除调用 LLM API 外）。
+### 销售转化
+| 能力 | 说明 |
+|------|------|
+| 客户管理 | A/B/C 分级、详情面板、文档库关联 |
+| 文档分析 | 读取本地 PDF/Word/Excel/PPT，Agent 自动解析 |
+| 商务文档生成 | 一键生成报价单、PI、合同（DOCX/XLSX/PPTX） |
+| 报价谈判 | 基于产品知识库和客户画像给出谈判策略 |
 
----
-
-## ⚠️ 安全部署说明
-
-Foreign Trade Assistant 在 `HERMES_YOLO_MODE=true` 下运行——AI Agent 执行工具（读写文件、终端命令等）
-**无需人工审批**。这是必须的，因为目标用户（外贸业务员）不具备判断 Agent 工具调用的技术能力。
-
-### 因此请务必：
-
-1. **仅在内网或本机使用**：不要将服务暴露在公网上
-2. **防火墙保护**：确保 `127.0.0.1:9119` 不被外部访问
-3. **API Key 安全**：`~/.hermes/.env` 中的 LLM API Key 不要分享
-4. **定期备份**：`~/.trade/` 目录和桌面工作目录中的重要文件
-
-### YOLO 模式说明
-
-```
-启动时输出：
-  ⚠️  HERMES_YOLO_MODE enabled — 工具审批已跳过
-     如需更高安全隔离，仅限受控内网环境使用
-```
-
-这是设计决定，不是配置疏忽。如果需要工具审批流程，请使用 Hermes 原生的交互模式。
+### 效率工具
+| 能力 | 说明 |
+|------|------|
+| 客户背调 | 6 层验证：邮箱→WHOIS→制裁→邮箱验证→技术栈→LinkedIn |
+| 今日简报 | 实时汇率+大宗商品+市场新闻+客户跟进提醒 |
+| 定时任务 | 7 个工作日自动化：早安简报/开发信/社媒/晚间总结 |
+| 对话记录 | 按公司隔离的聊天记忆，支持搜索/回溯 |
 
 ---
 
-## 功能概览
+## 数据安全
 
-| 功能 | 入口 | 说明 |
-|------|------|------|
-| 今日简报 | 侧边栏 → 工作台 | Agent 对话，自动加载近期上下文 |
-| 客户开发 | 侧边栏 → 获客引流 | 分析客户信息、生成开发信和跟进序列 |
-| 平台诊断 | 侧边栏 → 获客引流 | 分析阿里国际站/中国制造网产品页面 |
-| 社媒营销 | 侧边栏 → 获客引流 | 生成 Facebook/Instagram/TikTok/YouTube 内容日历 |
-| LinkedIn | 侧边栏 → 获客引流 | Profile 优化、内容策略、InMail 模板 |
-| 海关数据 | 侧边栏 → 获客引流 | 分析进出口数据、筛选采购商 |
-| 客户管理 | 侧边栏 → 销售转化 | 客户表格（A/B/C 分级）、详情面板、文档库关联 |
-| 文档库 | 侧边栏 → 销售转化 | 按目录读取本地文档，Agent 自动分析 |
-| 文档生成 | 侧边栏 → 销售转化 | 生成 PPTX/DOCX/XLSX 专业商务文档 |
-| 客户背调 | 侧边栏 → 工具 | 6 层验证：WHOIS + 邮箱验证 + 制裁名单 + 技术栈 + LinkedIn（Hermes 浏览器） + 邮箱注册检测 |
-| 定时任务 | 侧边栏 → 工具 | 7 个工作日自动化任务（早安简报/开发信/社媒等） |
-| 数据目录 | 侧边栏 → 工具 | 浏览 `~/.trade/` 目录结构和文件 |
-| 对话记录 | 侧边栏 → 历史 | 查看/搜索/删除历史对话 |
+- **所有数据存在本地**（`~/.trade/`），不上传任何服务器
+- LLM API 调用仅发送用户提问内容，不含客户身份信息
+- 多公司数据隔离（`X-Company-ID` header）
+- 绑定 `127.0.0.1`，不暴露到网络
+
+---
+
+## 技术栈
+
+- **AI 引擎**: [Hermes Agent](https://github.com/NousResearch/hermes-agent)（MIT 开源）
+- **后端**: FastAPI + SQLite + uvicorn
+- **前端**: 原生 JavaScript SPA（单文件，零构建工具依赖）
+- **LLM**: 兼容 OpenAI / Anthropic / DeepSeek / MiniMax / Ollama 等
+- **文档解析**: PyMuPDF / python-docx / openpyxl / python-pptx
 
 ---
 
@@ -172,56 +150,15 @@ Foreign Trade Assistant 在 `HERMES_YOLO_MODE=true` 下运行——AI Agent 执�
 
 ```
 trade/                     B2B 业务层
-├── api/                   FastAPI 路由（按业务域拆分）
-│   ├── chat.py              AI 对话（sync + SSE stream）
-│   ├── companies.py         公司管理
-│   ├── libraries.py         文档库管理
-│   ├── customers.py         客户管理
-│   ├── orders.py            订单管理
-│   ├── conversations.py     对话记录
-│   ├── memory.py            Hindsight 记忆 + LLM 提供商
-│   ├── onboarding.py        首次引导
-│   ├── cron.py               定时任务 API
-│   ├── deps.py              共享依赖 + session token 校验
-│   └── models.py             Pydantic 请求/响应模型
+├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
-│   ├── whois.py             域名 WHOIS
-│   ├── email_verify.py      企业邮箱验证
-│   ├── sanctions.py         制裁名单筛查
-│   ├── tech_stack.py        技术栈检测
-│   ├── linkedin_verify.py   LinkedIn 验证（browser_navigate 指令生成）
-│   ├── scoring.py           风险评分
-│   └── orchestrator.py      编排器
-├── database.py             SQLite 连接 + schema + 迁移
-├── company.py              公司 CRUD + 桌面工作目录
-├── library.py              文档库 CRUD
-├── customer.py             客户 CRUD（多联系人）
-├── order.py                订单 CRUD（3 层上下文查询）
-├── chat_memory.py          对话记录 + Hindsight 桥接
-├── memory.py               Hindsight 客户端
-├── helpers.py              Provider 检查 + Agent 工厂 + Prompt 构建
-├── prompt.py               System prompt 模板
-├── prompts.py              Prompt 文件加载器（mtime 缓存）
-├── skill_router.py         Skill 匹配引擎 + 注入
-├── skill_registry.py       14 个 skill 注册表（纯数据）
-├── license.py              系统校验管理
-├── onboarding.py           首次引导逻辑
-├── email_intel.py          holehe 邮箱平台检测
-└── post_install.py         Skills 安装到 Hermes
+├── skill_router.py        Skill 自动匹配引擎
+├── skill_registry.py      14 个 skill 注册表（纯数据）
+└── ... + 13 个业务模块
 
-skills/                     14 个 B2B skills（安装到 ~/.hermes/skills/）
-tests/                      127 个测试（database/business/api/osint/smoke）
-static/trade_chat.html      Chat SPA 前端
-scripts/
-├── install.sh              一键安装脚本（macOS/Linux）
-├── install.ps1             一键安装脚本（Windows）
-├── build.sh                打包构建（macOS）
-├── build.ps1               打包构建（Windows）
-├── install_prereqs.sh      前置依赖安装（macOS/Linux）
-└── install_prereqs.ps1     前置依赖安装（Windows）
-pyinstaller.spec            PyInstaller 打包配置
-pyproject.toml              pip 安装配置
-server.py                   FastAPI 入口
+skills/                    14 个 B2B skills（Markdown 驱动）
+tests/                     测试覆盖（database/business/api/osint/smoke）
+server.py                  FastAPI 入口
 ```
 
 ---
@@ -229,12 +166,9 @@ server.py                   FastAPI 入口
 ## 开发
 
 ```bash
-pip install -e ".[dev,docs]"       # dev 工具 + 文档解析依赖
-python -m pytest tests/ -v       # 运行 127 个测试
-ruff check trade/ server.py      # 代码检查
-ruff check --fix .               # 自动修复
-coverage run -m pytest tests/ -v # 测试覆盖
-python -m trade.database          # 初始化/检查数据库
+pip install -e ".[dev,docs]"
+python -m pytest tests/ -v   # 运行测试
+ruff check trade/ server.py  # 代码检查
 ```
 
 ## 文档
@@ -245,11 +179,16 @@ python -m trade.database          # 初始化/检查数据库
 - [外贸业务方法总结](外贸业务方法总结.md)
 - [Trade 数据目录结构设计](Trade数据目录结构设计.md)
 - [COMPATIBILITY.md](COMPATIBILITY.md) — Hermes 版本兼容性记录
-- [数据库 Schema](docs/database-schema.md) — 8 张表完整字段说明
-- [数据库关系图](docs/database-relationships.drawio) — draw.io 可编辑
+- [数据库 Schema](docs/database-schema.md)
+
+---
 
 ## 联系作者
 
 <img src="docs/wechat-contact.jpeg" alt="WeChat Contact" width="200">
 
-扫码添加微信，备注「Trade」即可。商务合作或技术支持请发邮件至 lauroge@gmail.com。
+扫码添加微信，备注「Trade」。商务合作或技术支持请发邮件至 lauroge@gmail.com。
+
+---
+
+**Foreign Trade Assistant** — 把重复劳动交给 AI，把时间留给客户。

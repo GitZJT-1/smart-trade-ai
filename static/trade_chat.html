@@ -1037,7 +1037,7 @@ async function loadCronStatus(isPoll = false) {
         if (!t.output || _shownCronOutputs.has(t.name)) continue;
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message assistant msg-cron-output';
-        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${marked.parse(t.output)}</div></div>`;
+        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(t.output))}</div></div>`;
         panel.insertAdjacentElement('afterend', msgDiv);
         _shownCronOutputs.add(t.name);
     }

@@ -279,7 +279,7 @@ def search_history(
         else:
             # 无时间范围限制，查询该公司的所有历史记录
             rows = conn.execute(
-                "SELECT id, query, response, created_at "
+                "SELECT id, company_id, library_id, query, response, files_read, created_at "
                 "FROM conversations WHERE company_id = ? "
                 "ORDER BY id ASC LIMIT ?",
                 (company_id, limit),

@@ -408,11 +408,14 @@ def main() -> None:
         sys.exit(1)
 
     # 写入 PID 文件，供 _restart_trade_service() 重启时使用
+    import atexit as _atexit
     from pathlib import Path as _Path
     _pid_dir = _Path.home() / ".trade" / "data"
     _pid_dir.mkdir(parents=True, exist_ok=True)
     _pid_file = _pid_dir / "trade.pid"
     _pid_file.write_text(str(os.getpid()))
+    # 进程退出时清理 PID 文件，防止误杀
+    _atexit.register(lambda: _pid_file.unlink(missing_ok=True))
 
     _install_cors(args.port)
 

@@ -16,9 +16,9 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshot-1.png" alt="AI Chat Interface" width="75%">
+  <img src="docs/screenshot-2.png" alt="Customer & Cron Panel" width="75%">
   <br>
-  <em>AI 对话界面 — 自动调用 web_search / read_file / database 工具</em>
+  <em>客户管理 + 定时任务面板</em>
 </p>
 
 ---
@@ -37,9 +37,9 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshot-2.png" alt="Customer & Cron Panel" width="75%">
+  <img src="docs/screenshot-1.png" alt="AI Chat Interface" width="75%">
   <br>
-  <em>客户管理 + 定时任务面板</em>
+  <em>AI 对话界面 — 自动调用 web_search / read_file / database 工具</em>
 </p>
 
 ---

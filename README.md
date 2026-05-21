@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
+[中文](README.md) | [English](README.en.md)
+
 <div align="center">
   <h3>外贸业务员的 AI 助手</h3>
   <p>本地运行 · 14 项专业能力 · 数据不出电脑</p>

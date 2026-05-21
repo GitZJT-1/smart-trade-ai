@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
+[中文](README.md) | [English](README.en.md)
+
 <div align="center">
   <h3>AI Assistant for International Trade Professionals</h3>
   <p>Runs locally · 14 built-in skills · Your data never leaves your machine</p>

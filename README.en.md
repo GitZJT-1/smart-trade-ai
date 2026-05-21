@@ -48,7 +48,7 @@ So you can focus on what actually matters — closing deals.
 
 ## Get started in 3 minutes
 
-### Option 1: One-liner install (recommended)
+### Option 1: One-liner install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -56,7 +56,25 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 
 The script handles: Python check → Hermes Agent → Smart Trade AI → 14 skills → database init.
 
-### Option 2: Manual install
+> **Prefer to review before running?**
+> ```bash
+> curl -fsSLO https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh
+> less install.sh       # review, then
+> bash install.sh
+> ```
+
+### Option 2: Install from Release (pinned version)
+
+Visit [Releases](https://github.com/chefroger/smart-trade-ai/releases) or specify a version:
+
+```bash
+git clone --branch v0.4.4 https://github.com/chefroger/smart-trade-ai.git ~/.trade/smart-trade-ai
+cd ~/.trade/smart-trade-ai && pip install -e ".[docs]"
+install-trade-skills
+python server.py
+```
+
+### Option 3: Manual install
 
 **Prerequisites**: Python >= 3.11 · Git · LLM API Key (OpenAI / Anthropic / DeepSeek / MiniMax etc.)
 
@@ -131,10 +149,12 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ## Data Security
 
-- **All data stays local** (`~/.trade/`), nothing uploaded to any server
-- LLM API only sends the user's question, no client identity data
+- **Business data is stored locally by default** (`~/.trade/`), nothing uploaded to any server
+- With **Ollama or other local models**, full local operation is possible — no data leaves your machine
+- With **OpenAI / Anthropic / DeepSeek / MiniMax or other cloud LLMs**, your input and necessary context are sent to the chosen provider — client identity data is NOT included
 - Multi-company isolation (`X-Company-ID` header)
-- Bound to `127.0.0.1`, not exposed to the network
+- Bound to `127.0.0.1` — only accessible from your local browser
+- **Auto-backup before upgrades** → `~/.trade/backups/`
 
 ---
 

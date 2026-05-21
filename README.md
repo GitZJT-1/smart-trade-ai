@@ -48,7 +48,7 @@
 
 ## 3 分钟上手
 
-### 方式一：一键安装（推荐）
+### 方式一：一键安装
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -56,7 +56,25 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 
 脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 14 个 skills → 数据库初始化。
 
-### 方式二：手动安装
+> **如果你希望安装前先审查脚本**：
+> ```bash
+> curl -fsSLO https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh
+> less install.sh       # 审查后
+> bash install.sh
+> ```
+
+### 方式二：从 Release 安装（固定版本）
+
+访问 [Releases](https://github.com/chefroger/smart-trade-ai/releases) 下载最新版，或指定版本：
+
+```bash
+git clone --branch v0.4.4 https://github.com/chefroger/smart-trade-ai.git ~/.trade/smart-trade-ai
+cd ~/.trade/smart-trade-ai && pip install -e ".[docs]"
+install-trade-skills
+python server.py
+```
+
+### 方式三：手动安装
 
 **前置条件**：Python >= 3.11 · Git · LLM API Key（OpenAI / Anthropic / DeepSeek / MiniMax 等）
 
@@ -131,10 +149,12 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ## 数据安全
 
-- **所有数据存在本地**（`~/.trade/`），不上传任何服务器
-- LLM API 调用仅发送用户提问内容，不含客户身份信息
+- **业务数据默认存储在本地**（`~/.trade/`），不上传任何服务器
+- 如使用 **Ollama 等本地模型**，可实现完整本地运行，数据完全不出电脑
+- 如使用 **OpenAI / Anthropic / DeepSeek / MiniMax 等云端 LLM**，用户输入和必要上下文会发送至所选服务商——不包含客户身份信息
 - 多公司数据隔离（`X-Company-ID` header）
-- 绑定 `127.0.0.1`，不暴露到网络
+- 绑定 `127.0.0.1`，仅本机浏览器可访问
+- **升级前自动备份数据库**到 `~/.trade/backups/`
 
 ---
 

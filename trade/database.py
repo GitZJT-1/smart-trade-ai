@@ -8,7 +8,9 @@ libraries、customers、customer_libraries、conversations。
 """
 
 import os
+import shutil
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 
@@ -164,6 +166,13 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer     ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_company ON conversations(company_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_library ON conversations(library_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_created  ON conversations(created_at);
+
+-- Schema migrations tracking (for versioned upgrades)
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version     INTEGER PRIMARY KEY,
+    name        TEXT    NOT NULL,
+    applied_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
 """
 
 # Migration from v0 (single-company) schema — handled in Python, not SQL
@@ -282,10 +291,78 @@ def _migrate_from_v0(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def _backup_db(db_path: Path) -> Path | None:
+    """在 schema 变更前自动备份数据库。
+
+    备份到 ~/.trade/backups/trade-YYYYMMDD-HHMMSS.db。
+    如果数据库尚不存在（全新安装），则跳过备份。
+    返回备份路径，无备份时返回 None。
+    """
+    if not db_path.is_file():
+        return None  # 全新安装，无需备份
+
+    backup_dir = db_path.parent.parent / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_path = backup_dir / f"trade-{ts}.db"
+    shutil.copy2(str(db_path), str(backup_path))
+    return backup_path
+
+
+def _apply_pending_migrations(conn: sqlite3.Connection) -> int:
+    """执行未应用的 schema 迁移。
+
+    在 schema_migrations 表中查询已应用的版本，
+    只执行当前代码中定义但尚未应用的迁移。
+    返回新执行的迁移数量。
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version     INTEGER PRIMARY KEY,
+            name        TEXT    NOT NULL,
+            applied_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+        )
+    """)
+
+    # 定义所有已知迁移: (version, name, sql)
+    migrations: list[tuple[int, str, str]] = [
+        # Future migrations go here. Example:
+        # (2, "add_customer_email_index",
+        #  "CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(contact);"),
+    ]
+
+    # 获取已应用的版本
+    applied = {
+        row[0] for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
+    }
+
+    applied_count = 0
+    for version, name, sql in migrations:
+        if version not in applied:
+            conn.executescript(sql)
+            conn.execute(
+                "INSERT INTO schema_migrations (version, name) VALUES (?, ?)",
+                (version, name),
+            )
+            applied_count += 1
+
+    return applied_count
+
+
 def init_db() -> Path:
     """如果表不存在则创建它们。处理 v0→v1 迁移。
+
     同时向所有现有表添加备用列，无论版本如何。
-    返回数据库路径。"""
+    在 schema 变更前自动备份数据库。
+    返回数据库路径。
+    """
+    db_path = _get_db_path()
+
+    # 升级前自动备份
+    backup_path = _backup_db(db_path)
+    if backup_path:
+        print(f"  📦 Database backed up → {backup_path}")
+
     conn = get_connection()
     try:
         conn.executescript(SCHEMA_SQL)
@@ -295,6 +372,11 @@ def init_db() -> Path:
             # 已是 v1（或全新安装）— 仍然确保备用列存在
             _add_spare_columns(conn)
             conn.commit()
+        # 执行增量迁移（从 schema_migrations 表驱动）
+        new_migrations = _apply_pending_migrations(conn)
+        conn.commit()
+        if new_migrations > 0:
+            print(f"  📋 Applied {new_migrations} new schema migration(s)")
     finally:
         conn.close()
     return _get_db_path()

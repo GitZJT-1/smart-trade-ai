@@ -207,7 +207,7 @@ def update_skills() -> None:
         sys.exit(1)
 
     # GitHub raw URL 前缀
-    RAW_BASE = "https://raw.githubusercontent.com/chefroger/foreign-trade-assistant/main/skills"
+    RAW_BASE = "https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/skills"
 
     updated = 0
     skipped = 0

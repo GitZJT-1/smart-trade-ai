@@ -103,7 +103,7 @@ try {
 Write-Host ""
 Write-Host "Step 3/5: 安装 Foreign Trade Assistant" -ForegroundColor White
 
-$TradeRepo = "https://github.com/chefroger/foreign-trade-assistant.git"
+$TradeRepo = "https://github.com/chefroger/smart-trade-ai.git"
 $TradeDir = "$TradeHome\foreign-trade-assistant"
 
 if (Test-Path $TradeDir) {

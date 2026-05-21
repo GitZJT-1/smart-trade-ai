@@ -1,6 +1,6 @@
 # Foreign Trade Assistant
 
-[![Test](https://github.com/chefroger/foreign-trade-assistant/actions/workflows/test.yml/badge.svg)](https://github.com/chefroger/foreign-trade-assistant/actions/workflows/test.yml)
+[![Test](https://github.com/chefroger/smart-trade-ai/actions/workflows/test.yml/badge.svg)](https://github.com/chefroger/smart-trade-ai/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
@@ -49,7 +49,7 @@
 ### 方式一：一键安装（推荐）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/chefroger/foreign-trade-assistant/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
 脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 14 个 skills → 数据库初始化。
@@ -67,7 +67,7 @@ cd ~/.hermes/hermes-agent && pip install -e "."
 hermes setup      # 按提示选择 provider、填入 API Key
 
 # 3. 安装 Foreign Trade Assistant
-git clone --branch main https://github.com/chefroger/foreign-trade-assistant.git ~/.trade/foreign-trade-assistant
+git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
 cd ~/.trade/foreign-trade-assistant && pip install -e ".[docs]"
 
 # 4. 安装 skills 并启动
@@ -82,7 +82,7 @@ python server.py
 git clone --branch main https://github.com/NousResearch/hermes-agent.git $env:LOCALAPPDATA\hermes\hermes-agent
 cd $env:LOCALAPPDATA\hermes\hermes-agent; pip install -e "."; hermes setup
 
-git clone --branch main https://github.com/chefroger/foreign-trade-assistant.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
+git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
 cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-trade-skills
 
 python server.py

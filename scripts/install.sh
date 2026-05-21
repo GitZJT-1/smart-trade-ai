@@ -3,7 +3,7 @@
 # Foreign Trade Assistant — 一键安装脚本 (macOS / Linux / WSL2)
 # ==============================================================================
 # 使用方式:
-#   curl -fsSL https://raw.githubusercontent.com/chefroger/foreign-trade-assistant/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 #
 # 全程使用 venv，不碰系统 Python site-packages，兼容 Homebrew PEP 668。
 # ==============================================================================
@@ -105,7 +105,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 log_step "Step 3/5: 安装 Foreign Trade Assistant"
 
-TRADE_REPO="https://github.com/chefroger/foreign-trade-assistant.git"
+TRADE_REPO="https://github.com/chefroger/smart-trade-ai.git"
 TRADE_DIR="$HOME/.trade/foreign-trade-assistant"
 
 if [ -d "$TRADE_DIR" ]; then

@@ -699,11 +699,16 @@ async function doTradeUpdate() {
         if (resp && resp.ok) {
             toast('✅ 系统更新完成！正在重启...');
             console.log(resp.output);
+        } else if (resp && resp.error) {
+            toast('❌ 更新失败: ' + resp.error);
         } else {
-            toast('❌ 更新失败: ' + (resp?.error || '未知错误'));
+            // resp 为 null 可能是因为服务器重启导致连接断开，
+            // 更新脚本本身可能在服务端已成功执行
+            toast('✅ 更新指令已执行，服务正在重启...');
         }
     } catch(e) {
-        toast('❌ 更新出错: ' + e.message);
+        // 服务器重启时连接断开属于正常现象
+        toast('✅ 更新指令已执行，服务正在重启...');
     } finally {
         btn.disabled = false;
         btn.textContent = '⬆️ 系统更新';

@@ -585,7 +585,9 @@ def update_trade() -> None:
 
     if ok:
         print("\n✅ Trade update complete.")
-        _restart_trade_service()
+        # 延迟重启：给 HTTP 请求留出时间返回响应，避免 ERR_EMPTY_RESPONSE
+        import threading as _threading
+        _threading.Thread(target=lambda: (__import__("time").sleep(1.5), _restart_trade_service()), daemon=True).start()
     else:
         print("\n⚠️  Trade update completed with warnings. Check the output above.")
 

@@ -21,8 +21,8 @@ from collections import OrderedDict
 from pathlib import Path
 
 from trade.skill_registry import (
-    _COMPILED,
     _EXPLICIT_RE,
+    _SKILLS,
     get_skill_by_name,
     skill_names,
 )
@@ -166,15 +166,126 @@ def _norm(text: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 核心匹配
+# 核心匹配：评分计算
 # ─────────────────────────────────────────────────────────────────────────────
 
+_EXPLICIT_SCORE = 9999  # 显式调用（如 "用 b2b-osint"）获得绝对最高分
+
+# 匹配权重
+_BOUNDARY_WEIGHT = 3   # 词边界匹配（如独立词"背景调查"）
+_SUBSTRING_WEIGHT = 1  # 宽松子串匹配（如"做一下背景调查再联系"）
+
+
+def _score_skills(query: str) -> list[dict]:
+    """对每个注册 skill 逐触发词计算匹配得分，返回排序后的评分列表。
+
+    匹配策略：
+      1. 显式调用（"用 b2b-xxx"）→ 该 skill 得 _EXPLICIT_SCORE，直接返回
+      2. 关键词匹配 → 逐触发词检查：
+         - 词边界匹配 (\b{trigger}\b) → 3 分
+         - 宽松子串匹配 ({trigger})    → 1 分
+
+    返回格式：
+        [{"skill_name": str, "score": int, "triggers_matched": [str],
+          "word_boundary_hits": int, "substring_hits": int}, ...]
+    按 (-score, 注册顺序) 排序。无匹配时返回 []。
+    """
+    # 空查询直接返回空列表
+    if not query or not query.strip():
+        return []
+
+    # ── 策略 1：显式 skill 调用（得分 9999，确保绝对优先）──
+    explicit_match = _EXPLICIT_RE.search(query)
+    if explicit_match:
+        matched_text = explicit_match.group(0)
+        normalized_match = matched_text.lower().replace(" ", "-").replace("_", "-")
+        candidates = re.findall(r'b2b-[\w-]+', normalized_match)
+        if candidates:
+            skill_name_candidate = next(
+                (name for c in candidates
+                 for name in skill_names()
+                 if name == c),
+                None,
+            )
+            if skill_name_candidate:
+                return [{
+                    "skill_name": skill_name_candidate,
+                    "score": _EXPLICIT_SCORE,
+                    "triggers_matched": [],
+                    "word_boundary_hits": 0,
+                    "substring_hits": 0,
+                }]
+
+    # ── 策略 2：逐触发词评分 ──
+    normed = _norm(query)
+    results = []
+
+    for idx, skill in enumerate(_SKILLS):
+        triggers = skill.get("triggers", [])
+        # 跳过无触发词的 skill（如 chat-memory）
+        if not triggers:
+            continue
+
+        total_score = 0
+        triggers_matched: list[str] = []
+        boundary_hits = 0
+        substring_hits = 0
+
+        for kw in triggers:
+            escaped = re.escape(kw)
+            # 优先尝试词边界匹配（精确度更高）
+            boundary_re = re.compile(r'\b' + escaped + r'\b', re.IGNORECASE)
+            if boundary_re.search(normed):
+                total_score += _BOUNDARY_WEIGHT
+                boundary_hits += 1
+                triggers_matched.append(kw)
+                continue  # 词边界命中后不再尝试子串（避免重复计数）
+            # 宽松子串匹配
+            substring_re = re.compile(escaped, re.IGNORECASE)
+            if substring_re.search(normed):
+                total_score += _SUBSTRING_WEIGHT
+                substring_hits += 1
+                triggers_matched.append(kw)
+
+        if total_score > 0:
+            results.append({
+                "skill_name": skill["name"],
+                "score": total_score,
+                "triggers_matched": triggers_matched,
+                "word_boundary_hits": boundary_hits,
+                "substring_hits": substring_hits,
+                "_order": idx,  # 注册顺序（用于等同分时打破平局）
+            })
+
+    # 按 (-score, 注册顺序) 降序排列，确保确定性
+    results.sort(key=lambda r: (-r["score"], r["_order"]))
+    # 移除内部排序键
+    for r in results:
+        del r["_order"]
+
+    return results
+
+
+def match_skills(query: str) -> list[dict]:
+    """返回所有匹配的 skill 及其评分，按置信度降序排列。
+
+    返回格式：
+        [{"skill_name": str, "score": int, "triggers_matched": [str],
+          "word_boundary_hits": int, "substring_hits": int}, ...]
+    无匹配时返回空列表 []。
+    """
+    return _score_skills(query)
+
+
 def match_skill(query: str) -> dict | None:
-    """返回第一个匹配的 skill 注册表条目，或 None。
+    """返回最高得分的 skill 注册表条目，或 None。
+
+    维持向后兼容性。内部使用 _score_skills() 评分后取第一名。
+    需要全部匹配结果时使用 match_skills()。
 
     匹配策略（按优先级）：
-      1. 显式调用：检测用户显式提及的 skill 名（如 "用 b2b-email-intel"、"load skill b2b-document"）
-      2. 关键词匹配：查询文本中的词/短词命中 skill 的 triggers 列表
+      1. 显式调用："用 b2b-email-intel" → 绝对优先（score=9999）
+      2. 关键词匹配：逐触发词评分，词边界 3 分 + 子串 1 分 → 取最高分
 
     参数：
         query: 用户原始输入（自动标准化）
@@ -183,40 +294,10 @@ def match_skill(query: str) -> dict | None:
         完整的 skill dict（含 name, triggers, augment_prompt 等），
         或 None 表示无匹配。
     """
-    # 空查询直接返回 None，避免无效匹配
-    if not query or not query.strip():
+    results = _score_skills(query)
+    if not results:
         return None
-
-    # ── 策略 1：显式 skill 调用 ──
-    # 检测显式 skill 调用模式（如 "用 b2b-email-intel"、"load skill b2b-document"）
-    explicit_match = _EXPLICIT_RE.search(query)
-    if explicit_match:
-        matched_text = explicit_match.group(0)
-        # 归一化：将空格和下划线转为连字符，以匹配 "用 b2b email intel" 这种写法
-        normalized_match = matched_text.lower().replace(" ", "-").replace("_", "-")
-        # 提取 normalized_match 中所有 "b2b-xxx" 形式的完整 token
-        # 精确匹配，避免 "用 b2b" 截断后误匹配到不完整的 skill 名
-        candidates = re.findall(r'b2b-[\w-]+', normalized_match)
-        # 至少找到一个候选 skill 名，才继续精确匹配
-        if candidates:
-            skill_name_candidate = next(
-                (name for c in candidates
-                 for name in skill_names()
-                 if name == c),  # 精确匹配，而非子串
-                None,
-            )
-            # 精确匹配到注册表中的 skill 名时，直接返回该 skill 配置
-            if skill_name_candidate:
-                return get_skill_by_name(skill_name_candidate)
-
-    # ── 策略 2：关键词/正则匹配 ──
-    normed = _norm(query)
-    for pattern, skill in _COMPILED:
-        # 只要有一条已编译关键词正则命中标准化后的查询文本，即返回该 skill
-        if pattern.search(normed):
-            return skill
-
-    return None
+    return get_skill_by_name(results[0]["skill_name"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -254,7 +335,8 @@ def augment_query(
     if skill_name:
         skill = get_skill_by_name(skill_name)
     else:
-        skill = match_skill(query)
+        results = _score_skills(query)
+        skill = get_skill_by_name(results[0]["skill_name"]) if results else None
 
     # 如果两个路径都未匹配到 skill，原样返回用户 query，不做任何修改
     if skill is None:

@@ -319,10 +319,10 @@ def build_query(
     customer_id 可选地添加客户上下文（客户名称、关联文档库）。
     """
 
-    # 0. Skill auto-detection — 在组装 prompt 之前必须先匹配 skill，这样即使用户
-    #    描述模糊，LLM 也知道该调用哪个工具/函数
-    matched_skill = _skill_router.match_skill(query)
-    matched_name = matched_skill["name"] if matched_skill else None
+    # 0. Skill auto-detection — 评分排序后取最高置信度 skill
+    matched_skills = _skill_router.match_skills(query)
+    matched_name = matched_skills[0]["skill_name"] if matched_skills else None
+    matched_skill = _skill_router.get_skill_by_name(matched_name) if matched_name else None
 
     augmented_query = _skill_router.augment_query(
         query, company_id=company_id

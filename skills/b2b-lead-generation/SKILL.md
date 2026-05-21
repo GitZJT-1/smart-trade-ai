@@ -28,6 +28,12 @@ injection_prompt: |
 
   **铁律**：一封开发信中，60% 讲客户可能遇到的问题和你的解决方案，25% 展示工厂/产品硬实力（实拍、资质、产能），15% 作为收尾和 call-to-action。产品和工厂可以出现，但放在客户视角之后，作为「所以我们能做到」的支撑证据。
 
+  **内容真实性规则**：
+  - **不编造客户数字**：不说 "We've helped 300+ companies..." 除非用户资料中有明确数据。无数据时用 "We work with utility companies across..." 等定性表述
+  - **不编造成本节省**：不说 "reduced costs by 40%" 等精确百分比，改为 "eliminated the need for expensive hydraulic tooling"
+  - **不编造服务承诺**：不说 "48h response guaranteed" 除非用户实际能做到。改为 "we typically respond within 48 hours"
+  - **案例必须来源真实**：提及客户案例时，要么用用户提供的真实案例，要么说 "one of our clients in [region]" 泛化表述
+
   1. 加载 skill: b2b-lead-generation
   2. 根据用户需求执行对应子任务：
      - 找客户：使用 b2b-platform/LinkedIn/海关数据等来源

@@ -59,7 +59,7 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `asyncio_mode=auto` handles async test functions automatically.
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `asyncio_mode=auto` handles async test functions automatically. 127 tests across 5 files (test_database, test_business, test_api, test_osint, test_chat_smoke).
 
 ## Architecture
 
@@ -77,6 +77,10 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
   ├── trade/api/companies.py     /companies/*     Multi-company CRUD
   ├── trade/api/libraries.py     /libraries/*     Document library CRUD + file upload
   ├── trade/api/customers.py     /customers/*     Customer CRUD + library linking
+  ├── trade/api/companies.py     /companies/*     Multi-company CRUD
+  ├── trade/api/libraries.py     /libraries/*     Document library CRUD + file upload
+  ├── trade/api/customers.py     /customers/*     Customer CRUD + library linking
+  ├── trade/api/orders.py        /orders/*        Order CRUD (3-layer context query)
   ├── trade/api/conversations.py /conversations/* Chat log CRUD
   ├── trade/api/chat.py          /chat (sync) + /chat/stream (SSE with tool progress)
   ├── trade/api/memory.py        /memory/*        Hindsight long-term memory + LLM providers
@@ -94,6 +98,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     ├─ trade/company.py       Multi-company CRUD + ~/.trade/ data dir management
         │     ├─ trade/library.py       Document library CRUD
         │     ├─ trade/customer.py      Customer CRUD + library associations
+        │     ├─ trade/order.py         Order CRUD (3-layer context query)
         │     └─ trade/chat_memory.py   Conversation log + Hindsight bridge
         │           └─ trade/memory.py  Hindsight long-term memory client
         │
@@ -108,6 +113,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     ├── scoring.py       Risk score + recommendation
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
+        ├─ trade/license.py     License validation
         ├─ trade/skill_registry.py 14 skill definitions (pure data — triggers, aliases, formats)
         └─ trade/post_install.py Skill installation + CLI commands (update/backup)
 ```
@@ -141,6 +147,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 13. **Data templates**: `.trade-template/` contains structured templates for companies (agent identity, products, competitors, certifications, marketing strategy, sales playbook), clients (profiles, contacts, orders, quotes, requirements), and libraries. These are the canonical source for `trade/onboarding.py` when initializing new company data directories.
 
 14. **OSINT subpackage**: `trade/osint/` is a 6-layer due-diligence pipeline (email registration → WHOIS → email verification → sanctions → tech stack → LinkedIn verification), coordinated by `orchestrator.py`. All functions are pure (no DB, no filesystem). `trade/email_intel.py` is a separate module using `holehe` CLI under subprocess for 120+ platform email registration checks.
+
+15. **Orders API**: `trade/api/orders.py` + `trade/order.py` provide 3-layer context query (company scope, customer scope, order details). Each order links to a customer, which belongs to a company — ensuring correct data isolation.
 
 ## Hermes Coupling Points
 

@@ -48,6 +48,29 @@ injection_prompt: |
 
   如果用户没有明确说明产品或市场，请先询问这两个关键信息。
 
+  ## 邮件主题行优化（提升打开率）
+
+  邮件主题行决定 70%+ 的打开率。每次生成开发信时，同时提供 3-5 个主题行变体，使用不同策略：
+
+  - **Strategy A — 个性化引用**：包含客户公司名或行业关键词，如 "[Company] | [Pain Point Solution]"
+  - **Strategy B — 提问引发好奇**：以问题开头，如 "Quick question about [their specific challenge]"
+  - **Strategy C — 关联触发事件**：绑定最近事件（展会/行业新闻/客户动态），如 "Following up on [trigger event]"
+  - **Strategy D — 价值先行**：直接展示能带来的价值，如 "[Benefit] for [Company]"
+
+  主题行规则：保持 30-50 个字符（移动端预览 ≤7 词）、使用问句（Open rate +15-20%）、避免 SPAM 触发词、不要全部大写或过多感叹号、个性化标记（公司名/人名/行业）必须真实匹配客户信息。
+
+  ## 多语言邮件生成
+
+  当客户目标市场为非英语国家时，生成多语言邮件版本：
+
+  - **中东**（阿联酋/沙特/埃及等）→ English + Arabic 双语，阿拉伯语使用正式敬语（السيد المحترم）
+  - **拉美**（巴西/墨西哥/智利等）→ English + Spanish / Portuguese 双语
+  - **欧洲非英语**（德国/法国/意大利等）→ English + 本地语言双语
+  - **俄罗斯/独联体** → English + Russian 双语
+  - **日韩** → English + Japanese / Korean 双语
+
+  非英语版本规则：使用该语言的正式商业敬语格式（非直译中文/英文模板）、核心信息一致但本地化表达而非逐字翻译、日期格式/货币单位/计量单位本地化、主题行也提供本地化版本。始终以英语版本为主要版本，本地化版本为第二版本。如客户市场信息不明确，默认只生成英语版本。
+
   4. 【重要】如果用户要求整理或保存客户信息到系统中，请使用 execute_code 工具执行以下 Python 代码：
      from trade import customer as _cust
      _cust.bulk_save(
@@ -423,6 +446,107 @@ Best regards,
 4. **Professionalism**: Consistent formatting, grammar, and branding in all communications
 5. **Follow-through**: If you promise something (quote, sample, call), deliver it
 6. **Documentation**: Log all customer interactions in the customer record
+
+## Subject Line Variants (Lavender.ai style)
+
+Generate 3-5 variants for every email. Apply to any email template above.
+
+**Example — For a hydraulic tool OEM reaching out to a distributor:**
+
+- Strategy A — Personalized Reference: `XYZ Hydraulics | Streamlining Tooling Supply`
+- Strategy B — Question/Curiosity: `Quick question about your tooling lead times`
+- Strategy C — Trigger Event: `Re: Hannover Messe — hydraulic solutions for your lineup`
+- Strategy D — Value-First: `30% faster tooling delivery for XYZ Hydraulics`
+
+**Example — For a food packaging buyer in Germany:**
+
+- Strategy A — Personalized Reference: `EuroPack GmbH | Sustainable tray solutions`
+- Strategy B — Question/Curiosity: `Still struggling with moisture in meat packaging?`
+- Strategy C — Value-First: `15% lower leak rate vs industry average`
+- Strategy D — Trigger Event: `Following up on Anuga Food Fair`
+
+## Multi-Language Email Variants
+
+When target market is non-English, generate dual-language versions with localized formatting.
+
+### Arabic + English (Middle East buyers)
+
+```
+Arabic:
+السيد [Name] المحترم،
+
+السلام عليكم ورحمة الله وبركاته،
+
+لاحظت أن [Company Name] تعمل في مجال [industry]، وقد يكون التحدي الأكبر لديكم هو [pain point].
+
+نحن في [Your Company] نساعد شركات قطاع [industry] على [solution]، من خلال:
+→ [Specific benefit 1]
+→ [Specific benefit 2]
+
+نتطلع إلى مناقشة كيف يمكننا دعم أعمالكم.
+
+مع خالص التحية،
+[Your name]
+
+English (same content):
+Subject: Supporting [Company]'s [pain point] with [solution]
+
+Dear [Name],
+
+[Same value proposition in English, not literal translation]
+```
+
+### Spanish + English (Latin American buyers)
+
+```
+Spanish:
+Asunto: Optimización de [pain point] para [Company Name]
+
+Estimado/a [Name],
+
+Noté que [Company Name] enfrenta desafíos con [pain point]. En [Your Company] ayudamos a empresas del sector [industry] a [solution].
+
+→ [Specific benefit 1]
+→ [Specific benefit 2]
+
+¿Le parece bien una llamada de 15 minutos esta semana?
+
+Saludos cordiales,
+[Your name]
+```
+
+### German + English (DACH buyers)
+
+```
+German:
+Betreff: Effizientere [solution] für [Company Name]
+
+Sehr geehrte/r Herr/Frau [Name],
+
+ich habe festgestellt, dass [Company Name] im Bereich [industry] tätig ist. Eine häufige Herausforderung ist [pain point].
+
+Wir unterstützen Unternehmen wie Ihres dabei, [solution] zu erreichen:
+→ [Specific benefit 1]
+→ [Specific benefit 2]
+
+Ich freue mich auf ein kurzes Gespräch.
+
+Mit freundlichen Grüßen,
+[Your name]
+```
+
+### Regional Language Quick Reference
+
+| Region | Language | Subject Tone | Formal Greeting |
+|--------|----------|-------------|-----------------|
+| Middle East | Arabic + English | Formal, relationship-first | السيد المحترم / Dear |
+| Latin America | Spanish + English | Warm, professional | Estimado/a / Dear |
+| Brazil | Portuguese + English | Warm, personal | Prezado/a / Dear |
+| Germany/Austria | German + English | Direct, formal | Sehr geehrte/r |
+| France | French + English | Formal, polite | Madame/Monsieur |
+| Russia/CIS | Russian + English | Formal, direct | Уважаемый/ая |
+| Japan | Japanese + English | Very formal, humble | 拝啓 / Dear |
+| South Korea | Korean + English | Formal, respectful | 안녕하세요 / Dear |
 
 ## Common Pitfalls
 

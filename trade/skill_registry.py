@@ -247,12 +247,26 @@ STOP RULE（防止无效搜索）:
             "找客户", "开发客户", "客户开发", "找潜在客户", "开发信",
             "询盘", "客户跟进", "客户分析", "报价", "谈判", "成交",
             "报价单", "报价模板", "价格谈判", "报价技巧",
+            # 邮件主题 + 多语言
+            "邮件主题", "主题行优化", "邮件标题", "邮件标题优化",
+            "多语言开发信", "多语言邮件", "阿拉伯语开发信", "西班牙语开发信",
+            "开发信优化", "邮件优化", "提升打开率",
+            "阿拉伯", "阿联酋客户", "中东客户",
+            "西班牙", "拉美客户", "墨西哥客户", "巴西客户",
+            "德国客户", "法国客户", "欧洲客户",
+            "俄罗斯客户", "日本客户", "韩国客户",
             # English
             "lead generation", "find customers", "customer development",
             "cold email", "outreach", "prospect", "prospecting",
             "lead gen", "leadgen",
             "follow up", "follow-up", "quotation", "quote", "negotiation",
             "closing", "rfq", "inquiry",
+            # 邮件主题 + 多语言 (English)
+            "subject line", "subject line optimization",
+            "multi-language email", "multilingual email",
+            "arabic email", "spanish email", "german email",
+            "french email", "portuguese email", "russian email",
+            "japanese email", "korean email",
             # English fragments
             "find buyers", "get customers", "look for customers",
             # Fragments
@@ -264,7 +278,9 @@ STOP RULE（防止无效搜索）:
         "input_fmt": "产品/服务描述 + 目标市场/地区（可选）",
         "output_fmt": (
             "客户分类框架（A/B/C级）+ 优先排序列表 + "
-            "个性化开发信模板 + 跟进时间线 + 报价策略建议"
+            "个性化开发信模板（含多主题行变体）+ "
+            "多语言邮件版本（目标市场非英语时）+ "
+            "跟进时间线 + 报价策略建议"
         ),
         "augment_prompt": """你是 b2b-lead-generation 技能。当用户需要开发客户、写开发信、做客户分析、处理询盘、报价、谈判或成交时，请执行以下步骤：
 

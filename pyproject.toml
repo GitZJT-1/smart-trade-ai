@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "foreign-trade-assistant"
-version = "0.4.3"
-description = "Foreign Trade Assistant — AI sales assistant for B2B trade companies. Lead generation, customer due diligence, document analysis, social media, and daily automation."
+name = "smart-trade-ai"
+version = "0.4.4"
+description = "Smart Trade AI — AI sales assistant for B2B trade companies. Lead generation, customer due diligence, document analysis, social media, and daily automation."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Roger Lococo" }]

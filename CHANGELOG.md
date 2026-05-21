@@ -2,6 +2,19 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
+## [0.4.4] — 2026-05-21
+
+### Changed
+- **仓库重命名**：`foreign-trade-assistant` → `smart-trade-ai`
+- **README 重构**：痛点导向首页 + 截图 + 场景化功能分类
+- 项目名称更新为 Smart Trade AI
+
+### Fixed
+- **今日简报 cron 输出不展示**：进入今日简报时，已完成任务的输出自动作为 AI 对话消息显示
+- **系统更新按钮全链路修复**：增加 install_skills + update_skills + 模板同步 + 自动重启（跨平台）
+- **`/system/update` 等端点 401**：移到不受 session token 保护的独立路由组
+- **update_skills 网络超时**：增加 3 次重试 + 递增退避
+
 ## [0.4.3] — 2026-05-20
 
 ### Added

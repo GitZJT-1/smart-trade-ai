@@ -78,10 +78,10 @@ body {
 .sidebar-footer button:hover { background: rgba(255,255,255,0.1); color: #E2E8F0; }
 
 /* ── Main ────────────────────────────────────────────────────────────── */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-main); position: relative; padding-top: 28px; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-main); position: relative; }
 
 /* ── Chat View ───────────────────────────────────────────────────────── */
-.chat-view { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.chat-view { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding-top: 24px; }
 #main-content > div { height: auto; flex: 1; }
 .chat-topbar {
     padding: 6px 20px; background: var(--bg-card); border-bottom: 1px solid var(--border);
@@ -159,7 +159,7 @@ body {
 .empty-state button { padding: 11px 22px; border-radius: var(--radius-sm); background: var(--primary); color: #fff; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
 
 /* ── Panel Views (Customers / Tasks / Directory / History) ──────────── */
-.panel-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.panel-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: 24px; }
 .panel-topbar {
     padding: 14px 20px; background: var(--bg-card); border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 12px;
@@ -808,6 +808,7 @@ function navToView(view, chatCtx, chatName) {
     // 移除 main 中不属于视图缓存的子元素（首次从 empty state 切换时）
     const cachedIds = new Set(Object.keys(viewCache).map(k => 'view-' + k));
     for (const child of Array.from(main.children)) {
+        if (child.id === 'guidance-bar') continue;  // 不删除全局横幅
         if (!cachedIds.has(child.id)) {
             child.remove();
         }

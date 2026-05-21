@@ -66,7 +66,7 @@ cd ~/.hermes/hermes-agent && pip install -e "."
 # 2. 配置 LLM
 hermes setup      # 按提示选择 provider、填入 API Key
 
-# 3. 安装 Foreign Trade Assistant
+# 3. 安装 Smart Trade AI
 git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
 cd ~/.trade/foreign-trade-assistant && pip install -e ".[docs]"
 
@@ -92,8 +92,8 @@ python server.py
 
 ```bash
 pip install pyinstaller
-./scripts/build.sh          # macOS → dist/Foreign Trade Assistant.app
-powershell -File scripts/build.ps1  # Windows → dist/Foreign Trade Assistant.exe
+./scripts/build.sh          # macOS → dist/Smart Trade AI.app
+powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 ```
 
 ---
@@ -192,4 +192,4 @@ ruff check trade/ server.py  # 代码检查
 
 ---
 
-**Foreign Trade Assistant** — 把重复劳动交给 AI，把时间留给客户。
+**Smart Trade AI** — 把重复劳动交给 AI，把时间留给客户。

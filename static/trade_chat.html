@@ -1404,7 +1404,7 @@ function filterCustomers() {
     if (search) filtered = filtered.filter(c => (c.name||'').toLowerCase().includes(search) || (c.contact||'').toLowerCase().includes(search));
     if (tier) {
         filtered = filtered.filter(c => {
-            const t = (c.extra1 ? JSON.parse(c.extra1||'{}') : {})['tier'] || c.tier || '';
+            const t = _parseExtra1(c)['tier'] || c.tier || '';
             if (tier==='none') return !t;
             return t === tier;
         });
@@ -1418,8 +1418,8 @@ async function showCustomerDetail(cid) {
     if (!c) return;
     editingCustomerData = c;
 
-    const extra1 = c.extra1 ? JSON.parse(c.extra1||'{}') : {};
-    const extra2 = c.extra2 ? JSON.parse(c.extra2||'{}') : {};
+    const extra1 = _parseExtra1(c);
+    const extra2 = _parseExtra2(c);
     const tier = extra1['tier'] || '';
     const country = extra1['country'] || '';
     const linkedin = extra1['linkedin_url'] || '';
@@ -1721,8 +1721,8 @@ function showCustomerEditModal(cid) {
     if (cid) {
         const c = allCustomers.find(x => x.id === cid);
         if (!c) return;
-        const extra1 = c.extra1 ? JSON.parse(c.extra1||'{}') : {};
-        const extra2 = c.extra2 ? JSON.parse(c.extra2||'{}') : {};
+        const extra1 = _parseExtra1(c);
+        const extra2 = _parseExtra2(c);
         $('customer-modal-title').textContent = '编辑客户';
         $('cust-edit-id').value = cid;
         $('cust-name').value = c.name||'';

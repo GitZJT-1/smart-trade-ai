@@ -356,10 +356,9 @@ def _restart_trade_service() -> None:
         cmd = [sys.executable, "-m", "trade"]  # 默认用包方式启动
 
     # 继承原始启动参数（如 --port）
-    import argparse
     extra_args = []
     _skip_next = False
-    for i, arg in enumerate(sys.argv[1:], 1):
+    for _i, arg in enumerate(sys.argv[1:], 1):
         if _skip_next:
             _skip_next = False
             continue
@@ -426,7 +425,7 @@ def _restart_trade_service() -> None:
         print("     或手动运行: trade")
     else:
         print(f"     systemctl --user restart {label}")
-        print(f"     或手动运行: trade")
+        print("     或手动运行: trade")
 
 
 def _sync_trade_template(template_src: Path, trade_home: Path) -> None:

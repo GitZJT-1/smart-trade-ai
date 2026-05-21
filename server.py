@@ -244,6 +244,7 @@ app.include_router(license_router, prefix="/api/trade")
 # 系统更新/备份/重启端点不能要求 session token，
 # 因为平台更新时会用到，前端调用时 token 可能在异步流程中丢失。
 from fastapi import APIRouter as _SysRouter
+
 from trade.api.cron import _capture_output
 
 _system_router = _SysRouter(tags=["system"])
@@ -270,9 +271,9 @@ def api_restart_trade():
     通过 PID 文件终止旧进程后自动拉起新进程（独立会话）。
     """
     import os as _os
-    from pathlib import Path as _P
+    from pathlib import Path as _Path
 
-    trade_home = _P.home() / ".trade" / "data"
+    trade_home = _Path.home() / ".trade" / "data"
     pid_file = trade_home / "trade.pid"
     if pid_file.is_file():
         try:

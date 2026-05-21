@@ -57,7 +57,7 @@ def get_today_cron():
         if output:
             completed.append({
                 "name": task["name"], "time": task["time"],
-                "output": output[:300], "has_output": True,
+                "output": output, "has_output": True,
             })
         elif is_past:
             pending.append({

@@ -907,9 +907,10 @@ async function loadCronStatus() {
     const container = ct.querySelector('#chat-messages');
     if (!container) return;
 
-    // 移除旧的 cron 面板（如果有）
+    // 移除旧的 cron 面板和 cron 输出消息（如果有）
     const oldPanel = container.querySelector('.cron-panel');
     if (oldPanel) oldPanel.remove();
+    container.querySelectorAll('.msg-cron-output').forEach(el => el.remove());
 
     const {completed, pending, current_time} = data;
     const allDone = pending.length === 0;
@@ -950,6 +951,30 @@ async function loadCronStatus() {
         emptyEl.insertAdjacentHTML('afterend', html);
     } else {
         container.insertAdjacentHTML('afterbegin', html);
+    }
+
+    // 将已完成任务的输出作为 AI 对话消息展示
+    if (completed.length) {
+        for (const t of completed) {
+            if (t.output) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message assistant msg-cron-output';
+                msgDiv.innerHTML = `
+                    <div class="bubble">
+                        <div class="bubble-meta">
+                            <span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span>
+                        </div>
+                        <div class="cron-output-content">${marked.parse(t.output)}</div>
+                    </div>`;
+                const lastCronEl = container.querySelector('.cron-panel');
+                if (lastCronEl) {
+                    lastCronEl.insertAdjacentElement('afterend', msgDiv);
+                } else {
+                    container.appendChild(msgDiv);
+                }
+            }
+        }
+        container.scrollTop = container.scrollHeight;
     }
 }
 

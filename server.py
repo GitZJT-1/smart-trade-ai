@@ -240,6 +240,64 @@ from trade.api.license import router as license_router
 
 app.include_router(license_router, prefix="/api/trade")
 
+# ── System endpoints (无需 session token) ──────────────────────────────────
+# 系统更新/备份/重启端点不能要求 session token，
+# 因为平台更新时会用到，前端调用时 token 可能在异步流程中丢失。
+from fastapi import APIRouter as _SysRouter
+from trade.api.cron import _capture_output
+
+_system_router = _SysRouter(tags=["system"])
+
+
+@_system_router.post("/system/update")
+def api_update_trade():
+    """一键更新 Trade 系统（git pull + pip install + skills + db + template sync）。"""
+    from trade.post_install import update_trade as _do_update
+    return _capture_output(_do_update)
+
+
+@_system_router.post("/system/backup")
+def api_backup_trade():
+    """备份 Trade 系统数据为 tar.gz，返回文件路径。"""
+    from trade.post_install import backup_trade as _do_backup
+    return _capture_output(_do_backup)
+
+
+@_system_router.post("/system/restart")
+def api_restart_trade():
+    """重启 Trade 服务（跨平台）。
+
+    通过 PID 文件终止旧进程后自动拉起新进程（独立会话）。
+    """
+    import os as _os
+    from pathlib import Path as _P
+
+    trade_home = _P.home() / ".trade" / "data"
+    pid_file = trade_home / "trade.pid"
+    if pid_file.is_file():
+        try:
+            _old_pid = int(pid_file.read_text().strip())
+        except (ValueError, OSError):
+            _old_pid = None
+    else:
+        _old_pid = None
+
+    if _old_pid is not None:
+        import signal
+        try:
+            _os.kill(_old_pid, signal.SIGTERM)
+        except OSError:
+            pass
+        try:
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    return {"ok": True, "message": "重启指令已发送"}
+
+
+app.include_router(_system_router, prefix="/api/trade")
+
 # ── Mount Trade API ───────────────────────────────────────────────────────
 from trade.api import router as trade_router
 

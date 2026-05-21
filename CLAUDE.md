@@ -217,6 +217,20 @@ Sync happens at three points:
       └── ...
 ```
 
+## Frontend Architecture (static/trade_chat.html)
+
+The SPA uses vanilla JS with a custom view-caching router:
+- **`navToView(view, chatCtx, chatName)`** — switches between chat/customers/tasks/history views. Creates DOM once, caches in `viewCache` object, hides/shows on switch. Non-cached children (except `#guidance-bar`) are removed on each switch.
+- **`api(method, path, body)`** — central fetch wrapper. Adds `X-Hermes-Session-Token` + `X-Company-ID` headers. 120s AbortController timeout. Handles 401/402/404/409 with toast. Returns parsed JSON or null.
+- **`$ (id)`** — shorthand for `document.getElementById(id)`.
+- **Guidance bar** — `#guidance-bar` is an absolute-positioned banner inserted into `#main-content`. It's preserved across view switches (skipped in cleanup loop). Rendered by `_renderGuidanceBar()` with cron task schedule matching.
+- **Modals** — a mix of static hidden divs (company-modal, customer-modal, library-modal) toggled via `showModal(id)`/`hideModal(id)`, and dynamically-created backdrops (order-modal, customer-detail-panel, custom-template-modal) that must clean up old instances before creating new ones to avoid duplicate IDs.
+- **Chat** — SSE streaming via `EventSource`-like fetch reader. Tool progress events (`tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done`) rendered inline. Markdown via marked.js + DOMPurify.
+
+## Chat Memory
+
+Every chat message (query + response) is persisted to SQLite `conversations` table with `created_at` auto-populated via `datetime('now', 'localtime')` default. Both `/chat` and `/chat/stream` call `chat_memory.save_with_context()` after agent response, which also optionally syncs to Hindsight long-term memory and Hermes native memory.
+
 ## Code Annotation Standards
 
 Every function must have a Chinese docstring. Every if-branch must have a comment explaining the business logic. Complex list/dict comprehensions should be split with inline comments. Sections separated by banner comments (`# ====`).

@@ -348,6 +348,13 @@ def main() -> None:
     if not _check_hermes_version():
         sys.exit(1)
 
+    # 写入 PID 文件，供 _restart_trade_service() 重启时使用
+    from pathlib import Path as _Path
+    _pid_dir = _Path.home() / ".trade" / "data"
+    _pid_dir.mkdir(parents=True, exist_ok=True)
+    _pid_file = _pid_dir / "trade.pid"
+    _pid_file.write_text(str(os.getpid()))
+
     _install_cors(args.port)
 
     if not args.no_gateway:

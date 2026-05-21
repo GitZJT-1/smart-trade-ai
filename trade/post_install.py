@@ -265,81 +265,196 @@ def update_skills() -> None:
 
 
 def _restart_trade_service() -> None:
-    """尝试重启 Trade 后台服务。
+    """重启 Trade 服务进程，支持所有平台。
 
-    macOS launchd 用户：reload plist
-    systemd 用户：restart trade 服务
-    如果都不是（手动运行），打印提示。
+    策略（按优先级）：
+      1. 通过 PID 文件查找运行中的 Trade 进程，发送 SIGTERM / 终止信号
+      2. 重新启动 Trade（使用相同的 Python 解释器和命令）
+      3. fallback：launchd (macOS) / systemd (Linux)
 
-    重启失败不阻塞更新流程——只是提示。
+    如果以上都不可行（例如前台终端运行），打印明确的用户操作指引。
     """
     import platform
-    import shutil
+    import signal
     import subprocess as _sp
+    import time
 
     sys_name = platform.system()
-    label = "com.trade.assistant"
 
-    # 确保系统命令在 PATH 中（macOS Python 子进程 PATH 可能不含 /usr/bin）
-    _env = os.environ.copy()
-    _path = _env.get("PATH", "")
-    _extra_paths = []
-    if sys_name == "Darwin":
-        for _p in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
-            if _p not in _path:
-                _extra_paths.append(_p)
-    elif sys_name == "Linux":
-        for _p in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
-            if _p not in _path:
-                _extra_paths.append(_p)
-    elif sys_name == "Windows":
-        _extra_paths.append(r"C:\Windows\System32")
-    if _extra_paths:
-        _env["PATH"] = _path + os.pathsep + os.pathsep.join(_extra_paths)
+    # ── 策略 1：通过 PID 文件终止旧进程 ──
+    # Trade 进程在启动时将 PID 写入 ~/.trade/data/trade.pid
+    trade_home = _get_trade_home()
+    pid_file = trade_home / "data" / "trade.pid"
+    old_pid = None
+    if pid_file.is_file():
+        try:
+            _pid_text = pid_file.read_text().strip()
+            if _pid_text:
+                old_pid = int(_pid_text)
+        except (ValueError, OSError):
+            pass
+
+    if old_pid is not None:
+        try:
+            if sys_name == "Windows":
+                # Windows: 用 taskkill 终止进程树
+                _sp.run(
+                    ["taskkill", "/PID", str(old_pid), "/T", "/F"],
+                    capture_output=True, timeout=10,
+                )
+            else:
+                # Unix: 先尝试优雅终止，等 2 秒后强制 kill
+                _os_module = __import__("os")
+                _os_module.kill(old_pid, signal.SIGTERM)
+                _waited = 0
+                for _ in range(20):  # 最多等 2 秒
+                    time.sleep(0.1)
+                    _waited += 0.1
+                    try:
+                        _os_module.kill(old_pid, 0)  # 检查进程是否存在
+                    except OSError:
+                        # 进程已退出
+                        break
+                else:
+                    # 进程仍在运行，强制 kill
+                    try:
+                        _os_module.kill(old_pid, signal.SIGKILL)
+                    except OSError:
+                        pass
+        except Exception:
+            pass  # 进程可能已经不存在
+        finally:
+            # 无论成功与否，删除旧 PID 文件
+            try:
+                pid_file.unlink()
+            except OSError:
+                pass
+
+    # ── 策略 2：重新启动 Trade ──
+    # 新进程独立于当前进程（start_new_session / CREATE_NEW_PROCESS_GROUP）
+    cmd = [sys.executable, "-m", "trade"] if "trade" in sys.argv[0] or sys.argv[0].endswith("trade") else [sys.executable, sys.argv[0]]
+    # 更可靠的启动方式：使用和当前进程相同的 Python，运行 trade package
+    # 通过 sys.argv 推断启动方式
+    if len(sys.argv) > 0 and "server.py" in sys.argv[0]:
+        # 可能是 python server.py 方式启动
+        server_py = Path(sys.argv[0]).resolve()
+        if server_py.is_file():
+            cmd = [sys.executable, str(server_py)]
+        else:
+            cmd = [sys.executable, "-m", "trade"]  # fallback
+    else:
+        cmd = [sys.executable, "-m", "trade"]  # 默认用包方式启动
+
+    # 继承原始启动参数（如 --port）
+    import argparse
+    extra_args = []
+    _skip_next = False
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if _skip_next:
+            _skip_next = False
+            continue
+        if arg in ("update", "backup", "skills-update", "update-trade"):
+            continue  # 子命令不传递
+        if arg.startswith("--port") or arg.startswith("--host") or arg == "--no-browser" or arg == "--no-gateway":
+            extra_args.append(arg)
+            continue
+    cmd.extend(extra_args)
+
+    try:
+        kwargs = {
+            "stdout": _sp.DEVNULL,
+            "stderr": _sp.DEVNULL,
+        }
+        if sys_name == "Windows":
+            kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs["start_new_session"] = True
+        _sp.Popen(cmd, **kwargs)
+        print("  ↻ Trade 服务已重新启动")
+        return
+    except Exception as e:
+        print(f"  ⚠ 自动重启失败: {e}")
+
+    # ── 策略 3：fallback — launchd (macOS) / systemd (Linux) ──
+    label = "com.trade.assistant"
 
     if sys_name == "Darwin":
         plist = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
         if plist.exists():
-            # macOS launchctl 可能在 /bin 而非 /usr/bin；用完整路径确保找到
             _launchctl = shutil.which("launchctl") or "/bin/launchctl"
             try:
                 _sp.run(
                     [_launchctl, "unload", str(plist)],
-                    capture_output=True, timeout=5, env=_env,
+                    capture_output=True, timeout=10,
                 )
                 _sp.run(
                     [_launchctl, "load", str(plist)],
-                    capture_output=True, timeout=5, env=_env,
+                    capture_output=True, timeout=10,
                 )
-                print("  ↻ Trade 后台服务已自动重启")
+                print("  ↻ Trade 后台服务已重新加载（launchd）")
+                return
             except Exception:
-                print("  ⚠ 自动重启失败，请手动执行: launchctl unload ~/Library/LaunchAgents/com.trade.assistant.plist && launchctl load ~/Library/LaunchAgents/com.trade.assistant.plist")
-            return
+                pass
 
     if sys_name == "Linux":
-        # systemctl --user 优先，失败则 sudo systemctl
         for _cmd in (
             ["systemctl", "--user", "restart", label],
             ["sudo", "systemctl", "restart", label],
         ):
-            r = _sp.run(_cmd, capture_output=True, timeout=5, env=_env)
+            r = _sp.run(_cmd, capture_output=True, timeout=10)
             if r.returncode == 0:
-                print("  ↻ Trade 后台服务已自动重启")
+                print("  ↻ Trade 后台服务已重新启动（systemd）")
                 return
 
+    # ── 无法自动重启时打印明确指引 ──
+    print("  💡 Trade 代码已更新。请重启 Trade 以应用更改：")
     if sys_name == "Windows":
-        # Windows 无标准服务管理器，提示用户
-        print("  💡 Windows 请手动重启 Trade：关闭当前窗口后重新运行 trade 命令")
-        return
-
-    # 无法自动重启
-    print("  💡 请在终端中重启 Trade 服务以应用更新：")
-    if sys_name == "Darwin":
+        print("     关闭当前 Trade 窗口后重新运行 trade 命令")
+    elif sys_name == "Darwin":
         print(f"     launchctl unload ~/Library/LaunchAgents/{label}.plist")
         print(f"     launchctl load ~/Library/LaunchAgents/{label}.plist")
-    elif sys_name == "Linux":
+        print("     或手动运行: trade")
+    else:
         print(f"     systemctl --user restart {label}")
-        print(f"     或 sudo systemctl restart {label}")
+        print(f"     或手动运行: trade")
+
+
+def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
+    """将 .trade-template/ 中新增的模板文件同步到 Trade 运行时目录。
+
+    仅复制不存在的文件，不覆盖用户已有数据。
+    处理 prompts/system.md 植入逻辑（与 install_skills 中的行为一致）。
+    """
+    if not template_src.is_dir():
+        return
+
+    _dest = trade_home / ".trade-template"
+    if not _dest.exists():
+        # 整个模板目录不存在，全量复制
+        shutil.copytree(template_src, _dest, dirs_exist_ok=False)
+        for f in _dest.rglob("*"):
+            if f.is_file():
+                f.chmod(0o644)
+    else:
+        # 模板目录已存在，仅复制新增的文件
+        for item in template_src.rglob("*"):
+            rel = item.relative_to(template_src)
+            target = _dest / rel
+            if item.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+            elif item.is_file() and not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, target)
+                target.chmod(0o644)
+
+    # 从模板植入 ~/.trade/prompts/system.md（仅当尚未存在时）
+    prompts_src = template_src / "prompts" / "system.md"
+    prompts_dir = trade_home / "prompts"
+    prompts_dst = prompts_dir / "system.md"
+    if prompts_src.is_file() and not prompts_dst.is_file():
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(prompts_src, prompts_dst)
+        prompts_dst.chmod(0o644)
 
 
 def update_trade() -> None:
@@ -347,9 +462,12 @@ def update_trade() -> None:
 
     执行步骤：
       1. git pull（拉取最新代码）
-      2. pip install -e . --no-deps（更新包注册）
-      3. update_skills()（同步最新 B2B skills）
-      4. 数据库迁移检查
+      2. install_skills()（安装新增的 b2b-* skill 目录 + 模板）
+      3. update_skills()（从 GitHub 同步 SKILL.md 内容）
+      4. pip install（更新包及依赖）
+      5. _sync_trade_template()（同步 .trade-template/ 新增模板文件）
+      6. 数据库迁移检查
+      7. 自动重启 Trade 服务
 
     用法：trade-update（或 trade update）
     """
@@ -357,7 +475,6 @@ def update_trade() -> None:
 
     trade_dir = _get_trade_home() / "foreign-trade-assistant"
     if not trade_dir.is_dir():
-        # 找不到 Trade 安装目录时报告错误并退出
         print("[update_trade] ERROR: Trade install directory not found.", file=sys.stderr)
         print(f"  Expected: {trade_dir}", file=sys.stderr)
         sys.exit(1)
@@ -365,59 +482,102 @@ def update_trade() -> None:
     ok = True
 
     # 1. git pull — 拉取最新代码
-    print("→ Step 1/4: git pull ...")
+    print("→ Step 1/6: git pull ...")
     result = subprocess.run(
         ["git", "pull", "--ff-only", "origin", "main"],
         cwd=str(trade_dir), capture_output=True, text=True,
     )
     if result.returncode != 0:
-        # git pull 失败（如网络问题或本地修改冲突），继续后续步骤
         err_text = result.stderr.strip()
         print(f"  ⚠ git pull failed: {err_text}")
         if "not something we can merge" in err_text or "uncommitted" in err_text:
-            print("  💡 原因：本地代码有修改，无法自动合并。如需强制更新：")
-            print("     cd ~/.trade/foreign-trade-assistant && git stash && git pull --ff-only origin main")
-        print("  (继续后续步骤...数据不受影响)")
-        ok = False
+            print("  💡 本地代码有修改。尝试自动 stash 后重试...")
+            # 自动 stash + pull + pop，降低用户操作门槛
+            _stash = subprocess.run(
+                ["git", "stash"],
+                cwd=str(trade_dir), capture_output=True, text=True,
+            )
+            if _stash.returncode == 0:
+                _pull2 = subprocess.run(
+                    ["git", "pull", "--ff-only", "origin", "main"],
+                    cwd=str(trade_dir), capture_output=True, text=True,
+                )
+                if _pull2.returncode == 0:
+                    print(f"  ✓ git pull (after stash) — {_pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else 'OK'}")
+                    # 尝试恢复用户本地修改
+                    _pop = subprocess.run(
+                        ["git", "stash", "pop"],
+                        cwd=str(trade_dir), capture_output=True, text=True,
+                    )
+                    if _pop.returncode == 0:
+                        print("  ✓ 本地修改已恢复")
+                    else:
+                        print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
+                        print("    恢复: cd ~/.trade/foreign-trade-assistant && git stash pop")
+                else:
+                    print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
+                    ok = False
+            else:
+                print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
+                ok = False
+        else:
+            print("  (继续后续步骤...数据不受影响)")
+            ok = False
     else:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
 
-    # 2. pip install — 更新包及其依赖
-    print("→ Step 2/4: pip install ...")
+    # 2. install_skills — 安装新增 b2b-* skill 目录到 ~/.hermes/skills/
+    print("→ Step 2/6: install skills (新增 skill 目录) ...")
+    try:
+        install_skills()
+    except SystemExit:
+        ok = False
+
+    # 3. update_skills — 从 GitHub 同步每个 skill 的 SKILL.md 内容
+    print("→ Step 3/6: update skills (同步 SKILL.md) ...")
+    try:
+        update_skills()
+    except SystemExit:
+        ok = False
+
+    # 4. pip install — 更新包及依赖（包含依赖以确保新版本需求被满足）
+    print("→ Step 4/6: pip install ...")
     pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir)]
     result = subprocess.run(pip_args, capture_output=True, text=True)
     if result.returncode != 0:
-        # pip 安装失败时标记错误但不退出
         print(f"  ⚠ pip install failed: {result.stderr.strip()}")
         ok = False
     else:
         print("  ✓ Package updated")
 
-    # 3. skills — 同步最新 B2B skills
-    print("→ Step 3/4: skills update ...")
+    # 5. 同步 .trade-template/ 新增模板文件
+    print("→ Step 5/6: template sync ...")
     try:
-        update_skills()
-    except SystemExit:
-        # update_skills 内部可能调用 sys.exit(1)，捕获以继续执行
-        ok = False
+        # git pull 后的项目根目录下的 .trade-template/
+        template_src = trade_dir / ".trade-template"
+        trade_home = _get_trade_home()
+        trade_home.mkdir(parents=True, exist_ok=True)
+        _sync_trade_template(template_src, trade_home)
+        print("  ✓ Templates synced")
+    except Exception as e:
+        print(f"  ⚠ Template sync failed: {e}")
+        # 模板同步失败不影响其他步骤
+        pass
 
-    # 4. db migration (幂等操作)
-    print("→ Step 4/4: database check ...")
+    # 6. db migration (幂等操作)
+    print("→ Step 6/6: database check ...")
     try:
         from trade.database import init_db
         db_path = init_db()
         print(f"  ✓ Database OK ({db_path})")
     except Exception as e:
-        # 数据库检查失败不影响后续步骤
         print(f"  ⚠ Database check failed: {e}")
         ok = False
 
     if ok:
-        # 所有步骤成功完成
         print("\n✅ Trade update complete.")
         _restart_trade_service()
     else:
-        # 部分步骤失败，提示用户检查输出
         print("\n⚠️  Trade update completed with warnings. Check the output above.")
 
 

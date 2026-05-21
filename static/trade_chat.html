@@ -697,7 +697,7 @@ async function doTradeUpdate() {
     try {
         const resp = await api('POST', '/api/trade/system/update');
         if (resp && resp.ok) {
-            toast('✅ 系统更新完成！重启后生效');
+            toast('✅ 系统更新完成！正在重启...');
             console.log(resp.output);
         } else {
             toast('❌ 更新失败: ' + (resp?.error || '未知错误'));

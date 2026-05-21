@@ -378,7 +378,7 @@ body {
         <div class="logo">📦 Trade<span>AI</span></div>
         <div class="company-select">
             <div class="csel-row">
-                <select id="company-select" onchange="onCompanyChange(this.value)">
+                <select id="company-select" aria-label="选择公司" onchange="onCompanyChange(this.value)">
                     <option value="">— 选择公司 —</option>
                 </select>
                 <button onclick="showAddCompanyModal()" title="添加公司">+</button>
@@ -473,14 +473,14 @@ body {
             <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
             <h4 style="font-size:13px;font-weight:600;margin-bottom:10px;">添加新公司</h4>
             <div class="form-row">
-                <div class="form-group"><label>公司名称 *</label><input type="text" id="co-name" placeholder="例如：我的外贸公司"></div>
-                <div class="form-group"><label>Slug</label><input type="text" id="co-slug" placeholder="自动生成"></div>
+                <div class="form-group"><label for="co-name">公司名称 *</label><input type="text" id="co-name" placeholder="例如：我的外贸公司"></div>
+                <div class="form-group"><label for="co-slug">Slug</label><input type="text" id="co-slug" placeholder="自动生成"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>联系人</label><input type="text" id="co-contact-name" placeholder="姓名"></div>
-                <div class="form-group"><label>邮箱</label><input type="email" id="co-contact-email" placeholder="email@example.com"></div>
+                <div class="form-group"><label for="co-contact-name">联系人</label><input type="text" id="co-contact-name" placeholder="姓名"></div>
+                <div class="form-group"><label for="co-contact-email">邮箱</label><input type="email" id="co-contact-email" placeholder="email@example.com"></div>
             </div>
-            <div class="form-group"><label>网站</label><input type="text" id="co-website" placeholder="https://..."></div>
+            <div class="form-group"><label for="co-website">网站</label><input type="text" id="co-website" placeholder="https://..."></div>
             <div class="form-actions">
                 <button class="btn" onclick="hideModal('company-modal')">关闭</button>
                 <button class="btn btn-primary" onclick="createCompany()">创建公司</button>
@@ -488,7 +488,7 @@ body {
         </div>
         <div id="tab-identity" class="hidden">
             <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">配置当前选中公司的 AI Agent 身份。系统会在对话时注入此内容。</p>
-            <div class="form-group"><label>Agent 身份 (Markdown)</label>
+            <div class="form-group"><label for="identity-editor">Agent 身份 (Markdown)</label>
             <textarea id="identity-editor" placeholder="粘贴 agent-identity.md 内容..."></textarea></div>
             <div class="form-actions">
                 <button class="btn" onclick="hideModal('company-modal')">关闭</button>
@@ -503,28 +503,28 @@ body {
     <div class="modal">
         <h3 id="customer-modal-title">添加客户</h3>
         <input type="hidden" id="cust-edit-id">
-        <div class="form-group"><label>公司名称 *</label><input type="text" id="cust-name" placeholder="客户公司名称"></div>
+        <div class="form-group"><label for="cust-name">公司名称 *</label><input type="text" id="cust-name" placeholder="客户公司名称"></div>
         <div class="form-row">
-            <div class="form-group"><label>联系人</label><input type="text" id="cust-contact" placeholder="联系人姓名"></div>
-            <div class="form-group"><label>职位</label><input type="text" id="cust-title" placeholder="CEO / Purchasing Manager"></div>
-            <div class="form-group"><label>国家</label><input type="text" id="cust-country" placeholder="如 Italy"></div>
+            <div class="form-group"><label for="cust-contact">联系人</label><input type="text" id="cust-contact" placeholder="联系人姓名"></div>
+            <div class="form-group"><label for="cust-title">职位</label><input type="text" id="cust-title" placeholder="CEO / Purchasing Manager"></div>
+            <div class="form-group"><label for="cust-country">国家</label><input type="text" id="cust-country" placeholder="如 Italy"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>邮箱</label><input type="text" id="cust-email" placeholder="contact@company.com"></div>
-            <div class="form-group"><label>电话</label><input type="text" id="cust-phone" placeholder="+1 555-0123"></div>
+            <div class="form-group"><label for="cust-email">邮箱</label><input type="text" id="cust-email" placeholder="contact@company.com"></div>
+            <div class="form-group"><label for="cust-phone">电话</label><input type="text" id="cust-phone" placeholder="+1 555-0123"></div>
         </div>
         <div class="form-row">
-            <div class="form-group" style="flex:1;"><label>WhatsApp</label><input type="text" id="cust-whatsapp" placeholder="+1 555-0123"></div>
+            <div class="form-group" style="flex:1;"><label for="cust-whatsapp">WhatsApp</label><input type="text" id="cust-whatsapp" placeholder="+1 555-0123"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>LinkedIn URL</label><input type="text" id="cust-linkedin" placeholder="https://linkedin.com/..."></div>
-            <div class="form-group"><label>公司网站</label><input type="text" id="cust-website" placeholder="https://company.com"></div>
+            <div class="form-group"><label for="cust-linkedin">LinkedIn URL</label><input type="text" id="cust-linkedin" placeholder="https://linkedin.com/..."></div>
+            <div class="form-group"><label for="cust-website">公司网站</label><input type="text" id="cust-website" placeholder="https://company.com"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>客户等级</label><select id="cust-tier"><option value="">未分级</option><option value="A">A 级</option><option value="B">B 级</option><option value="C">C 级</option></select></div>
-            <div class="form-group"><label>备用邮箱</label><input type="text" id="cust-backup-email" placeholder="backup@company.com"></div>
+            <div class="form-group"><label for="cust-tier">客户等级</label><select id="cust-tier"><option value="">未分级</option><option value="A">A 级</option><option value="B">B 级</option><option value="C">C 级</option></select></div>
+            <div class="form-group"><label for="cust-backup-email">备用邮箱</label><input type="text" id="cust-backup-email" placeholder="backup@company.com"></div>
         </div>
-        <div class="form-group"><label>备注 / 跟进项目</label><textarea id="cust-note" placeholder="该联系人负责的项目、需求、注意事项等" style="min-height:80px;"></textarea></div>
+        <div class="form-group"><label for="cust-note">备注 / 跟进项目</label><textarea id="cust-note" placeholder="该联系人负责的项目、需求、注意事项等" style="min-height:80px;"></textarea></div>
         <div class="form-actions">
             <button class="btn" onclick="hideModal('customer-modal')">取消</button>
             <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
@@ -537,9 +537,9 @@ body {
     <div class="modal">
         <h3>📁 添加文档库</h3>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">将本地文件夹关联为文档库，Agent 可通过 read_file 读取其中的文件。</p>
-        <div class="form-group"><label>库名称 *</label><input type="text" id="lib-name" placeholder="例如：产品报价库"></div>
-        <div class="form-group"><label>文件夹路径 *</label><input type="text" id="lib-path" placeholder="/Users/xxx/Documents/客户资料"><p class="hint">📌 Mac: 文件夹上右键 → Option键 → 复制路径名</p></div>
-        <div class="form-group"><label>描述</label><input type="text" id="lib-desc" placeholder="可选"></div>
+        <div class="form-group"><label for="lib-name">库名称 *</label><input type="text" id="lib-name" placeholder="例如：产品报价库"></div>
+        <div class="form-group"><label for="lib-path">文件夹路径 *</label><input type="text" id="lib-path" placeholder="/Users/xxx/Documents/客户资料"><p class="hint">📌 Mac: 文件夹上右键 → Option键 → 复制路径名</p></div>
+        <div class="form-group"><label for="lib-desc">描述</label><input type="text" id="lib-desc" placeholder="可选"></div>
         <div class="form-actions">
             <button class="btn" onclick="hideModal('library-modal')">取消</button>
             <button class="btn btn-primary" onclick="createLibrary()">添加</button>
@@ -651,7 +651,7 @@ function showActivateModal() {
     div.innerHTML = `<div class="modal" style="text-align:center;">
         <h3>🔑 激活 Trade Assistant</h3>
         <p style="margin:8px 0;color:var(--text-secondary);">请输入您获取的激活码</p>
-        <input type="text" id="activate-code-input" placeholder="TRADE-XXXX-XXXX-XXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:monospace;font-size:16px;text-align:center;text-transform:uppercase;margin:12px 0;">
+        <input type="text" id="activate-code-input" aria-label="激活码" placeholder="TRADE-XXXX-XXXX-XXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:monospace;font-size:16px;text-align:center;text-transform:uppercase;margin:12px 0;">
         <button class="btn btn-primary" onclick="doActivate()" style="margin-top:8px;">✅ 激活</button>
         <button class="btn" onclick="this.closest('.modal-backdrop').remove()">取消</button>
         <p id="activate-msg" style="margin-top:10px;font-size:12px;"></p>
@@ -876,7 +876,7 @@ function renderChatViewInto(container, ctx, name) {
             </div>
             <div class="chat-topbar-actions">
                 ${ctx === 'docs' ? `
-                <select id="chat-library-select" onchange="onChatLibraryChange(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
+                <select id="chat-library-select" aria-label="选择文档库" onchange="onChatLibraryChange(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
                     <option value="">— 选择文档库 —</option>
                 </select>
                 <button onclick="showAddLibraryModal()" title="添加文档库" style="height:30px;width:30px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);cursor:pointer;font-size:16px;">+</button>` : ''}
@@ -892,7 +892,7 @@ function renderChatViewInto(container, ctx, name) {
         </div>
         <div class="chat-input-area" style="position:sticky;bottom:0;left:0;right:0;background:var(--bg-main);padding:12px 20px 16px;">
             <div class="chat-input-inner">
-                <textarea id="msg-input" placeholder="${placeholders[ctx] || ''}" rows="1"
+                <textarea id="msg-input" aria-label="输入消息" placeholder="${placeholders[ctx] || ''}" rows="1"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
                 <button onclick="sendMsg()" id="send-btn">发送</button>
             </div>
@@ -1285,11 +1285,11 @@ async function renderCustomersViewInto(container) {
             <h2>👥 客户管理${coName ? `<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 ${esc(coName)}</span>` : ''}</h2>
             <div class="panel-topbar-actions">
                 <button class="btn btn-danger" id="batch-delete-btn" style="display:none;" onclick="batchDeleteCustomers()">🗑 批量删除</button>
-                <input class="panel-search" id="cust-search" placeholder="搜索客户..." oninput="filterCustomers()">
-                <select id="cust-tier-filter" onchange="filterCustomers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
+                <input class="panel-search" id="cust-search" aria-label="搜索客户" placeholder="搜索客户..." oninput="filterCustomers()">
+                <select id="cust-tier-filter" aria-label="筛选客户等级" onchange="filterCustomers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
                     <option value="">全部等级</option><option value="A">A 级</option><option value="B">B 级</option><option value="C">C 级</option><option value="none">未分级</option>
                 </select>
-                <select id="cust-sort" onchange="renderCustomersTable(allCustomers)" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
+                <select id="cust-sort" aria-label="客户排序方式" onchange="renderCustomersTable(allCustomers)" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
                     <option value="name">按名称排序</option><option value="updated_at">按最近跟进</option>
                 </select>
                 <button class="btn btn-primary" onclick="showCustomerEditModal()">+ 添加客户</button>
@@ -1418,6 +1418,7 @@ function filterCustomers() {
 
 // ── Customer Detail Slide Panel ────────────────────────────────
 async function showCustomerDetail(cid) {
+    closeCustomerDetail();  // 先关闭旧面板，防止重复 id
     const c = allCustomers.find(x => x.id === cid);
     if (!c) return;
     editingCustomerData = c;
@@ -1468,34 +1469,34 @@ async function showCustomerDetail(cid) {
         <div class="panel-section">
             <div class="panel-section-title">基本信息</div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>客户名称</label><input type="text" value="${esc(c.name)}" id="detail-name"></div>
-                <div class="panel-field"><label>联系人职位</label><input type="text" value="${esc(title)}" id="detail-title"></div>
+                <div class="panel-field"><label for="detail-name">客户名称</label><input type="text" value="${esc(c.name)}" id="detail-name"></div>
+                <div class="panel-field"><label for="detail-title">联系人职位</label><input type="text" value="${esc(title)}" id="detail-title"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>等级</label><select id="detail-tier">
+                <div class="panel-field"><label for="detail-tier">等级</label><select id="detail-tier">
                     <option value="" ${!tier?'selected':''}>未分级</option>
                     <option value="A" ${tier==='A'?'selected':''}>A 级</option>
                     <option value="B" ${tier==='B'?'selected':''}>B 级</option>
                     <option value="C" ${tier==='C'?'selected':''}>C 级</option>
                 </select></div>
-                <div class="panel-field"><label>国家</label><input type="text" value="${esc(country)}" id="detail-country"></div>
+                <div class="panel-field"><label for="detail-country">国家</label><input type="text" value="${esc(country)}" id="detail-country"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>邮箱</label><input type="text" value="${esc(email)}" id="detail-email"></div>
-                <div class="panel-field"><label>电话</label><input type="text" value="${esc(phone)}" id="detail-phone"></div>
+                <div class="panel-field"><label for="detail-email">邮箱</label><input type="text" value="${esc(email)}" id="detail-email"></div>
+                <div class="panel-field"><label for="detail-phone">电话</label><input type="text" value="${esc(phone)}" id="detail-phone"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>WhatsApp</label><input type="text" value="${esc(whatsapp)}" id="detail-whatsapp"></div>
+                <div class="panel-field"><label for="detail-whatsapp">WhatsApp</label><input type="text" value="${esc(whatsapp)}" id="detail-whatsapp"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>LinkedIn</label><input type="text" value="${esc(linkedin)}" id="detail-linkedin"></div>
-                <div class="panel-field"><label>公司网站</label><input type="text" value="${esc(website)}" id="detail-website"></div>
+                <div class="panel-field"><label for="detail-linkedin">LinkedIn</label><input type="text" value="${esc(linkedin)}" id="detail-linkedin"></div>
+                <div class="panel-field"><label for="detail-website">公司网站</label><input type="text" value="${esc(website)}" id="detail-website"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label>备用邮箱</label><input type="text" value="${esc(backupEmail)}" id="detail-backup-email"></div>
-                <div class="panel-field"><label>联系方式</label><input type="text" value="${esc(c.contact||'')}" id="detail-contact"></div>
+                <div class="panel-field"><label for="detail-backup-email">备用邮箱</label><input type="text" value="${esc(backupEmail)}" id="detail-backup-email"></div>
+                <div class="panel-field"><label for="detail-contact">联系方式</label><input type="text" value="${esc(c.contact||'')}" id="detail-contact"></div>
             </div>
-            <div class="panel-field"><label>备注</label><textarea id="detail-note">${esc(c.note||'')}</textarea></div>
+            <div class="panel-field"><label for="detail-note">备注</label><textarea id="detail-note">${esc(c.note||'')}</textarea></div>
             <button class="btn btn-primary" onclick="saveCustomerDetail(${c.id})" style="width:100%;">💾 保存修改</button>
         </div>
         <div class="panel-section">
@@ -1508,7 +1509,7 @@ async function showCustomerDetail(cid) {
                 </div>`).join('')}
             </div>
             <div style="margin-top:8px;display:flex;gap:6px;">
-                <select id="detail-link-lib" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;">
+                <select id="detail-link-lib" aria-label="关联文档库" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;">
                     <option value="">— 选择文档库 —</option>
                 </select>
                 <button class="btn-xs primary" onclick="linkCustomerLib(${c.id})">关联</button>
@@ -1617,38 +1618,42 @@ async function loadOrdersForCustomer(cid) {
 function showOrderModal(cid) { showOrderEditModal(null, cid); }
 
 function showOrderEditModal(oid, presetCid) {
+    // 先清理旧的订单弹窗，防止重复 id
+    const old = document.getElementById('order-modal-backdrop');
+    if (old) old.remove();
     const isEdit = !!oid;
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
+    backdrop.id = 'order-modal-backdrop';
     backdrop.onclick = e => { if (e.target===backdrop) backdrop.remove(); };
     backdrop.innerHTML = `<div class="modal" style="max-width:520px;width:95%;" onclick="event.stopPropagation()">
         <h3>${isEdit ? '编辑订单' : '新增订单'}</h3>
         <input type="hidden" id="order-edit-id" value="${oid||''}">
         <input type="hidden" id="order-cust-id" value="${presetCid||''}">
         <div id="order-cust-row" style="display:${presetCid?'none':'block'};">
-            <div class="form-group"><label>客户 *</label><select id="order-cust-sel"></select></div>
+            <div class="form-group"><label for="order-cust-sel">客户 *</label><select id="order-cust-sel"></select></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>品名 *</label><input type="text" id="order-product" placeholder="如：预绞丝"></div>
-            <div class="form-group"><label>订单号</label><input type="text" id="order-no" placeholder="如：PO-2026-001"></div>
+            <div class="form-group"><label for="order-product">品名 *</label><input type="text" id="order-product" placeholder="如：预绞丝"></div>
+            <div class="form-group"><label for="order-no">订单号</label><input type="text" id="order-no" placeholder="如：PO-2026-001"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>数量</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>
-            <div class="form-group"><label>单位</label><input type="text" id="order-unit" value="套"></div>
+            <div class="form-group"><label for="order-qty">数量</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>
+            <div class="form-group"><label for="order-unit">单位</label><input type="text" id="order-unit" value="套"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>单价</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>
-            <div class="form-group"><label>币种</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>
+            <div class="form-group"><label for="order-price">单价</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>
+            <div class="form-group"><label for="order-currency">币种</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>总金额</label><input type="number" id="order-total" placeholder="3500" step="any"></div>
-            <div class="form-group"><label>状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option></select></div>
+            <div class="form-group"><label for="order-total">总金额</label><input type="number" id="order-total" placeholder="3500" step="any"></div>
+            <div class="form-group"><label for="order-status">状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option></select></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>交期</label><input type="date" id="order-delivery"></div>
-            <div class="form-group"><label>付款方式</label><input type="text" id="order-payment" placeholder="T/T 30/70"></div>
+            <div class="form-group"><label for="order-delivery">交期</label><input type="date" id="order-delivery"></div>
+            <div class="form-group"><label for="order-payment">付款方式</label><input type="text" id="order-payment" placeholder="T/T 30/70"></div>
         </div>
-        <div class="form-group"><label>备注</label><textarea id="order-notes" style="min-height:50px;" placeholder="备注信息"></textarea></div>
+        <div class="form-group"><label for="order-notes">备注</label><textarea id="order-notes" style="min-height:50px;" placeholder="备注信息"></textarea></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
             ${isEdit?'<button class="btn btn-danger" onclick="deleteOrder('+oid+')">🗑 删除</button>':''}
             <button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()">取消</button>
@@ -2048,7 +2053,7 @@ function showPromptEditorModal(title, currentText, onSave) {
             <button class="slide-panel-close" onclick="document.getElementById('prompt-editor-modal').remove()">×</button>
         </div>
         <div class="form-group">
-            <label>任务 Prompt（Agent 将按此指令执行）</label>
+            <label for="prompt-editor-text">任务 Prompt（Agent 将按此指令执行）</label>
             <textarea id="prompt-editor-text" style="width:100%;min-height:200px;font-family:monospace;font-size:13px;padding:10px;">${esc(currentText)}</textarea>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
@@ -2074,6 +2079,8 @@ function showPromptEditorModal(title, currentText, onSave) {
 }
 
 function showAddCustomTemplateModal() {
+    const old = document.getElementById('custom-template-modal');
+    if (old) old.remove();  // 先清理旧的，防止重复 id
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.id = 'custom-template-modal';
@@ -2084,13 +2091,13 @@ function showAddCustomTemplateModal() {
             <h3>➕ 自定义任务模板</h3>
             <button class="slide-panel-close" onclick="document.getElementById('custom-template-modal').remove()">×</button>
         </div>
-        <div class="form-group"><label>任务名称 *</label><input type="text" id="custom-tmpl-name" placeholder="例如：海关数据每日监控"></div>
+        <div class="form-group"><label for="custom-tmpl-name">任务名称 *</label><input type="text" id="custom-tmpl-name" placeholder="例如：海关数据每日监控"></div>
         <div class="form-row">
-            <div class="form-group"><label>执行时间 *</label><input type="text" id="custom-tmpl-time" placeholder="09:00 或 09:00-10:30" value="09:00"></div>
-            <div class="form-group"><label>Cron 表达式</label><input type="text" id="custom-tmpl-cron" placeholder="0 9 * * 1-5" value="0 9 * * 1-5"></div>
+            <div class="form-group"><label for="custom-tmpl-time">执行时间 *</label><input type="text" id="custom-tmpl-time" placeholder="09:00 或 09:00-10:30" value="09:00"></div>
+            <div class="form-group"><label for="custom-tmpl-cron">Cron 表达式</label><input type="text" id="custom-tmpl-cron" placeholder="0 9 * * 1-5" value="0 9 * * 1-5"></div>
         </div>
-        <div class="form-group"><label>任务描述</label><input type="text" id="custom-tmpl-desc" placeholder="简要描述任务内容"></div>
-        <div class="form-group"><label>执行 Prompt *</label><textarea id="custom-tmpl-prompt" style="width:100%;min-height:150px;font-family:monospace;font-size:13px;padding:10px;" placeholder="Agent 将按此指令执行..."></textarea></div>
+        <div class="form-group"><label for="custom-tmpl-desc">任务描述</label><input type="text" id="custom-tmpl-desc" placeholder="简要描述任务内容"></div>
+        <div class="form-group"><label for="custom-tmpl-prompt">执行 Prompt *</label><textarea id="custom-tmpl-prompt" style="width:100%;min-height:150px;font-family:monospace;font-size:13px;padding:10px;" placeholder="Agent 将按此指令执行..."></textarea></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
             <button class="btn" onclick="document.getElementById('custom-template-modal').remove()">取消</button>
             <button class="btn btn-primary" onclick="saveCustomTemplate()">💾 保存模板</button>
@@ -2321,7 +2328,7 @@ async function renderHistoryViewInto(container) {
         <div class="panel-topbar">
             <h2>💬 对话记录${coName ? `<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 ${esc(coName)}</span>` : ''}</h2>
             <div class="panel-topbar-actions">
-                <input class="panel-search" id="conv-search" placeholder="搜索对话..." oninput="filterConversations()">
+                <input class="panel-search" id="conv-search" aria-label="搜索对话" placeholder="搜索对话..." oninput="filterConversations()">
             </div>
         </div>
         <div class="panel-body">

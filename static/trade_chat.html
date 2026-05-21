@@ -894,88 +894,154 @@ function renderChatViewInto(container, ctx, name) {
 
     if (ctx === 'docs') loadChatLibrarySelect();
     loadChatHistory();
-    // 如果是今日简报视图，加载 cron 任务清单
-    if (ctx === 'daily') loadCronStatus();
+    // 每日简报视图：额外拉取一次 cron 状态（全局轮询已覆盖）
+    if (ctx === 'daily') {
+        _shownCronOutputs = new Set();
+        loadCronStatus(false);
+    }
 }
 
-async function loadCronStatus() {
+// ═════════════════════ 全局 cron 轮询与工作台横幅 ═════════════════════
+let _cronPollTimer = null;
+let _shownCronOutputs = new Set();  // 已展示过的 cron 输出任务名
+
+// 标准任务时间表（与后端 standard_tasks 对应）
+const TASK_SCHEDULE = [
+    {name:'早安简报', time:'09:00', until:'09:30', desc:'查看今日汇率、大宗商品行情、客户跟进提醒'},
+    {name:'邮件处理与跟进', time:'09:00', until:'10:30', desc:'回复客户邮件，跟进待处理询盘'},
+    {name:'精准加人 (LinkedIn)', time:'10:00', until:'11:30', desc:'在 LinkedIn 上搜索并添加目标客户'},
+    {name:'评论互动与私信致谢', time:'11:30', until:'12:00', desc:'回复社媒评论，发送感谢私信'},
+    {name:'客户开发', time:'13:30', until:'15:30', desc:'分析客户资料，生成开发信和跟进序列'},
+    {name:'LinkedIn 内容发布', time:'15:30', until:'17:00', desc:'发布 LinkedIn 内容'},
+    {name:'B2B 平台检查', time:'15:30', until:'17:00', desc:'检查阿里国际站/中国制造网新询盘和待跟进报价'},
+    {name:'每日工作总结', time:'17:00', until:'17:30', desc:'填写当日工作成果和明日计划'},
+];
+
+function _parseTime(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+
+function _getCurrentTaskGuidance(currentTime) {
+    const now = _parseTime(currentTime || new Date().toLocaleTimeString('zh-CN',{hour12:false}).slice(0,5));
+    for (const task of TASK_SCHEDULE) {
+        const start = _parseTime(task.time);
+        const end = _parseTime(task.until);
+        if (now >= start && now < end) return task;
+    }
+    return null;  // 休息时段
+}
+
+function _renderGuidanceBar(currentTimeStr, completed, pending) {
+    const guidance = _getCurrentTaskGuidance(currentTimeStr);
+    const doneCount = completed.length, totalPending = pending.length;
+
+    let barHtml = `<div id="guidance-bar" style="background:var(--bg-card);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">`;
+
+    if (guidance) {
+        // 该任务是否已完成
+        const isDone = completed.some(c => c.name === guidance.name);
+        barHtml += `<div style="display:flex;align-items:center;gap:8px;min-width:0;">`;
+        barHtml += `<span style="font-size:20px;">⏰</span>`;
+        barHtml += `<div style="min-width:0;">`;
+        barHtml += `<div style="font-size:11px;color:var(--text-muted);">${guidance.time}-${guidance.until} · 当前时段</div>`;
+        barHtml += `<div style="font-weight:600;font-size:14px;color:${isDone ? 'var(--accent-green)' : 'var(--primary)'};">${esc(guidance.name)}</div>`;
+        barHtml += `<div style="font-size:12px;color:var(--text-secondary);">${guidance.desc}</div>`;
+        barHtml += `</div></div>`;
+
+        if (!isDone) {
+            barHtml += `<button class="btn btn-primary btn-xs" onclick="navToView('chat','daily','今日简报')" style="white-space:nowrap;">📋 去工作台</button>`;
+        } else {
+            barHtml += `<span style="font-size:11px;color:var(--accent-green);white-space:nowrap;">✅ 已完成</span>`;
+        }
+    } else {
+        // 休息或非工作时间
+        barHtml += `<span style="font-size:20px;">☕</span>`;
+        barHtml += `<span style="font-size:13px;color:var(--text-secondary);">当前时段暂无安排 · ${currentTimeStr}</span>`;
+    }
+
+    // 进度条
+    const total = doneCount + totalPending;
+    const pct = total > 0 ? Math.round(doneCount/total*100) : 0;
+    barHtml += `<div style="flex:1;min-width:120px;">`;
+    barHtml += `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:2px;"><span>今日进度</span><span>${doneCount}/${total} 已完成</span></div>`;
+    barHtml += `<div style="height:4px;background:var(--bg-main);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--accent-green);border-radius:2px;transition:width 0.3s;"></div></div>`;
+    barHtml += `</div>`;
+
+    barHtml += `</div>`;
+    return barHtml;
+}
+
+function startCronPolling() {
+    stopCronPolling();
+    _cronPollTimer = setInterval(() => {
+        if (currentCompanyId) loadCronStatus(true);
+    }, 30000);
+}
+
+function stopCronPolling() {
+    if (_cronPollTimer) { clearInterval(_cronPollTimer); _cronPollTimer = null; }
+}
+
+async function loadCronStatus(isPoll = false) {
     if (!currentCompanyId) return;
     const data = await api('GET', '/api/trade/cron/today');
     if (!data) return;
+    const {completed, pending, current_time} = data;
+
+    // 更新全局顶部横幅
+    const main = $('main-content');
+    let bar = document.getElementById('guidance-bar');
+    const barHtml = _renderGuidanceBar(current_time, completed, pending);
+    if (bar) {
+        bar.outerHTML = barHtml;
+    } else {
+        main.insertAdjacentHTML('afterbegin', barHtml);
+    }
+
+    // 如果当前在今日简报视图，更新聊天区的 cron 面板和输出
     const ct = currentChatContainer;
-    if (!ct) return;
+    if (!ct || currentView !== 'chat' || currentChatContext !== 'daily') return;
     const container = ct.querySelector('#chat-messages');
     if (!container) return;
 
-    // 移除旧的 cron 面板和 cron 输出消息（如果有）
-    const oldPanel = container.querySelector('.cron-panel');
-    if (oldPanel) oldPanel.remove();
-    container.querySelectorAll('.msg-cron-output').forEach(el => el.remove());
-
-    const {completed, pending, current_time} = data;
-    const allDone = pending.length === 0;
-
-    let html = `<div class="cron-panel" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow-sm);">`;
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">`;
-    html += `<div style="font-weight:600;font-size:14px;">📋 今日任务清单 <span style="font-weight:400;color:var(--text-muted);font-size:12px;">${current_time}</span></div>`;
-    html += `<div style="font-size:12px;color:${allDone ? 'var(--accent-green)' : 'var(--accent)'};">${allDone ? '✅ 全部完成' : '⏳ ' + pending.length + ' 项待处理'}</div>`;
-    html += `</div>`;
-
+    // 更新 cron 面板
+    let panel = container.querySelector('.cron-panel');
+    let panelHtml = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">`;
+    panelHtml += `<div style="font-weight:600;font-size:14px;">📋 今日任务清单 <span style="font-weight:400;color:var(--text-muted);font-size:12px;">${current_time}</span></div>`;
+    panelHtml += `<div style="font-size:12px;color:${pending.length === 0 ? 'var(--accent-green)' : 'var(--accent)'};">${pending.length === 0 ? '✅ 全部完成' : '⏳ ' + pending.length + ' 项待处理'}</div>`;
+    panelHtml += `</div>`;
     if (completed.length) {
-        html += `<div style="font-size:12px;color:var(--accent-green);margin-bottom:6px;">已完成 (${completed.length})</div>`;
+        panelHtml += `<div style="font-size:12px;color:var(--accent-green);margin-bottom:6px;">已完成 (${completed.length})</div>`;
         for (const t of completed) {
-            html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;">`;
-            html += `<span style="color:var(--accent-green);">✓</span>`;
-            html += `<span style="font-weight:500;">${esc(t.name)}</span>`;
-            html += `<span style="color:var(--text-muted);font-size:11px;">${t.time}</span>`;
-            html += `</div>`;
+            panelHtml += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;"><span style="color:var(--accent-green);">✓</span><span style="font-weight:500;">${esc(t.name)}</span><span style="color:var(--text-muted);font-size:11px;">${t.time}</span></div>`;
         }
     }
-
     if (pending.length) {
-        html += `<div style="font-size:12px;color:var(--text-secondary);margin:6px 0;">待处理 (${pending.length})</div>`;
+        panelHtml += `<div style="font-size:12px;color:var(--text-secondary);margin:6px 0;">待处理 (${pending.length})</div>`;
         for (const t of pending) {
-            html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;">`;
-            html += `<span style="color:${t.missed ? 'var(--accent-red)' : 'var(--text-muted)'};">${t.missed ? '⚠' : '○'}</span>`;
-            html += `<span style="font-weight:500;color:${t.missed ? 'var(--accent-red)' : ''};">${esc(t.name)}</span>`;
-            html += `<span style="color:var(--text-muted);font-size:11px;">${t.scheduled}</span>`;
-            if (t.missed) html += `<span style="color:var(--accent-red);font-size:11px;">（已过时）</span>`;
-            html += `</div>`;
+            panelHtml += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;"><span style="color:${t.missed ? 'var(--accent-red)' : 'var(--text-muted)'};">${t.missed ? '⚠' : '○'}</span><span style="font-weight:500;color:${t.missed ? 'var(--accent-red)' : ''};">${esc(t.name)}</span><span style="color:var(--text-muted);font-size:11px;">${t.scheduled}</span>${t.missed ? '<span style="color:var(--accent-red);font-size:11px;">（已过时）</span>' : ''}</div>`;
         }
     }
-    html += `</div>`;
-
-    // 插到聊天区域顶部
-    const emptyEl = container.querySelector('.empty-state');
-    if (emptyEl) {
-        emptyEl.insertAdjacentHTML('afterend', html);
+    if (panel) {
+        panel.innerHTML = panelHtml;
     } else {
-        container.insertAdjacentHTML('afterbegin', html);
+        panel = document.createElement('div');
+        panel.className = 'cron-panel';
+        panel.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow-sm);';
+        panel.innerHTML = panelHtml;
+        const emptyEl = container.querySelector('.empty-state');
+        if (emptyEl) emptyEl.insertAdjacentElement('afterend', panel);
+        else container.insertAdjacentElement('afterbegin', panel);
     }
 
-    // 将已完成任务的输出作为 AI 对话消息展示
-    if (completed.length) {
-        for (const t of completed) {
-            if (t.output) {
-                const msgDiv = document.createElement('div');
-                msgDiv.className = 'message assistant msg-cron-output';
-                msgDiv.innerHTML = `
-                    <div class="bubble">
-                        <div class="bubble-meta">
-                            <span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span>
-                        </div>
-                        <div class="cron-output-content">${marked.parse(t.output)}</div>
-                    </div>`;
-                const lastCronEl = container.querySelector('.cron-panel');
-                if (lastCronEl) {
-                    lastCronEl.insertAdjacentElement('afterend', msgDiv);
-                } else {
-                    container.appendChild(msgDiv);
-                }
-            }
-        }
-        container.scrollTop = container.scrollHeight;
+    // 增量追加已完成任务的 AI 输出
+    for (const t of completed) {
+        if (!t.output || _shownCronOutputs.has(t.name)) continue;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message assistant msg-cron-output';
+        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${marked.parse(t.output)}</div></div>`;
+        panel.insertAdjacentElement('afterend', msgDiv);
+        _shownCronOutputs.add(t.name);
     }
+    if (completed.length) container.scrollTop = container.scrollHeight;
 }
 
 function onChatLibraryChange(libId) {
@@ -2472,10 +2538,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (currentCompanyId) {
         saveState();
         navToView('chat', 'daily', '今日简报');
+        startCronPolling();  // 全局轮询：无论用户在哪个页面，定时任务结果都会推送
     } else {
         renderNoCompanyPage();
     }
 });
+
+// 页面关闭时清理轮询
+window.addEventListener('beforeunload', () => stopCronPolling());
 
 function renderNoCompanyPage() {
     // 清除视图缓存

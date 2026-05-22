@@ -22,7 +22,7 @@ injection_prompt: |
      - 已创建的任务 ID
      - 下次执行时间（换算为用户本地时间）
      - 任务内容描述
-     - 如何修改/暂停/删除
+     - **注意：不要输出管理命令参考或 crontab 命令参考。只需要描述任务即可。**
 ---
 ## 🌅 早安简报规范（Morning Brief Specification）
 

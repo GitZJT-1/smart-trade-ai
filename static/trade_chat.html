@@ -1049,7 +1049,11 @@ async function loadCronStatus(isPoll = false) {
         if (!t.output || _shownCronOutputs.has(t.name)) continue;
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message assistant msg-cron-output';
-        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(t.output))}</div></div>`;
+        // 截断 cron 输出中的"管理命令参考"等冗余管理指令
+        let cleanOutput = t.output || '';
+        const truncIdx = cleanOutput.search(/管理命令参考|##?\s*管理命令|crontab\s*命令参考/i);
+        if (truncIdx >= 0) cleanOutput = cleanOutput.substring(0, truncIdx).trimEnd();
+        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(cleanOutput))}</div></div>`;
         panel.insertAdjacentElement('afterend', msgDiv);
         _shownCronOutputs.add(t.name);
     }

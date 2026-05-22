@@ -950,9 +950,8 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
         barHtml += `<span style="font-size:13px;color:var(--text-secondary);">${guidance.desc}</span>`;
         barHtml += `</div>`;
 
-        if (!isDone) {
-            barHtml += `<button class="btn btn-primary btn-xs" onclick="navToView('chat','daily','今日简报')" style="white-space:nowrap;">📋 去工作台</button>`;
-        } else {
+        // 任务已完成则显示已完成标记
+        if (isDone) {
             barHtml += `<span style="font-size:11px;color:var(--accent-green);white-space:nowrap;">✅ 已完成</span>`;
         }
     } else {

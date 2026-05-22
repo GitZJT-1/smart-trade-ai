@@ -101,25 +101,65 @@ def _load_active_jobs():
             if not isinstance(job, dict):
                 continue
             name = job.get("name", job.get("task_name", ""))
-            schedule_display = ""
-            sched = job.get("schedule", {})
-            if isinstance(sched, dict):
-                schedule_display = sched.get("display", "")
+            # 从 cron 或调度信息中提取人类可读的时间
+            schedule_display = _extract_time_display(job)
             if name:
-                # 从 cron 表达式中提取大致时间用于排序
-                tasks.append({"name": name, "time": schedule_display or "", "job_id": job.get("id", "")})
+                tasks.append({"name": name, "time": schedule_display, "job_id": job.get("id", "")})
     elif isinstance(job_list, dict):
         for job_id, job in job_list.items():
             if not isinstance(job, dict):
                 continue
             name = job.get("task_name", job.get("name", ""))
-            schedule_display = ""
-            sched = job.get("schedule", {})
-            if isinstance(sched, dict):
-                schedule_display = sched.get("display", "")
+            schedule_display = _extract_time_display(job)
             if name:
-                tasks.append({"name": name, "time": schedule_display or "", "job_id": job_id})
+                tasks.append({"name": name, "time": schedule_display, "job_id": job_id})
     return tasks
+
+
+def _extract_time_display(job: dict) -> str:
+    """从 cron job 中提取人类可读的时间显示。
+
+    优先级: schedule.display → schedule_display → 从 next_run_at 提取时分 → 空串
+    将 cron 表达式 "0 9 * * 1-5" 转换为 "09:00"。
+    """
+    # 尝试从 schedule.dict 或 schedule_display 中获取
+    sched = job.get("schedule", {})
+    if isinstance(sched, dict):
+        display = sched.get("display", "")
+        if display:
+            time_str = _cron_to_time(display)
+            if time_str:
+                return time_str
+    sched_display = job.get("schedule_display", "")
+    if sched_display:
+        time_str = _cron_to_time(sched_display)
+        if time_str:
+            return time_str
+    # 从 next_run_at 提取时分
+    next_run = job.get("next_run_at", "")
+    if next_run:
+        try:
+            # 格式: "2026-05-22T09:00:00+08:00"
+            return next_run[11:16]
+        except Exception:
+            pass
+    return ""
+
+
+def _cron_to_time(expr: str) -> str:
+    """将 5 段 cron 表达式转换为 "HH:MM" 显示。
+
+    只处理简单的 "M H * * *" 或 "M H * * D" 格式。
+    其他格式返回空串。
+    """
+    import re
+    parts = expr.strip().split()
+    if len(parts) >= 2:
+        m, h = parts[0], parts[1]
+        # 验证小时和分钟是数字
+        if re.match(r'^\d+$', h) and re.match(r'^\d+$', m):
+            return f"{int(h):02d}:{int(m):02d}"
+    return ""
 
 
 @router.get("/cron/jobs")

@@ -968,11 +968,12 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
     barHtml += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:1px;"><span>今日进度</span><span>${doneCount}/${total}</span></div>`;
     barHtml += `<div style="height:3px;background:var(--bg-main);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--accent-green);border-radius:2px;transition:width 0.3s;"></div></div>`;
     // 今日所有定时任务列表（从 completed + pending 合并，按时间排序）
+    const _stripEmoji = s => s.replace(/[\u{1F600}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{200D}\u{FE0F}]/gu, '').trim();
     const all = [...completed, ...pending].sort((a, b) => {
         const ta = (a.time || '').split('-')[0], tb = (b.time || '').split('-')[0];
         return ta.localeCompare(tb);
     });
-    const items = all.map(t => `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">${esc(t.time)} ${esc(t.name)}</div>`);
+    const items = all.map(t => `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">${esc(t.time)} ${esc(_stripEmoji(t.name))}</div>`);
     barHtml += `<div style="margin-top:2px;">${items.join('')}</div>`;
     barHtml += `</div>`;
 

@@ -428,6 +428,42 @@ def _restart_trade_service() -> None:
         print("     或手动运行: trade")
 
 
+def _sync_dir_rsync(src: Path, dst: Path) -> None:
+    """递归同步目录 src → dst，覆盖旧文件，删除目标多余文件。
+
+    不跟踪软链接，不保留权限（统一 0o644/0o755）。
+    """
+    import shutil as _shutil
+
+    if not src.is_dir():
+        return
+    dst.mkdir(parents=True, exist_ok=True)
+
+    _keep = set()
+    for item in src.rglob("*"):
+        if item.name in ("__pycache__", ".DS_Store") or item.name.endswith(".pyc"):
+            continue
+        rel = item.relative_to(src)
+        target = dst / rel
+        _keep.add(str(target))
+        if item.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.is_file() or item.stat().st_mtime != target.stat().st_mtime:
+                _shutil.copy2(item, target)
+
+    # 删除目标中多余的文件
+    for item in sorted(dst.rglob("*"), reverse=True):
+        if item.name in ("__pycache__", ".DS_Store"):
+            continue
+        if str(item) not in _keep:
+            if item.is_dir() and not any(str(c).startswith(str(item)) for c in _keep):
+                _shutil.rmtree(item)
+            elif item.is_file():
+                item.unlink()
+
+
 def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
     """将 .trade-template/ 中新增的模板文件同步到 Trade 运行时目录。
 
@@ -588,6 +624,31 @@ def update_trade() -> None:
         ok = False
     else:
         print("  ✓ Package updated")
+
+    # 4.5. 如果运行目录是独立副本（非 git 管理的 ~/.trade/foreign-trade-assistant/），
+    # 将 git pull 后的代码同步过去，确保重启时加载的是最新代码
+    _runtime_dir = _get_trade_home() / "foreign-trade-assistant"
+    if not (_runtime_dir / ".git").is_dir() and _runtime_dir.is_dir():
+        print("→ Step 4.5/6: sync to runtime dir ...")
+        try:
+            import shutil as _shutil
+            _exclude = {".git", "__pycache__", ".pytest_cache", "*.pyc", ".DS_Store", "venv", ".venv", "node_modules"}
+            for _src_item in trade_dir.iterdir():
+                _name = _src_item.name
+                if _name in _exclude or _name.startswith(".") or _name.startswith("~"):
+                    continue
+                _dst = _runtime_dir / _name
+                if _src_item.is_dir():
+                    if _name == "skills":
+                        # 同步 skills 目录（排除被 .gitignore 的，如 __pycache__）
+                        _sync_dir_rsync(_src_item, _dst)
+                    else:
+                        _sync_dir_rsync(_src_item, _dst)
+                else:
+                    _shutil.copy2(_src_item, _dst)
+            print("  ✓ Code synced to runtime dir")
+        except Exception as e:
+            print(f"  ⚠ Code sync failed: {e}")
 
     # 5. 同步 .trade-template/ 新增模板文件
     print("→ Step 5/6: template sync ...")

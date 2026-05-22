@@ -64,7 +64,7 @@ Tests use temporary databases (monkeypatch `_get_db_path`), no production data i
 ## Architecture
 
 ```
-static/trade_chat.html          Chat SPA — single-file vanilla JS (~4000+ lines), served at /trade
+static/trade_chat.html          Chat SPA — single-file vanilla JS (~2600 lines), served at /trade
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
         ▼
 server.py                       FastAPI entry point — complex startup sequence (see below)
@@ -140,7 +140,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
 
-3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~4000+ line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
+3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~2600 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
 
 4. **Dual chat endpoints**: `/chat` is synchronous (thread pool + 600s timeout); `/chat/stream` uses SSE to emit `tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done` events for real-time tool progress in the UI.
 

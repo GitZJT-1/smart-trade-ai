@@ -967,6 +967,9 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
     barHtml += `<div style="flex:1;min-width:100px;">`;
     barHtml += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:1px;"><span>今日进度</span><span>${doneCount}/${total}</span></div>`;
     barHtml += `<div style="height:3px;background:var(--bg-main);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--accent-green);border-radius:2px;transition:width 0.3s;"></div></div>`;
+    // 今日所有定时任务列表
+    const allTasks = TASK_SCHEDULE.map(t => `${t.time} ${t.name} - ${t.desc}`);
+    barHtml += `<div style="margin-top:2px;font-size:11px;color:var(--text-muted);line-height:1.5;overflow:hidden;text-overflow:ellipsis;">${allTasks.join(' · ')}</div>`;
     barHtml += `</div>`;
 
     barHtml += `</div>`;

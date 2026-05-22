@@ -30,47 +30,96 @@ _JOBS_FILE = _HERMES_HOME / "cron" / "jobs.json"
 
 @router.get("/cron/today")
 def get_today_cron():
-    """返回今日 cron 任务清单（已执行 + 待执行）。"""
+    """返回今日 cron 任务清单（已执行 + 待执行）。
+
+    任务来源: jobs.json 中已激活的定时任务。如果 jobs.json 不存在或为空，
+    回退到内置标准任务列表。
+    """
     today = date.today().isoformat()
-
-    standard_tasks = [
-        {"name": "早安简报", "time": "09:00"},
-        {"name": "邮件处理与跟进", "time": "09:00-10:30"},
-        {"name": "精准加人 (LinkedIn)", "time": "10:00-11:30"},
-        {"name": "评论互动与私信致谢", "time": "11:30-12:00"},
-        {"name": "LinkedIn 内容发布", "time": "15:30"},
-        {"name": "B2B 平台检查", "time": "15:30-17:00"},
-        {"name": "客户开发", "time": "13:30-15:30"},
-        {"name": "每日工作总结", "time": "17:00"},
-    ]
-
     now = datetime.now()
     current_time = now.strftime("%H:%M")
+
+    # 从 jobs.json 读取实际激活的任务
+    active_jobs = _load_active_jobs()
+    if active_jobs:
+        tasks = active_jobs
+    else:
+        # 回退到内置标准任务列表
+        tasks = [
+            {"name": "早安简报", "time": "09:00"},
+            {"name": "邮件处理与跟进", "time": "09:00-10:30"},
+            {"name": "精准加人 (LinkedIn)", "time": "10:00-11:30"},
+            {"name": "评论互动与私信致谢", "time": "11:30-12:00"},
+            {"name": "LinkedIn 内容发布", "time": "15:30"},
+            {"name": "B2B 平台检查", "time": "15:30-17:00"},
+            {"name": "客户开发", "time": "13:30-15:30"},
+            {"name": "每日工作总结", "time": "17:00"},
+        ]
+
     completed = []
     pending = []
 
-    for task in standard_tasks:
+    for task in tasks:
+        task_name = task["name"]
         task_time = task["time"].split("-")[0] if "-" in task["time"] else task["time"]
         is_past = task_time <= current_time
-        output = _find_cron_output(task["name"], today)
+        output = _find_cron_output(task_name, today)
 
         if output:
             completed.append({
-                "name": task["name"], "time": task["time"],
+                "name": task_name, "time": task["time"],
                 "output": output, "has_output": True,
             })
         elif is_past:
             pending.append({
-                "name": task["name"], "time": task["time"],
+                "name": task_name, "time": task["time"],
                 "scheduled": task_time, "missed": True,
             })
         else:
             pending.append({
-                "name": task["name"], "time": task["time"],
+                "name": task_name, "time": task["time"],
                 "scheduled": task_time, "missed": False,
             })
 
     return {"today": today, "current_time": current_time, "completed": completed, "pending": pending}
+
+
+def _load_active_jobs():
+    """从 jobs.json 读取已激活的定时任务，提取 name 和 time。"""
+    if not _JOBS_FILE.is_file():
+        return []
+    try:
+        with open(_JOBS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return []
+
+    tasks = []
+    job_list = data.get("jobs", [])
+    if isinstance(job_list, list):
+        for job in job_list:
+            if not isinstance(job, dict):
+                continue
+            name = job.get("name", job.get("task_name", ""))
+            schedule_display = ""
+            sched = job.get("schedule", {})
+            if isinstance(sched, dict):
+                schedule_display = sched.get("display", "")
+            if name:
+                # 从 cron 表达式中提取大致时间用于排序
+                tasks.append({"name": name, "time": schedule_display or "", "job_id": job.get("id", "")})
+    elif isinstance(job_list, dict):
+        for job_id, job in job_list.items():
+            if not isinstance(job, dict):
+                continue
+            name = job.get("task_name", job.get("name", ""))
+            schedule_display = ""
+            sched = job.get("schedule", {})
+            if isinstance(sched, dict):
+                schedule_display = sched.get("display", "")
+            if name:
+                tasks.append({"name": name, "time": schedule_display or "", "job_id": job_id})
+    return tasks
 
 
 @router.get("/cron/jobs")

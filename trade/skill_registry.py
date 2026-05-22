@@ -636,7 +636,7 @@ STOP RULE（防止无效搜索）:
 2. 根据操作类型执行：
    - 查看客户列表：调用 customer.list_by_company(company_id)，
      按 A/B/C 分级展示，标注每个客户的最新跟进时间
-   - 客户详情：调用 customer.get(customer_id, company_id)，
+   - 客户详情：调用 customer.get(customer_id, company_id=company_id)，
      显示档案完整信息 + 关联报价单 + 订单历史
    - 客户分级：根据年交易额/订单频率/利润贡献重新分类
    - 订单跟踪：从对话中提取订单号，查询状态更新

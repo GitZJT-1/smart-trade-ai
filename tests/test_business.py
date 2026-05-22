@@ -136,7 +136,7 @@ class TestCompanyCRUD:
 
         # 级联删除后，库/客户/对话应不存在
         assert library.get(lib["id"]) is None
-        assert customer.get(cust["id"]) is None
+        assert customer.admin_get(cust["id"]) is None
         assert chat_memory.get(company_id, conv["id"]) is None
 
     def test_create_empty_name(self, test_db):

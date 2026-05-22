@@ -14,8 +14,8 @@ def create(
     name: str,
     contact: str = "",
     note: str = "",
-    company_id: int | None = None,
     *,
+    company_id: int,
     country: str = "",
     tier: str = "",
     linkedin_url: str = "",
@@ -75,21 +75,14 @@ def list_by_company(company_id: int) -> list[dict]:
         conn.close()
 
 
-def get(customer_id: int, company_id: int | None = None) -> dict | None:
-    """根据 ID 获取单个客户，可选地按公司作用域限制。"""
+def get(customer_id: int, *, company_id: int) -> dict | None:
+    """根据 ID 获取单个客户，必须按公司作用域限制。"""
     conn = get_connection()
     try:
-        if company_id is not None:
-            # 如果传入了公司ID，则同时校验客户ID和公司ID，防止跨公司读取
-            row = conn.execute(
-                "SELECT * FROM customers WHERE id = ? AND company_id = ?",
-                (customer_id, company_id),
-            ).fetchone()
-        else:
-            # 未传入公司ID时，仅按客户ID查询（用于不要求多租户隔离的场景）
-            row = conn.execute(
-                "SELECT * FROM customers WHERE id = ?", (customer_id,)
-            ).fetchone()
+        row = conn.execute(
+            "SELECT * FROM customers WHERE id = ? AND company_id = ?",
+            (customer_id, company_id),
+        ).fetchone()
         return _row_to_dict(row) if row else None
     finally:
         conn.close()
@@ -97,7 +90,8 @@ def get(customer_id: int, company_id: int | None = None) -> dict | None:
 
 def update(
     customer_id: int,
-    company_id: int | None = None,
+    *,
+    company_id: int,
     **kwargs,
 ) -> dict | None:
     """更新客户字段（单事务，部分失败统一回滚）。
@@ -115,88 +109,66 @@ def update(
     basic_updates = {k: v for k, v in kwargs.items() if k in basic_allowed and v is not None}
 
     if not (extra1_updates or extra2_updates or basic_updates):
-        # 没有需要更新的字段，直接返回当前客户数据
-        return get(customer_id, company_id)
+        return get(customer_id, company_id=company_id)
 
     conn = get_connection()
     try:
-        # 显式事务
         conn.execute("BEGIN")
 
-        # 读取当前 JSON 用于合并（必须加 company_id 校验，防止跨公司写 extra）
-        if company_id is not None:
-            row = conn.execute(
-                "SELECT extra1, extra2 FROM customers WHERE id = ? AND company_id = ?",
-                (customer_id, company_id),
-            ).fetchone()
-        else:
-            row = conn.execute(
-                "SELECT extra1, extra2 FROM customers WHERE id = ?", (customer_id,)
-            ).fetchone()
+        # 读取当前 JSON 用于合并（company_id 贯穿所有写操作）
+        row = conn.execute(
+            "SELECT extra1, extra2 FROM customers WHERE id = ? AND company_id = ?",
+            (customer_id, company_id),
+        ).fetchone()
         if row is None:
-            # 客户不存在，回滚事务并返回 None
             conn.rollback()
             return None
         current_extra1 = json.loads(row["extra1"]) if row["extra1"] else {}
         current_extra2 = json.loads(row["extra2"]) if row["extra2"] else {}
 
-        # 构造 WHERE 子句（company_id 贯穿所有写操作）
-        where_clause = "id = ? AND company_id = ?" if company_id is not None else "id = ?"
-        where_params = [customer_id] if company_id is None else [customer_id, company_id]
-
         # 合并 extra1
         if extra1_updates:
-            # 将新字段合并到现有的 extra1 JSON 中，避免覆盖未涉及的字段
             current_extra1.update(extra1_updates)
             conn.execute(
-                f"UPDATE customers SET extra1 = ?, updated_at = datetime('now','localtime') WHERE {where_clause}",
-                (json.dumps(current_extra1, ensure_ascii=False), *where_params),
+                "UPDATE customers SET extra1 = ?, updated_at = datetime('now','localtime') WHERE id = ? AND company_id = ?",
+                (json.dumps(current_extra1, ensure_ascii=False), customer_id, company_id),
             )
 
         # 合并 extra2
         if extra2_updates:
-            # 将新字段合并到现有的 extra2 JSON 中，避免覆盖未涉及的字段
             current_extra2.update(extra2_updates)
             conn.execute(
-                f"UPDATE customers SET extra2 = ?, updated_at = datetime('now','localtime') WHERE {where_clause}",
-                (json.dumps(current_extra2, ensure_ascii=False), *where_params),
+                "UPDATE customers SET extra2 = ?, updated_at = datetime('now','localtime') WHERE id = ? AND company_id = ?",
+                (json.dumps(current_extra2, ensure_ascii=False), customer_id, company_id),
             )
 
         # 基础字段
         if basic_updates:
-            # 动态构造 SET 子句，只更新非空的基础字段
             set_clause = ", ".join(f"{k} = ?" for k in basic_updates)
-            values = list(basic_updates.values()) + where_params
-            sql = f"UPDATE customers SET {set_clause}, updated_at = datetime('now','localtime') WHERE {where_clause}"
+            values = list(basic_updates.values()) + [customer_id, company_id]
+            sql = f"UPDATE customers SET {set_clause}, updated_at = datetime('now','localtime') WHERE id = ? AND company_id = ?"
             n = conn.execute(sql, values).rowcount
             if n == 0:
-                # 更新影响行数为0，说明记录不存在或已被删除，回滚事务
                 conn.rollback()
                 return None
 
         conn.commit()
-        return get(customer_id, company_id)
+        return get(customer_id, company_id=company_id)
     except Exception:
-        # 任何异常均回滚，保证事务原子性
         conn.rollback()
         raise
     finally:
         conn.close()
 
 
-def delete(customer_id: int, company_id: int | None = None) -> bool:
+def delete(customer_id: int, *, company_id: int) -> bool:
     """按公司作用域删除客户。如果删除了行则返回 True。"""
     conn = get_connection()
     try:
-        if company_id is not None:
-            # 带公司ID校验的删除，防止跨公司误删
-            cur = conn.execute(
-                "DELETE FROM customers WHERE id = ? AND company_id = ?",
-                (customer_id, company_id),
-            )
-        else:
-            # 无公司ID限制的删除（用于不要求多租户隔离的场景）
-            cur = conn.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
+        cur = conn.execute(
+            "DELETE FROM customers WHERE id = ? AND company_id = ?",
+            (customer_id, company_id),
+        )
         conn.commit()
         return cur.rowcount > 0
     finally:
@@ -218,7 +190,7 @@ def link_library(
     成功返回 True；如果客户或文档库在给定公司下不存在，则抛出 ValueError。
     """
     # Verify both belong to the company
-    cust = get(customer_id, company_id)
+    cust = get(customer_id, company_id=company_id)
     if not cust:
         # 客户在指定公司下不存在，拒绝关联以防止跨公司操作
         raise ValueError(f"Customer {customer_id} not found under company {company_id}")
@@ -251,7 +223,7 @@ def unlink_library(
     conn = get_connection()
     try:
         # Verify ownership before unlinking
-        cust = get(customer_id, company_id)
+        cust = get(customer_id, company_id=company_id)
         if not cust:
             # 客户在指定公司下不存在，视为操作不存在，返回 False
             return False
@@ -268,7 +240,7 @@ def unlink_library(
 def get_libraries(customer_id: int, company_id: int) -> list[dict]:
     """返回与客户关联的所有文档库，按公司作用域限制。"""
     # Verify customer belongs to company
-    cust = get(customer_id, company_id)
+    cust = get(customer_id, company_id=company_id)
     if not cust:
         # 客户不属于该公司，返回空列表而非报错，保证调用方流程不受阻
         return []
@@ -283,6 +255,21 @@ def get_libraries(customer_id: int, company_id: int) -> list[dict]:
             (customer_id, company_id),
         ).fetchall()
         return [_library_row_to_dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# ── 管理查询（绕过 company_id 隔离，仅用于内部场景如级联删除验证）───────
+
+
+def admin_get(customer_id: int) -> dict | None:
+    """管理员查询——不限制 company_id。仅用于内部维护和测试。"""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM customers WHERE id = ?", (customer_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else None
     finally:
         conn.close()
 

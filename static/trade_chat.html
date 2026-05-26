@@ -940,7 +940,7 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
     const guidance = _getCurrentTaskGuidance(currentTimeStr);
     const doneCount = completed.length, totalPending = pending.length;
 
-    let barHtml = `<div id="guidance-bar" style="flex-shrink:0;height:25vh;overflow-y:auto;background:var(--bg-card);border-bottom:1px solid var(--border);padding:6px 12px;line-height:1.4;font-size:12px;">`;
+    let barHtml = `<div id="guidance-bar" style="flex-shrink:0;max-height:25vh;overflow-y:auto;background:var(--bg-card);border-bottom:1px solid var(--border);padding:6px 12px;line-height:1.4;font-size:12px;">`;
 
     // 当前任务行
     if (guidance) {

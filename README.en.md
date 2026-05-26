@@ -98,12 +98,30 @@ python server.py
 
 ### Windows
 
+**Before installing, manually install the following:**
+
+| Software | Version | Download | Notes |
+|----------|---------|----------|-------|
+| **Python** | 3.11 ~ 3.13 | [python.org](https://www.python.org/downloads/) | Download **Windows installer (64-bit)**. Check "Add Python to PATH" during install. |
+| **Node.js** | >= 18 LTS | [nodejs.org](https://nodejs.org/) | Download LTS version, default install options are fine (required by some Hermes features). |
+| **Git** | Any | [git-scm.com](https://git-scm.com/download/win) | Download **Standalone Installer**, default options are fine. |
+
+> All three have standard Windows GUI installers — double-click → Next → Done, no manual configuration needed.
+
+After installation, **open a new terminal** (PowerShell or CMD) and run:
+
 ```powershell
+# Verify installations
+python --version   # should output Python 3.11.x ~ 3.13.x
+node --version     # should output v18.x.x or higher
+git --version      # should output git version 2.x.x
+
+# Install Trade
 git clone --branch main https://github.com/NousResearch/hermes-agent.git $env:LOCALAPPDATA\hermes\hermes-agent
 cd $env:LOCALAPPDATA\hermes\hermes-agent; pip install -e "."; hermes setup
 
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\smart-trade-ai
-cd $env:LOCALAPPDATA\trade\smart-trade-ai; pip install -e "."; install-trade-skills
+git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
+cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-trade-skills
 
 python server.py
 ```

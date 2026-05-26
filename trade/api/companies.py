@@ -36,9 +36,9 @@ def list_companies():
 
 @router.post("/companies")
 def create_company(payload: CompanyCreate):
-    """注册新公司。slug 省略时自动从 name 生成。"""
+    """注册新公司。slug 省略时自动从 name 生成。自动写入默认 Agent 身份。"""
     try:
-        return company_module.create(
+        company = company_module.create(
             name=payload.name, slug=payload.slug,
             logo_url=payload.logo_url, website=payload.website,
             contact_name=payload.contact_name, contact_email=payload.contact_email,
@@ -47,6 +47,20 @@ def create_company(payload: CompanyCreate):
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+    # 自动写入默认 Agent 身份（如果尚未设置）
+    from trade.onboarding import _build_agent_identity
+    existing = company_module.get_agent_identity(company["id"])
+    if not existing:
+        default_identity = _build_agent_identity(
+            company["name"],
+            {"products": "各类工业产品", "differentiation": "源头工厂，性价比高", "target_region": "全球市场"},
+        )
+        company_module.update_trade_company(
+            company_id=company["id"],
+            agent_identity_md=default_identity,
+        )
+    return company
 
 
 @router.get("/companies/{company_id}")

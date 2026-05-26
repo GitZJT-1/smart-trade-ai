@@ -473,8 +473,8 @@ body {
             <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
             <h4 style="font-size:13px;font-weight:600;margin-bottom:10px;">添加新公司</h4>
             <div class="form-row">
-                <div class="form-group"><label for="co-name">公司名称 *</label><input type="text" id="co-name" placeholder="例如：我的外贸公司"></div>
-                <div class="form-group"><label for="co-slug">Slug</label><input type="text" id="co-slug" placeholder="自动生成"></div>
+                <div class="form-group"><label for="co-name">公司名称 *</label><input type="text" id="co-name" placeholder="例如：我的外贸公司" oninput="autoSlug()"></div>
+                <div class="form-group"><label for="co-slug">Slug</label><input type="text" id="co-slug" placeholder="自动生成" style="color:var(--text-muted);"></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label for="co-contact-name">联系人</label><input type="text" id="co-contact-name" placeholder="姓名"></div>
@@ -2473,6 +2473,25 @@ function loadCompanyListUI() {
             <div style="font-size:11px;color:var(--text-muted);">${esc(c.slug)} · ${esc(c.contact_email||'无邮箱')}</div></div>
             <button class="btn btn-danger btn-xs" onclick="deleteCompany(${c.id})">删除</button>
         </div>`).join('');
+}
+
+function autoSlug() {
+    const name = $('co-name').value.trim();
+    const slugEl = $('co-slug');
+    if (!name) {
+        slugEl.value = '';
+        slugEl.placeholder = '自动生成';
+        slugEl.style.color = 'var(--text-muted)';
+        return;
+    }
+    // 前端实时生成 slug 预览（与后端的 _slugify 逻辑一致）
+    let s = name.toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_]+/g, '-')
+        .replace(/--+/g, '-')
+        .replace(/^-|-$/g, '') || 'company';
+    slugEl.value = s;
+    slugEl.style.color = '';
 }
 
 async function createCompany() {

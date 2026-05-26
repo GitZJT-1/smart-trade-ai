@@ -344,6 +344,18 @@ def build_query(
         code_fallback=code_fallback,
     )
 
+    # 1.5 注入当前公司信息 — Agent 需要明确知道自己为哪家公司工作
+    if company_id:
+        co = _company.get(company_id)
+        if co:
+            system_prompt += (
+                f"\n\n## 当前工作公司\n"
+                f"- 公司名称：{co['name']}\n"
+                f"- 公司 ID：{co['id']}\n"
+                f"- Slug：{co.get('slug', '')}\n\n"
+                "**所有数据操作（记忆读取、客户查询、文档搜索）必须限定在上述公司范围内。**"
+            )
+
     # 2. Customer context (injected before library context) — 客户信息放在文档上下文之前
     customer_context = ""
     if customer_id:

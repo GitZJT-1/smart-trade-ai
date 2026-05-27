@@ -1,7 +1,7 @@
 """
 Trade AI Assistant — Skill 注册表（纯数据模块）。
 
-包含所有 13 个 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
+包含所有 14 个 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
 此文件仅包含数据，不包含业务逻辑。
 新增 skill 时只需在此文件追加 _SKILLS 列表即可。
 
@@ -702,6 +702,20 @@ STOP RULE（防止无效搜索）:
 适用场景：用户提到"之前""上次""以前""那天""上周"等时间词；询问过去讨论过的内容；需要了解用户的长期偏好。
 调用方式：chat_memory_list(time_range="all", limit=20)
 结果格式：[{created_at, query, response}, ...]""",
+    },
+    {
+        "name": "b2b-skill-generator",
+        "triggers": [
+            # Chinese
+            "生成skill", "创建skill", "新建技能", "做个skill", "写个skill",
+            "生成技能", "新增技能", "创建一个skill",
+            # English
+            "create skill", "generate skill", "new skill",
+        ],
+        "aliases": [],
+        "input_fmt": "描述你需要什么功能（例如：'帮我做一个海关数据分析的skill'）",
+        "output_fmt": "自动生成符合规范的 SKILL.md + 注册到 skill_registry.py + 重启服务生效",
+        "augment_prompt": "",
     },
 ]
 

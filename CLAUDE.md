@@ -150,7 +150,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 14 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
 
-   The 14 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`.
+   The 15 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`, `b2b-skill-generator`.
 
 8. **Prompt resolution chain** (trade/prompts.py): Company identity file (~/.trade/companies/{slug}/agent_identity.md) → DB agent_identity_md field → global system.md → code fallback (TRADE_SYSTEM_PROMPT). Files are mtime-cached for performance.
 

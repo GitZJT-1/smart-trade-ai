@@ -136,7 +136,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 14 Professional Skills
+## 15 Professional Skills
 
 ### Lead Generation
 | Skill | Description |
@@ -160,8 +160,13 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 |------|------|
 | Due Diligence | 6-layer verification: email → WHOIS → sanctions → MX → tech stack → LinkedIn |
 | Morning Brief | Live FX rates + commodities + market news + client follow-up reminders |
-| Cron Tasks | 7 workday automations: morning brief / cold emails / social posts / daily summary |
+| Cron Tasks | Workday automations: morning brief / outreach / social posts / daily summary |
 | Chat History | Per-company chat memory, searchable and retraceable |
+
+### System
+| Skill | Description |
+|------|------|
+| Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
 
 ---
 

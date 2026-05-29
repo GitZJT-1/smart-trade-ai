@@ -46,6 +46,23 @@ So you can focus on what actually matters — closing deals.
 
 ---
 
+## Prerequisite: LLM API Key
+
+> **Smart Trade AI is free, but you need your own LLM subscription.** Hermes Agent won't pay for your usage — you must register with a model provider and get an API Key.
+
+Recommended pay-per-token plans (best value for trade workflows):
+
+| Plan | Model | Best For | Price | Sign Up |
+|------|-------|----------|-------|---------|
+| **Recommended** | DeepSeek V4 Flash | Daily chat, doc analysis, cold emails | ¥1/million tokens | [platform.deepseek.com](https://platform.deepseek.com) → Top-up → API Keys |
+| **Alternative** | MiniMax M2.7 | Long-form content, multi-turn conversations | ¥1/million tokens | [minimaxi.cn](https://minimaxi.cn) → Console → Token Plan subscription |
+
+> Avoid pay-as-you-go OpenAI/Anthropic — trade workflows burn a lot of tokens, and per-request billing gets expensive fast.
+
+After getting your API Key, run `hermes setup` in terminal, choose your provider, and paste the key.
+
+---
+
 ## Get started in 3 minutes
 
 ### Option 1: One-liner install

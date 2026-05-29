@@ -8,7 +8,7 @@
 
 <div align="center">
   <h3>外贸业务员的 AI 助手</h3>
-  <p>本地运行 · 14 项专业能力 · 数据不出电脑</p>
+  <p>本地运行 · 15 项专业能力 · 数据不出电脑</p>
 </div>
 
 **你的外贸团队每天花 3 小时写开发信、查客户背景、维护 B2B 平台？这个工具帮你把重复劳动压缩到 10 分钟。**
@@ -54,7 +54,7 @@
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 14 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 15 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
@@ -200,10 +200,10 @@ trade/                     B2B 业务层
 ├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
 ├── skill_router.py        Skill 自动匹配引擎
-├── skill_registry.py      14 个 skill 注册表（纯数据）
+├── skill_registry.py      15 个 skill 注册表（纯数据）
 └── ... + 13 个业务模块
 
-skills/                    14 个 B2B skills（Markdown 驱动）
+skills/                    15 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
 server.py                  FastAPI 入口
 ```

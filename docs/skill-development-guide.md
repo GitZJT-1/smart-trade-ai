@@ -236,7 +236,7 @@ injection_prompt: |
 
 ---
 
-## 6. 现有 14 个 Skills 的触发词快速参考
+## 6. 现有 15 个 Skills 的触发词快速参考
 
 | Skill | 典型触发词 |
 |-------|-----------|
@@ -254,3 +254,4 @@ injection_prompt: |
 | b2b-customer-mgmt | 客户管理、CRM、客户信息 |
 | b2b-daily-automation | 定时任务、自动化、简报、日报 |
 | chat-memory | 之前说过、上周聊的、历史记录、帮我查 |
+| b2b-skill-generator | 生成skill、创建技能、新建能力、做个skill |

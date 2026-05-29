@@ -15,7 +15,7 @@ import os
 import re
 
 # ─────────────────────────────────────────────────────────────────────────────
-# mtime 缓存：OrderedDict LRU（上限 128，远大于 14 个 skill）
+# mtime 缓存：OrderedDict LRU（上限 128，远大于 15 个 skill）
 # ─────────────────────────────────────────────────────────────────────────────
 from collections import OrderedDict
 from pathlib import Path

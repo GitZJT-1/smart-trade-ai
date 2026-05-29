@@ -8,7 +8,7 @@
 
 <div align="center">
   <h3>AI Assistant for International Trade Professionals</h3>
-  <p>Runs locally · 14 built-in skills · Your data never leaves your machine</p>
+  <p>Runs locally · 15 built-in skills · Your data never leaves your machine</p>
 </div>
 
 **Your team spends 3 hours a day writing cold emails, researching clients, and managing B2B platforms? This tool compresses that drudgery into 10 minutes.**
@@ -54,7 +54,7 @@ So you can focus on what actually matters — closing deals.
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 14 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 15 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -200,10 +200,10 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      14 skill registry (pure data)
+├── skill_registry.py      15 skill registry (pure data)
 └── ... + 13 business modules
 
-skills/                    14 B2B skills (Markdown-driven)
+skills/                    15 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

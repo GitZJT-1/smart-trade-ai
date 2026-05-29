@@ -1,7 +1,7 @@
 """
 Trade AI Assistant — Skill 注册表（纯数据模块）。
 
-包含所有 14 个 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
+包含所有 15 个 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
 此文件仅包含数据，不包含业务逻辑。
 新增 skill 时只需在此文件追加 _SKILLS 列表即可。
 

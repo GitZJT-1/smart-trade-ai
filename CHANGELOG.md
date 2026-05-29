@@ -18,7 +18,7 @@
 ## [0.4.3] — 2026-05-20
 
 ### Added
-- **Skill 开发指南**：`docs/skill-development-guide.md`，覆盖 frontmatter 规范、触发词设计原则、injection_prompt 最佳实践、14 个 skill 快速参考
+- **Skill 开发指南**：`docs/skill-development-guide.md`，覆盖 frontmatter 规范、触发词设计原则、injection_prompt 最佳实践、15 个 skill 快速参考
 - **Agent 重试机制**：sync 和 SSE 双端点均支持，RuntimeError / 空响应自动重试（最多 2 次，指数退避）
 
 ### Changed

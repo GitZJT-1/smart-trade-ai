@@ -48,7 +48,7 @@ So you can focus on what actually matters — closing deals.
 
 ## Prerequisite: LLM API Key
 
-> **You need your own LLM subscription.** Hermes Agent won't pay for your usage — you must register with a model provider and get an API Key.
+> Smart Trade AI uses Hermes Agent as its AI engine. You need to register with a model provider and get an API Key.
 
 Recommended plans:
 

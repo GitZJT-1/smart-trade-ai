@@ -48,7 +48,7 @@
 
 ## 前置条件：LLM API Key
 
-> **你需要自己订阅一个大模型服务。** Hermes Agent 不会替你付费，你需要去模型厂商那里注册并获取 API Key。
+> Smart Trade AI 使用 Hermes Agent 作为底层 AI 驱动。你需要去模型厂商那里注册并获取 API Key。
 
 推荐方案：
 

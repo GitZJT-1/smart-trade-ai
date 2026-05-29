@@ -48,16 +48,14 @@
 
 ## 前置条件：LLM API Key
 
-> **Smart Trade AI 本身是免费的，但需要你自己订阅一个大模型服务。** Hermes Agent 不会替你付费，你需要去模型厂商那里注册并获取 API Key。
+> **你需要自己订阅一个大模型服务。** Hermes Agent 不会替你付费，你需要去模型厂商那里注册并获取 API Key。
 
-推荐以下按 token 付费的高性价比方案：
+推荐方案：
 
-| 方案 | 模型 | 适合场景 | 价格 | 注册地址 |
-|------|------|---------|------|---------|
-| **推荐** | DeepSeek V4 Flash | 日常对话、文档分析、开发信 | ¥1/百万 tokens | [platform.deepseek.com](https://platform.deepseek.com) → 充值 → API Keys |
-| **备选** | MiniMax M2.7 | 长篇内容生成、多轮对话 | ¥1/百万 tokens | [minimaxi.cn](https://minimaxi.cn) → 控制台 → Token Plan 订阅 |
-
-> 不推荐按量付费的 OpenAI/Anthropic，外贸场景 token 消耗大，按量付费成本高。
+| 方案 | 模型 | 适合场景 | 注册地址 |
+|------|------|---------|---------|
+| **推荐** | DeepSeek V4 Flash | 日常对话、文档分析、开发信 | [platform.deepseek.com](https://platform.deepseek.com) → 充值 → API Keys |
+| **备选** | MiniMax M2.7 | 长篇内容生成、多轮对话 | [minimaxi.cn](https://minimaxi.cn) → 控制台 → Token Plan 订阅 |
 
 获取 API Key 后在终端运行 `hermes setup`，选择对应的 provider 并填入 Key 即可。
 

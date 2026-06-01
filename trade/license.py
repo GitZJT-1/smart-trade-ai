@@ -360,8 +360,9 @@ def _decode_activation_code(code: str) -> dict:
     激活码格式: TRADE-{base64url(日期+机器码哈希+Ed25519签名)}
     """
     import base64
-    from cryptography.hazmat.primitives.asymmetric import ed25519
+
     from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric import ed25519
 
     # 只去掉前缀 "TRADE-"，保留 base64url 中的 "-" 字符
     b64 = code

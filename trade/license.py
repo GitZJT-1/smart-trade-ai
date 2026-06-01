@@ -22,12 +22,26 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-# ── 激活码 secret ────────────────────────────────────────────────────────────
+# ── 非对称签名密钥 ──────────────────────────────────────────────────────
+
+# Ed25519 公钥 — 用于验证激活码签名。私钥由作者持有，用户端无法生成合法激活码。
+_PUBLIC_KEY_BYTES = bytes.fromhex(
+    "5af8d2a6356dd8c893b050ae111dfd76ed8f71c549f71b3bf645227e56126a9b"
+)
 
 
-# 内置激活码签名密钥。
-# 更换此值会使所有已发出的激活码失效，需通知用户重新申请。
-_SECRET = b"smart-trade-ai-license-key-v1"
+def _load_private_key():
+    """加载 Ed25519 私钥（仅作者生成激活码时需要）。"""
+    from cryptography.hazmat.primitives import serialization
+
+    priv_pem = os.environ.get("TRADE_LICENSE_PRIVATE_KEY", "")
+    if not priv_pem:
+        priv_file = Path.home() / ".hermes" / "license_private_key.pem"
+        if priv_file.is_file():
+            priv_pem = priv_file.read_text(encoding="utf-8")
+    if priv_pem:
+        return serialization.load_pem_private_key(priv_pem.encode(), password=None)
+    return None
 
 _TRIAL_DAYS = 30
 
@@ -311,73 +325,74 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
 def _encode_activation_code(request_code: str, expires_at: str) -> str:
     """根据申请码和到期日期生成激活码。
 
-    编码格式: TRADE-{date_hex}-{hash_hex}-{sig_hex}-{checksum}
-    每段 4 字符 hex，共计 20 字符，包含日期/机器码哈希/签名。
+    编码格式: TRADE-{base64url(日期 + 机器码哈希 + Ed25519签名)}
+    内部 payload = 8 bytes 日期 + 8 bytes 机器码哈希 → Ed25519 签名 64 bytes。
+    激活码 ~110 字符。
 
     Args:
-        request_code: 用户发送的申请码 (TRADE-REQ-XXXX-XXXX-XXXX)
+        request_code: 用户发送的申请码 (TRADE-REQ-XXXX-XXXX)
         expires_at: ISO 日期字符串，如 "2027-06-01"
-
-    Raises:
-        ValueError: TRADE_LICENSE_SECRET 未设置
     """
-    if not _SECRET:
-        raise ValueError("TRADE_LICENSE_SECRET 环境变量未设置，无法生成激活码。")
+    import base64
 
-    # 从申请码提取机器码哈希（去掉 TRADE-REQ- 前缀和连字符）
+    private_key = _load_private_key()
+    if private_key is None:
+        raise ValueError(
+            "私钥未找到。请将私钥保存为 ~/.hermes/license_private_key.pem "
+            "或设置 TRADE_LICENSE_PRIVATE_KEY 环境变量。"
+        )
+
     req_hash = request_code.replace("TRADE-REQ-", "").replace("-", "").upper()
-    # 到期日期编码为 hex 时间戳 (相对于 2026-01-01 的天数，4 字节)
-    from datetime import date as _date
-    base_date = _date(2026, 1, 1)
-    target_date = _date.fromisoformat(expires_at[:10])
-    days_offset = (target_date - base_date).days
-    date_hex = f"{days_offset:04x}".upper()
+    date_str = expires_at[:10].replace("-", "")  # YYYYMMDD
 
-    # 机器码哈希取前 8 位 hex (4 bytes)
-    hash_part = req_hash[:8]
+    # payload: 日期(8) + 机器码哈希(8) = 16 bytes ASCII hex
+    payload = (date_str + req_hash).encode()
 
-    # HMAC 签名: SHA256(date_hex + hash_part, SECRET) → 取前 8 位 hex (4 bytes)
-    sig_payload = (date_hex + hash_part).encode()
-    sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8].upper()
+    # Ed25519 签名
+    sig = private_key.sign(payload)
 
-    # checksum: date_hex + hash_part + sig 的 hex XOR，用于本地格式校验
-    checksum_val = int(date_hex, 16) ^ int(hash_part, 16) ^ int(sig, 16)
-    checksum = f"{checksum_val & 0xFFFF:04X}"
-
-    return f"TRADE-{date_hex}-{hash_part}-{sig}-{checksum}"
+    # 打包: 日期 + 机器码哈希 + 签名 → base64url
+    combined = date_str.encode() + req_hash.encode() + sig
+    b64 = base64.urlsafe_b64encode(combined).decode().rstrip("=")
+    return f"TRADE-{b64}"
 
 
 def _decode_activation_code(code: str) -> dict:
     """解码激活码，返回 {expires_at: str, machine_hash: str}。
 
-    激活码格式: TRADE-DDDD-HHHHHHHH-SSSSSSSS-CCCC
+    激活码格式: TRADE-{base64url(日期+机器码哈希+Ed25519签名)}
     """
-    stripped = code.replace("TRADE-", "").replace("-", "").upper()
-    if len(stripped) != 24:
-        raise ValueError(f"Invalid code length: expected 24 hex chars, got {len(stripped)}")
+    import base64
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+    from cryptography.exceptions import InvalidSignature
 
-    date_hex = stripped[0:4]
-    hash_part = stripped[4:12]   # 机器码哈希的前 8 位 hex
-    sig = stripped[12:20]        # HMAC 签名 8 位 hex
-    checksum = stripped[20:24]   # XOR checksum 4 位 hex
+    # 只去掉前缀 "TRADE-"，保留 base64url 中的 "-" 字符
+    b64 = code
+    if b64.startswith("TRADE-"):
+        b64 = b64[6:]
+    # 补回 base64 padding
+    b64 += "=" * (-len(b64) % 4)
+    decoded = base64.urlsafe_b64decode(b64)
 
-    # 校验 checksum
-    expected_checksum = int(date_hex, 16) ^ int(hash_part, 16) ^ int(sig, 16)
-    if f"{expected_checksum & 0xFFFF:04X}" != checksum:
-        raise ValueError("Checksum mismatch")
+    if len(decoded) < 80:
+        raise ValueError(f"Invalid code: expected >= 80 bytes, got {len(decoded)}")
 
-    # 验证 HMAC 签名
-    sig_payload = (date_hex + hash_part).encode()
-    expected_sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8].upper()
-    if not hmac.compare_digest(sig, expected_sig):
+    date_part = decoded[:8].decode()
+    req_hash = decoded[8:16].decode()
+    sig = decoded[16:80]
+
+    # 验证 Ed25519 签名
+    payload = date_part.encode() + req_hash.encode()
+    public_key = ed25519.Ed25519PublicKey.from_public_bytes(_PUBLIC_KEY_BYTES)
+    try:
+        public_key.verify(sig, payload)
+    except InvalidSignature:
         raise ValueError("Invalid activation code signature")
 
     # 解码日期
-    from datetime import date as _date, timedelta as _td
-    days_offset = int(date_hex, 16)
-    expires_at = (_date(2026, 1, 1) + _td(days=days_offset)).isoformat()
+    expires_at = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:8]}"
 
-    return {"expires_at": expires_at, "machine_hash": hash_part}
+    return {"expires_at": expires_at, "machine_hash": req_hash}
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────────

@@ -25,30 +25,9 @@ from pathlib import Path
 # ── 激活码 secret ────────────────────────────────────────────────────────────
 
 
-def _load_secret() -> bytes:
-    """加载 TRADE_LICENSE_SECRET，优先从环境变量，fallback 到 ~/.hermes/.env。"""
-    val = os.environ.get("TRADE_LICENSE_SECRET", "")
-    if val:
-        return val.encode()
-
-    # 尝试从 ~/.hermes/.env 逐行解析
-    env_file = Path.home() / ".hermes" / ".env"
-    if env_file.is_file():
-        try:
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line.startswith("TRADE_LICENSE_SECRET="):
-                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
-                    if val:
-                        os.environ["TRADE_LICENSE_SECRET"] = val
-                        return val.encode()
-        except Exception:
-            pass
-
-    return b""
-
-
-_SECRET = _load_secret()
+# 内置激活码签名密钥。
+# 更换此值会使所有已发出的激活码失效，需通知用户重新申请。
+_SECRET = b"smart-trade-ai-license-key-v1"
 
 _TRIAL_DAYS = 30
 

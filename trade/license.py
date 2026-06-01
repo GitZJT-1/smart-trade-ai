@@ -30,6 +30,57 @@ if not _SECRET:
 
 _TRIAL_DAYS = 30
 
+
+def _machine_id() -> str:
+    """获取本机唯一硬件标识符。
+
+    macOS → IOPlatformUUID (稳定，重装系统前不变)
+    Linux   → /etc/machine-id
+    Windows → 注册表 MachineGuid
+    其他平台 → hostname (fallback)
+    """
+    import platform as _plat
+    import subprocess as _sp
+
+    sys_name = _plat.system()
+    if sys_name == "Darwin":
+        try:
+            result = _sp.run(
+                ["ioreg", "-d2", "-c", "IOPlatformExpertDevice"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for line in result.stdout.splitlines():
+                if "IOPlatformUUID" in line:
+                    uuid = line.strip().split('"')[-2]
+                    return f"mac:{uuid}"
+        except Exception:
+            pass
+
+    elif sys_name == "Linux":
+        for path in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+            try:
+                mid = Path(path).read_text().strip()
+                if mid:
+                    return f"linux:{mid}"
+            except Exception:
+                continue
+
+    elif sys_name == "Windows":
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Cryptography",
+            )
+            guid, _ = winreg.QueryValueEx(key, "MachineGuid")
+            winreg.CloseKey(key)
+            if guid:
+                return f"win:{guid}"
+        except Exception:
+            pass
+
+    return f"host:{_plat.node()}"
+
 # 暴力破解限流：内存计数器，记录最近 60 秒内的失败尝试次数
 _MAX_ACTIVATE_ATTEMPTS = 10  # 每 60 秒最多 10 次激活尝试
 _ACTIVATE_ATTEMPTS: list[float] = []  # 时间戳列表

@@ -162,12 +162,16 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(title="Foreign Trade Assistant")
 
-    # 数据库初始化 + 许可证检查
+    # 数据库初始化
     _db_path = _init_db()
+    print(f"  Database: {_db_path}")
+
+    # 许可证检查：到期不影响服务启动（chat 端点在每次请求时校验），
+    # 但打印醒目提示引导用户激活
     lic_ok, lic_msg = _check_license()
     if not lic_ok:
-        print(f"  ⚠️  {lic_msg}")
-    print(f"  Database: {_db_path}")
+        print(f"\n  ⚠️  {lic_msg}")
+        print("  Chat 接口已限制，请通过前端获取激活码。\n")
 
     # 注入 session token
     from trade.api.deps import set_session_token

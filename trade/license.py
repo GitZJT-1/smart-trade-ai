@@ -38,6 +38,8 @@ def _load_private_key():
     if not priv_pem:
         priv_file = Path.home() / ".hermes" / "license_private_key.pem"
         if priv_file.is_file():
+            # 强制 600 权限防止私钥泄露
+            priv_file.chmod(0o600)
             priv_pem = priv_file.read_text(encoding="utf-8")
     if priv_pem:
         return serialization.load_pem_private_key(priv_pem.encode(), password=None)

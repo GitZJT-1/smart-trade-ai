@@ -79,6 +79,15 @@ def update(
     """更新文档库字段（name, root_path, description）。"""
     allowed = {"name", "root_path", "description"}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
+    # 路径穿越防护：root_path 不能包含 .. 或绝对路径突破限制
+    if "root_path" in updates:
+        rp = updates["root_path"]
+        if ".." in rp:
+            raise ValueError("root_path 不能包含 '..'")
+        # 必须是已存在的绝对目录
+        rp_path = Path(rp)
+        if not rp_path.is_absolute() or not rp_path.is_dir():
+            raise ValueError(f"root_path 必须是已存在的绝对目录: {rp}")
     if not updates:
         # 没有可更新的字段时，直接返回当前记录
         return get(library_id, company_id)

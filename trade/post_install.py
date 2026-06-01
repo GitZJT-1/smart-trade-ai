@@ -219,6 +219,11 @@ def update_skills() -> None:
             continue
 
         skill_name = skill_dir.name
+        # 安全校验：skill 目录名只允许 b2b- 前缀 + 小写字母连字符
+        if ".." in skill_name or "/" in skill_name or not skill_name.startswith("b2b-"):
+            print(f"  ✗ {skill_name} (invalid name)", file=sys.stderr)
+            failed += 1
+            continue
         raw_url = f"{RAW_BASE}/{skill_name}/SKILL.md"
         dest_dir = hermes_skills_dir / skill_name
         dest_file = dest_dir / "SKILL.md"

@@ -2,13 +2,13 @@
 许可证管理 — 试用期 + 年度激活。
 
 首次使用起 30 天免费试用，到期后需激活码继续使用。
-激活码有效期通常为一年。
 
-环境变量：
-  TRADE_LICENSE_SECRET — (必填) 激活码 HMAC 签名密钥。未设置时生成和验证激活码的功能不可用。
-                        运行 `python -m trade.license generate-secret` 随机生成。
+激活码使用 Ed25519 非对称签名，公钥内置代码，私钥由作者持有。
+用户端可用公钥验签但无法生成合法激活码。
 
-CLI 工具: python -m trade.license --generate YYYY-MM-DD
+CLI:
+  python -m trade.license generate <申请码> <到期日期>    # 作者生成激活码
+  python -m trade.license status                          # 查看许可证状态
 """
 
 from __future__ import annotations
@@ -280,9 +280,6 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     Returns:
         (success, message): success=True 表示激活成功。
     """
-    if not _SECRET:
-        return False, "服务器未配置许可证签名密钥。请联系管理员设置 TRADE_LICENSE_SECRET。"
-
     if not _check_activate_rate_limit():
         return False, "激活尝试过于频繁，请 60 秒后重试。"
 

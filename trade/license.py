@@ -204,8 +204,15 @@ def days_remaining(company_id: int | None = None) -> int:
     return _TRIAL_DAYS
 
 
+def _make_request_code() -> str:
+    """生成本机申请码: TRADE-REQ-XXXX-XXXX-XXXX（基于机器码哈希）。"""
+    mid = _machine_id()
+    h = hashlib.sha256(mid.encode()).hexdigest()[:12].upper()
+    return f"TRADE-REQ-{h[:4]}-{h[4:8]}-{h[8:12]}"
+
+
 def status(company_id: int | None = None) -> dict:
-    """返回许可证状态，供前端展示。"""
+    """返回许可证状态，供前端展示。到期时自动包含 request_code。"""
     data = _get_license_data(company_id)
     now = datetime.now(UTC)
 
@@ -215,6 +222,7 @@ def status(company_id: int | None = None) -> dict:
         "expires_at": data.get("expires_at"),
         "trial_used": 0,
         "trial_total": _TRIAL_DAYS,
+        "request_code": "",
     }
 
     if "first_launch_at" in data:
@@ -223,6 +231,7 @@ def status(company_id: int | None = None) -> dict:
 
     if not result["activated"] and result["days_remaining"] <= 0:
         result["status"] = "expired"
+        result["request_code"] = _make_request_code()
     elif result["activated"]:
         result["status"] = "active"
     else:

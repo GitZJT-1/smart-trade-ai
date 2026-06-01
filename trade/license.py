@@ -24,9 +24,31 @@ from pathlib import Path
 
 # ── 激活码 secret ────────────────────────────────────────────────────────────
 
-_SECRET = os.environ.get("TRADE_LICENSE_SECRET", "").encode()
-if not _SECRET:
-    _SECRET = b""  # 未设置则不提供激活码签名；generate 命令会报错
+
+def _load_secret() -> bytes:
+    """加载 TRADE_LICENSE_SECRET，优先从环境变量，fallback 到 ~/.hermes/.env。"""
+    val = os.environ.get("TRADE_LICENSE_SECRET", "")
+    if val:
+        return val.encode()
+
+    # 尝试从 ~/.hermes/.env 逐行解析
+    env_file = Path.home() / ".hermes" / ".env"
+    if env_file.is_file():
+        try:
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("TRADE_LICENSE_SECRET="):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val:
+                        os.environ["TRADE_LICENSE_SECRET"] = val
+                        return val.encode()
+        except Exception:
+            pass
+
+    return b""
+
+
+_SECRET = _load_secret()
 
 _TRIAL_DAYS = 30
 

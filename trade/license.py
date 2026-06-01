@@ -227,10 +227,10 @@ def days_remaining(company_id: int | None = None) -> int:
 
 
 def _make_request_code() -> str:
-    """生成本机申请码: TRADE-REQ-XXXX-XXXX-XXXX（基于机器码哈希）。"""
+    """生成本机申请码: TRADE-REQ-XXXX-XXXX（基于机器码哈希前 8 位）。"""
     mid = _machine_id()
-    h = hashlib.sha256(mid.encode()).hexdigest()[:12].upper()
-    return f"TRADE-REQ-{h[:4]}-{h[4:8]}-{h[8:12]}"
+    h = hashlib.sha256(mid.encode()).hexdigest()[:8].upper()
+    return f"TRADE-REQ-{h[:4]}-{h[4:8]}"
 
 
 def status(company_id: int | None = None) -> dict:
@@ -304,9 +304,9 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     except Exception:
         return False, "激活码无效"
 
-    # 验证机器码：本机哈希必须匹配激活码中的哈希
-    local_machine_hash = hashlib.sha256(_machine_id().encode()).hexdigest()[:12].upper()
-    if not hmac.compare_digest(local_machine_hash, decoded["machine_hash"]):
+    # 验证机器码：本机哈希的前 8 位必须匹配激活码中的哈希
+    local_hash = hashlib.sha256(_machine_id().encode()).hexdigest()[:8].upper()
+    if not hmac.compare_digest(local_hash, decoded["machine_hash"]):
         return False, "此激活码不适用于本机。请在本机上生成申请码后联系作者。"
 
     expires_at = decoded["expires_at"]
@@ -332,7 +332,8 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
 def _encode_activation_code(request_code: str, expires_at: str) -> str:
     """根据申请码和到期日期生成激活码。
 
-    激活码内嵌申请码哈希 + 到期日期 + HMAC 签名，确保一码一机。
+    编码格式: TRADE-{date_hex}-{hash_hex}-{sig_hex}-{checksum}
+    每段 4 字符 hex，共计 20 字符，包含日期/机器码哈希/签名。
 
     Args:
         request_code: 用户发送的申请码 (TRADE-REQ-XXXX-XXXX-XXXX)
@@ -345,67 +346,59 @@ def _encode_activation_code(request_code: str, expires_at: str) -> str:
         raise ValueError("TRADE_LICENSE_SECRET 环境变量未设置，无法生成激活码。")
 
     # 从申请码提取机器码哈希（去掉 TRADE-REQ- 前缀和连字符）
-    req_core = request_code.replace("TRADE-REQ-", "").replace("-", "").upper()
-    date_part = expires_at[:10].replace("-", "")
+    req_hash = request_code.replace("TRADE-REQ-", "").replace("-", "").upper()
+    # 到期日期编码为 hex 时间戳 (相对于 2026-01-01 的天数，4 字节)
+    from datetime import date as _date
+    base_date = _date(2026, 1, 1)
+    target_date = _date.fromisoformat(expires_at[:10])
+    days_offset = (target_date - base_date).days
+    date_hex = f"{days_offset:04x}".upper()
 
-    # 签名: HMAC(date + req_core)
-    sig_payload = (date_part + req_core).encode()
-    sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8]
+    # 机器码哈希取前 8 位 hex (4 bytes)
+    hash_part = req_hash[:8]
 
-    combined = (date_part + req_core + sig).encode()
-    b64 = _base64url_encode(combined)
-    return f"TRADE-{b64[:4]}-{b64[4:8]}-{b64[8:12]}-{b64[12:16]}".upper()
+    # HMAC 签名: SHA256(date_hex + hash_part, SECRET) → 取前 8 位 hex (4 bytes)
+    sig_payload = (date_hex + hash_part).encode()
+    sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8].upper()
+
+    # checksum: date_hex + hash_part + sig 的 hex XOR，用于本地格式校验
+    checksum_val = int(date_hex, 16) ^ int(hash_part, 16) ^ int(sig, 16)
+    checksum = f"{checksum_val & 0xFFFF:04X}"
+
+    return f"TRADE-{date_hex}-{hash_part}-{sig}-{checksum}"
 
 
 def _decode_activation_code(code: str) -> dict:
-    """解码激活码，返回 {expires_at: str, machine_hash: str}。"""
-    core = code.replace("TRADE-", "").replace("-", "").upper()
-    decoded = _base64url_decode(core)
+    """解码激活码，返回 {expires_at: str, machine_hash: str}。
 
-    date_part = decoded[:8].decode()
-    expires_at = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:8]}"
-    req_hash = decoded[8:20].decode()
-    sig_part = decoded[20:].decode()
+    激活码格式: TRADE-DDDD-HHHHHHHH-SSSSSSSS-CCCC
+    """
+    stripped = code.replace("TRADE-", "").replace("-", "").upper()
+    if len(stripped) != 24:
+        raise ValueError(f"Invalid code length: expected 24 hex chars, got {len(stripped)}")
 
-    # 验证签名
-    sig_payload = (date_part + req_hash).encode()
-    expected_sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8]
-    if not hmac.compare_digest(sig_part, expected_sig):
+    date_hex = stripped[0:4]
+    hash_part = stripped[4:12]   # 机器码哈希的前 8 位 hex
+    sig = stripped[12:20]        # HMAC 签名 8 位 hex
+    checksum = stripped[20:24]   # XOR checksum 4 位 hex
+
+    # 校验 checksum
+    expected_checksum = int(date_hex, 16) ^ int(hash_part, 16) ^ int(sig, 16)
+    if f"{expected_checksum & 0xFFFF:04X}" != checksum:
+        raise ValueError("Checksum mismatch")
+
+    # 验证 HMAC 签名
+    sig_payload = (date_hex + hash_part).encode()
+    expected_sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8].upper()
+    if not hmac.compare_digest(sig, expected_sig):
         raise ValueError("Invalid activation code signature")
 
-    return {"expires_at": expires_at, "machine_hash": req_hash}
+    # 解码日期
+    from datetime import date as _date, timedelta as _td
+    days_offset = int(date_hex, 16)
+    expires_at = (_date(2026, 1, 1) + _td(days=days_offset)).isoformat()
 
-
-_BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-
-
-def _base64url_encode(data: bytes) -> str:
-    result = []
-    for i in range(0, len(data), 3):
-        chunk = data[i:i+3]
-        bits = (chunk[0] << 16) | (chunk[1] << 8 if len(chunk) > 1 else 0) | (chunk[2] if len(chunk) > 2 else 0)
-        result.append(_BASE64URL_CHARS[(bits >> 18) & 63])
-        result.append(_BASE64URL_CHARS[(bits >> 12) & 63])
-        result.append(_BASE64URL_CHARS[(bits >> 6) & 63] if len(chunk) > 1 else "=")
-        result.append(_BASE64URL_CHARS[bits & 63] if len(chunk) > 2 else "=")
-    return "".join(result)
-
-
-def _base64url_decode(s: str) -> bytes:
-    s = s.rstrip("=")
-    result = bytearray()
-    for i in range(0, len(s), 4):
-        chunk = s[i:i+4]
-        idx = [_BASE64URL_CHARS.index(c) for c in chunk]
-        val = (idx[0] << 18) | (idx[1] << 12)
-        result.append((val >> 16) & 0xFF)
-        if len(chunk) > 2 and chunk[2] != "=":
-            val |= (idx[2] << 6)
-            result.append((val >> 8) & 0xFF)
-        if len(chunk) > 3 and chunk[3] != "=":
-            val |= idx[3]
-            result.append(val & 0xFF)
-    return bytes(result)
+    return {"expires_at": expires_at, "machine_hash": hash_part}
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────────

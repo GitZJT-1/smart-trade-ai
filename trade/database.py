@@ -41,6 +41,7 @@ def get_connection() -> sqlite3.Connection:
     避免 schema 顺序变更导致的位置索引 bug。
     """
     db_path = _get_db_path()
+    # timeout=30 (秒), busy_timeout=30000 (毫秒) — 两者等效 30s
     conn = sqlite3.connect(str(db_path), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")

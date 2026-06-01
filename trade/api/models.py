@@ -7,6 +7,8 @@ Trade AI Assistant — API 请求/响应模型（Pydantic）。
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 # ── Company ────────────────────────────────────────────────────────────────────
@@ -107,7 +109,7 @@ class OrderCreate(BaseModel):
     unit_price: float | None = Field(None, description="单价")
     currency: str | None = Field(None, description="币种")
     total_amount: float | None = Field(None, description="总金额")
-    status: str | None = Field(None, description="状态")
+    status: Literal["报价中", "已下单", "已出货", "已完成", "已取消"] | None = Field(None, description="状态")
     delivery_date: str | None = Field(None, description="交期")
     payment_terms: str | None = Field(None, description="付款方式")
     notes: str | None = Field(None, description="备注")
@@ -122,7 +124,7 @@ class OrderUpdate(BaseModel):
     unit_price: float | None = Field(None, description="单价")
     currency: str | None = Field(None, description="币种")
     total_amount: float | None = Field(None, description="总金额")
-    status: str | None = Field(None, description="状态")
+    status: Literal["报价中", "已下单", "已出货", "已完成", "已取消"] | None = Field(None, description="状态")
     delivery_date: str | None = Field(None, description="交期")
     payment_terms: str | None = Field(None, description="付款方式")
     notes: str | None = Field(None, description="备注")

@@ -12,6 +12,33 @@ from pathlib import Path
 
 from trade.database import get_connection
 
+# 禁止作为 root_path 的敏感目录
+_FORBIDDEN_DIRS = [
+    Path.home() / ".hermes",
+    Path.home() / ".trade",
+    Path.home() / ".ssh",
+    Path("/etc"),
+    Path("/var"),
+    Path("/tmp"),
+    Path("/root"),
+]
+
+
+def _validate_root_path(rp: str) -> str:
+    """验证 root_path 合法：不包含 .. , 是绝对路径, 不在禁止目录列表中。"""
+    if ".." in rp:
+        raise ValueError("root_path 不能包含 '..'")
+    rp_path = Path(rp).resolve()
+    if not rp_path.is_absolute():
+        raise ValueError(f"root_path 必须是绝对路径: {rp}")
+    for forbidden in _FORBIDDEN_DIRS:
+        try:
+            rp_path.relative_to(forbidden)
+            raise ValueError(f"root_path 不能指向系统敏感目录: {forbidden}")
+        except ValueError:
+            continue
+    return rp
+
 
 def create(
     name: str,
@@ -20,6 +47,8 @@ def create(
     company_id: int | None = None,
 ) -> dict:
     """创建归属于指定公司的文档库，返回新记录行的字典。"""
+    # 路径穿越防护
+    root_path = _validate_root_path(root_path)
     conn = get_connection()
     try:
         cur = conn.execute(
@@ -79,15 +108,9 @@ def update(
     """更新文档库字段（name, root_path, description）。"""
     allowed = {"name", "root_path", "description"}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
-    # 路径穿越防护：root_path 不能包含 .. 或绝对路径突破限制
+    # 路径穿越防护：校验 ..  / 绝对路径 / 禁止目录
     if "root_path" in updates:
-        rp = updates["root_path"]
-        if ".." in rp:
-            raise ValueError("root_path 不能包含 '..'")
-        # 必须是已存在的绝对目录
-        rp_path = Path(rp)
-        if not rp_path.is_absolute() or not rp_path.is_dir():
-            raise ValueError(f"root_path 必须是已存在的绝对目录: {rp}")
+        updates["root_path"] = _validate_root_path(updates["root_path"])
     if not updates:
         # 没有可更新的字段时，直接返回当前记录
         return get(library_id, company_id)

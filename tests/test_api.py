@@ -345,6 +345,7 @@ class TestLibraryEndpoints:
 
     def test_create_and_list(self, test_db, company_id, setup_mocks):
         from trade import library
+        Path("/tmp/eplib").mkdir(parents=True, exist_ok=True)
         lib = library.create("Endpoint Lib", "/tmp/eplib", company_id=company_id)
         assert lib["name"] == "Endpoint Lib"
 
@@ -354,6 +355,7 @@ class TestLibraryEndpoints:
     def test_company_scoped_access(self, test_db, company_id, setup_mocks):
         from trade import company, library
         other = company.create(name="Other Co", slug="other-co-lib")
+        Path("/tmp/mylib").mkdir(parents=True, exist_ok=True)
         lib = library.create("My Lib", "/tmp/mylib", company_id=company_id)
 
         # Other company shouldn't see this library

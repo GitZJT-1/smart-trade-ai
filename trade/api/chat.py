@@ -69,7 +69,7 @@ async def trade_chat(
 
     full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)
 
-    _MAX_AGENT_RETRIES = 2  # 最多重试 2 次（共 3 次尝试）
+    _MAX_AGENT_RETRIES = 1  # 最多重试 1 次（共 2 次尝试），避免 Token 费用翻倍
 
     def _call_agent():
         last_error = ""

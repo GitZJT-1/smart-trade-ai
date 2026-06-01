@@ -614,7 +614,11 @@ async function loadLicenseStatus() {
             bar.style.display = 'block';
             bar.style.background = '#FEF2F2';
             bar.style.color = '#991B1B';
-            bar.innerHTML = '⚠️ 试用期已到期 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;">输入激活码</a>';
+            var expiredHtml = '⚠️ 试用期已到期 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;">输入激活码</a>';
+            if (data.request_code) {
+                expiredHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + data.request_code + '</code>';
+            }
+            bar.innerHTML = expiredHtml;
         } else if (data.status === 'active') {
             bar.style.display = 'block';
             bar.style.background = '#F0FDF4';

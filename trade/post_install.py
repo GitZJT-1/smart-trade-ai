@@ -220,8 +220,8 @@ def update_skills() -> None:
 
         skill_name = skill_dir.name
         # 安全校验：skill 目录名只允许 b2b- 前缀 + 小写字母连字符
-        if ".." in skill_name or "/" in skill_name or not skill_name.startswith("b2b-"):
-            print(f"  ✗ {skill_name} (invalid name)", file=sys.stderr)
+        if ".." in skill_name or "/" in skill_name or "\\" in skill_name or not skill_name.startswith("b2b-"):
+            print(f"  ✗ {skill_name} (invalid name, skipped)", file=sys.stderr)
             failed += 1
             continue
         raw_url = f"{RAW_BASE}/{skill_name}/SKILL.md"
@@ -243,7 +243,12 @@ def update_skills() -> None:
                 with urllib.request.urlopen(req, timeout=15) as resp:
                     remote_content = resp.read().decode("utf-8")
 
-                # 比较 hash，相同则跳过
+                # 下载后二次校验：禁止路径穿越写入磁盘（SKILL.md 本身含换行符，属正常）
+                if remote_content.startswith(".."):
+                    print(f"  ✗ {skill_name} (content validation failed, skipped)", file=sys.stderr)
+                    failed += 1
+                    break
+
                 remote_hash = hashlib.sha256(remote_content.encode()).hexdigest()
                 if dest_file.is_file():
                     local_hash = hashlib.sha256(dest_file.read_bytes()).hexdigest()

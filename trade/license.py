@@ -282,6 +282,11 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     except Exception:
         return False, "激活码无效"
 
+    # 验证机器码：本机哈希必须匹配激活码中的哈希
+    local_machine_hash = hashlib.sha256(_machine_id().encode()).hexdigest()[:12].upper()
+    if not hmac.compare_digest(local_machine_hash, decoded["machine_hash"]):
+        return False, "此激活码不适用于本机。请在本机上生成申请码后联系作者。"
+
     expires_at = decoded["expires_at"]
     now = datetime.now(UTC)
 
@@ -302,40 +307,51 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
 # ── 激活码编解码 ──────────────────────────────────────────────────────────────
 
 
-def _encode_activation_code(expires_at: str) -> str:
-    """根据到期日期生成激活码。
+def _encode_activation_code(request_code: str, expires_at: str) -> str:
+    """根据申请码和到期日期生成激活码。
+
+    激活码内嵌申请码哈希 + 到期日期 + HMAC 签名，确保一码一机。
 
     Args:
-        expires_at: ISO 日期字符串，如 "2027-05-19"
+        request_code: 用户发送的申请码 (TRADE-REQ-XXXX-XXXX-XXXX)
+        expires_at: ISO 日期字符串，如 "2027-06-01"
 
     Raises:
         ValueError: TRADE_LICENSE_SECRET 未设置
     """
     if not _SECRET:
         raise ValueError("TRADE_LICENSE_SECRET 环境变量未设置，无法生成激活码。")
-    payload = expires_at[:10]  # YYYY-MM-DD
-    sig = hmac.new(_SECRET, payload.encode(), hashlib.sha256).hexdigest()[:8]
-    combined = (payload.replace("-", "") + sig).encode()
+
+    # 从申请码提取机器码哈希（去掉 TRADE-REQ- 前缀和连字符）
+    req_core = request_code.replace("TRADE-REQ-", "").replace("-", "").upper()
+    date_part = expires_at[:10].replace("-", "")
+
+    # 签名: HMAC(date + req_core)
+    sig_payload = (date_part + req_core).encode()
+    sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8]
+
+    combined = (date_part + req_core + sig).encode()
     b64 = _base64url_encode(combined)
-    return f"TRADE-{b64[:4]}-{b64[4:8]}-{b64[8:12]}".upper()
+    return f"TRADE-{b64[:4]}-{b64[4:8]}-{b64[8:12]}-{b64[12:16]}".upper()
 
 
 def _decode_activation_code(code: str) -> dict:
-    """解码激活码，返回 {expires_at: str}。"""
+    """解码激活码，返回 {expires_at: str, machine_hash: str}。"""
     core = code.replace("TRADE-", "").replace("-", "").upper()
     decoded = _base64url_decode(core)
 
     date_part = decoded[:8].decode()
     expires_at = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:8]}"
-    sig_part = decoded[8:].decode()
+    req_hash = decoded[8:20].decode()
+    sig_part = decoded[20:].decode()
 
     # 验证签名
-    expected_payload = expires_at.encode()
-    expected_sig = hmac.new(_SECRET, expected_payload, hashlib.sha256).hexdigest()[:8]
+    sig_payload = (date_part + req_hash).encode()
+    expected_sig = hmac.new(_SECRET, sig_payload, hashlib.sha256).hexdigest()[:8]
     if not hmac.compare_digest(sig_part, expected_sig):
         raise ValueError("Invalid activation code signature")
 
-    return {"expires_at": expires_at}
+    return {"expires_at": expires_at, "machine_hash": req_hash}
 
 
 _BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
@@ -379,6 +395,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trade License Manager")
     sub = parser.add_subparsers(dest="cmd")
     gen = sub.add_parser("generate", help="生成激活码")
+    gen.add_argument("request_code", help="用户申请码 (TRADE-REQ-XXXX-XXXX-XXXX)")
     gen.add_argument("date", help="到期日期 (YYYY-MM-DD)")
     sub.add_parser("generate-secret", help="随机生成 TRADE_LICENSE_SECRET")
     sub.add_parser("status", help="查看当前许可证状态")
@@ -386,7 +403,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.cmd == "generate":
-        code = _encode_activation_code(args.date)
+        code = _encode_activation_code(args.request_code, args.date)
         print(f"激活码: {code}")
         print(f"有效期至: {args.date}")
     elif args.cmd == "generate-secret":

@@ -397,11 +397,25 @@ def build_query(
     # 4. Library document context
     doc_context = ""
     if library_id:
+        # 用户明确选择了文档库
         lib = _lib.get(library_id, company_id=company_id)
         if lib:
             doc_context = (
                 f"\n[上下文] 用户正在文档库「{lib['name']}」({lib['root_path']}) "
                 "中提问。必要时使用 read_file 读取目录中的文件。"
+            )
+    elif company_id:
+        # 用户没有指定文档库 → 自动列出公司所有文档库，让 Agent 自己找
+        company_libs = _lib.list_by_company(company_id)
+        if company_libs:
+            lib_list = "\n".join(
+                f"  - {l['name']}：{l['root_path']}" for l in company_libs
+            )
+            doc_context = (
+                "\n[上下文] 当前公司的文档库目录如下。用户可能想从这些文档中获取信息，"
+                "请根据用户的问题自行判断需要读取哪些目录和文件。"
+                "使用 list_files 浏览目录，使用 read_file 读取具体文件。\n"
+                f"{lib_list}"
             )
 
     # 6. Skill system hint — OSINT 类 skill 的注入指令作为 system 层独立传入

@@ -59,7 +59,7 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 127 tests across 5 files (test_database, test_business, test_api, test_osint, test_chat_smoke).
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 158 tests across 6 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license).
 
 ## Architecture
 

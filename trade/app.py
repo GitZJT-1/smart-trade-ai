@@ -138,10 +138,17 @@ def _create_system_router() -> APIRouter:
 
         if old_pid is not None:
             import signal
+            # 安全校验：确认 PID 属于 trade 进程，防止误杀
             try:
-                os.kill(old_pid, signal.SIGTERM)
-            except OSError:
-                pass
+                proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
+            except Exception:
+                proc_cmd = ""
+            is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
+            if is_trade or not proc_cmd:
+                try:
+                    os.kill(old_pid, signal.SIGTERM)
+                except OSError:
+                    pass
             try:
                 pid_file.unlink(missing_ok=True)
             except Exception:

@@ -30,16 +30,29 @@ _PUBLIC_KEY_BYTES = bytes.fromhex(
 )
 
 
+def _resolve_hermes_home() -> Path:
+    """解析 Hermes 根目录（跨平台）。"""
+    val = os.environ.get("HERMES_HOME", "").strip()
+    if val:
+        return Path(val)
+    if os.name == "nt":
+        local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+        return Path(local) / "hermes"
+    return Path.home() / ".hermes"
+
+
 def _load_private_key():
     """加载 Ed25519 私钥（仅作者生成激活码时需要）。"""
     from cryptography.hazmat.primitives import serialization
 
     priv_pem = os.environ.get("TRADE_LICENSE_PRIVATE_KEY", "")
     if not priv_pem:
-        priv_file = Path.home() / ".hermes" / "license_private_key.pem"
+        _hermes_root = _resolve_hermes_home()
+        priv_file = _hermes_root / "license_private_key.pem"
         if priv_file.is_file():
             # 强制 600 权限防止私钥泄露
-            priv_file.chmod(0o600)
+            if os.name != "nt":
+                priv_file.chmod(0o600)
             priv_pem = priv_file.read_text(encoding="utf-8")
     if priv_pem:
         return serialization.load_pem_private_key(priv_pem.encode(), password=None)

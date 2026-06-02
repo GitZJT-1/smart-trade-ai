@@ -39,13 +39,17 @@ def _adjust_sys_path():
 
     # Hermes 源码路径优先级：
     # 1. HERMES_HOME 环境变量
-    # 2. ~/.hermes/hermes-agent/（pip install 的源码目录）
+    # 2. 平台默认路径（macOS/Linux: ~/.hermes/, Windows: %LOCALAPPDATA%\hermes\）
     # 3. 与 Trade 平级的 trade_ai_assistant 开发目录
     _hermes_checkout = os.environ.get("HERMES_HOME", "").strip()
     if not _hermes_checkout:
-        _default_hermes = Path.home() / ".hermes" / "hermes-agent"
-        if _default_hermes.is_dir():
-            _hermes_checkout = str(_default_hermes)
+        if os.name == "nt":
+            _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+            _default = Path(_local) / "hermes" / "hermes-agent"
+        else:
+            _default = Path.home() / ".hermes" / "hermes-agent"
+        if _default.is_dir():
+            _hermes_checkout = str(_default)
     if not _hermes_checkout:
         _dev_hermes = str(Path(__file__).resolve().parent.parent.parent / "trade_ai_assistant")
         if Path(_dev_hermes).is_dir():

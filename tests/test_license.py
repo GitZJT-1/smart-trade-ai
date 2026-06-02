@@ -70,11 +70,24 @@ class TestRequestCode:
         assert a == b  # 同一机器应生成相同申请码
 
 
-@_crypto_needed
-class TestEncodeDecode:
-    """激活码编解码 roundtrip（需要 cryptography）"""
+def _setup_temp_ed25519_key(monkeypatch):
+    """设置临时 Ed25519 测试密钥对，替换内置公钥 + 私钥加载函数。"""
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+    from cryptography.hazmat.primitives import serialization
+    pk = ed25519.Ed25519PrivateKey.generate()
+    pub_raw = pk.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    monkeypatch.setattr("trade.license._PUBLIC_KEY_BYTES", pub_raw)
+    monkeypatch.setattr("trade.license._load_private_key", lambda: pk)
 
-    def test_roundtrip(self):
+
+class TestEncodeDecode:
+    """激活码编解码 roundtrip"""
+
+    def test_roundtrip(self, monkeypatch):
+        _setup_temp_ed25519_key(monkeypatch)
         from trade.license import _make_request_code, _encode_activation_code, _decode_activation_code
 
         req = _make_request_code()
@@ -86,7 +99,8 @@ class TestEncodeDecode:
         assert decoded["expires_at"] == "2027-06-01"
         assert len(decoded["machine_hash"]) == 8
 
-    def test_decode_rejects_tampered_code(self):
+    def test_decode_rejects_tampered_code(self, monkeypatch):
+        _setup_temp_ed25519_key(monkeypatch)
         from trade.license import _make_request_code, _encode_activation_code, _decode_activation_code
 
         req = _make_request_code()
@@ -102,8 +116,9 @@ class TestEncodeDecode:
         with pytest.raises(ValueError):
             _decode_activation_code("TRADE-SHORT")
 
-    def test_different_machines_different_hash(self):
+    def test_different_machines_different_hash(self, monkeypatch):
         """不同机器码应产生不同的激活码哈希"""
+        _setup_temp_ed25519_key(monkeypatch)
         from trade.license import _encode_activation_code, _decode_activation_code
 
         code1 = _encode_activation_code("TRADE-REQ-AAAA-BBBB", "2027-06-01")
@@ -112,8 +127,9 @@ class TestEncodeDecode:
         d2 = _decode_activation_code(code2)
         assert d1["machine_hash"] != d2["machine_hash"]
 
-    def test_produces_different_codes_for_same_hash_different_date(self):
+    def test_produces_different_codes_for_same_hash_different_date(self, monkeypatch):
         """相同申请码不同日期应产生不同激活码"""
+        _setup_temp_ed25519_key(monkeypatch)
         from trade.license import _encode_activation_code
         code1 = _encode_activation_code("TRADE-REQ-AAAA-BBBB", "2027-06-01")
         code2 = _encode_activation_code("TRADE-REQ-AAAA-BBBB", "2027-12-31")
@@ -295,9 +311,8 @@ class TestRateLimit:
         assert _check_activate_rate_limit() is False
 
 
-@_crypto_needed
 class TestActivate:
-    """激活执行流程（需要 cryptography）"""
+    """激活执行流程"""
 
     def test_activate_with_empty_code(self):
         from trade.license import activate
@@ -309,8 +324,9 @@ class TestActivate:
         ok, msg = activate("X")
         assert not ok
 
-    def test_activate_cross_machine_rejected(self):
+    def test_activate_cross_machine_rejected(self, monkeypatch):
         """用不属于本机的哈希生成的激活码应被拒绝"""
+        _setup_temp_ed25519_key(monkeypatch)
         from trade.license import _encode_activation_code, activate
         code = _encode_activation_code("TRADE-REQ-DEAD-BEEF", "2027-12-31")
         ok, msg = activate(code)

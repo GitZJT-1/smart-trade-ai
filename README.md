@@ -113,32 +113,27 @@ python server.py
 
 ### Windows
 
-**安装前请先手动安装以下软件：**
+**安装前只需手动安装 Python：**
 
-| 软件 | 版本要求 | 下载 | 说明 |
-|------|---------|------|------|
-| **Python** | 3.11 ~ 3.13 | [python.org](https://www.python.org/downloads/) | 下载 **Windows installer (64-bit)**，安装时勾选「Add Python to PATH」 |
-| **Node.js** | >= 18 LTS | [nodejs.org](https://nodejs.org/) | 下载 LTS 版本，默认安装即可（Hermes 部分功能依赖） |
-| **Git** | 不限 | [git-scm.com](https://git-scm.com/download/win) | 下载 **Standalone Installer**，默认安装即可 |
+从 [python.org](https://www.python.org/downloads/) 下载 **Python 3.11 ~ 3.13 Windows installer (64-bit)**，安装时勾选「Add Python to PATH」。
 
-> 以上三个软件都有 Windows 图形安装向导，双击 → 下一步 → 完成即可，无需手动配置。
+> Node.js 和 Git 无需手动安装 — Hermes 的一键安装脚本会自动处理。
 
-安装完成后，**重新打开一个终端**（PowerShell 或 CMD），执行：
+安装 Python 后，**重新打开 PowerShell**，执行：
 
 ```powershell
-# 验证安装
-python --version   # 应显示 Python 3.11.x ~ 3.13.x
-node --version     # 应显示 v18.x.x 或更高
-git --version      # 应显示 git version 2.x.x
+# 1. 安装 Hermes Agent（自动处理 Node.js + Git + 依赖）
+irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 
-# 安装 Trade
-git clone --branch main https://github.com/NousResearch/hermes-agent.git $env:LOCALAPPDATA\hermes\hermes-agent
-cd $env:LOCALAPPDATA\hermes\hermes-agent; pip install -e "."; hermes setup
+# 2. 配置 LLM
+hermes setup
 
+# 3. 安装 Smart Trade AI
 git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
 cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-trade-skills
 
 python server.py
+# → 浏览器打开 http://127.0.0.1:9119/trade
 ```
 
 ### 打包为独立应用（双击运行，无需终端）

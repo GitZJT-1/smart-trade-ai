@@ -9,6 +9,15 @@ from unittest import mock
 
 import pytest
 
+# CI 环境可能没有 cryptography 包，需要 Ed25519 的测试自动跳过
+try:
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+    _HAS_CRYPTO = True
+except ImportError:
+    _HAS_CRYPTO = False
+
+_crypto_needed = pytest.mark.skipif(not _HAS_CRYPTO, reason="cryptography 未安装")
+
 
 class TestMachineId:
     """机器码生成测试"""
@@ -61,8 +70,9 @@ class TestRequestCode:
         assert a == b  # 同一机器应生成相同申请码
 
 
+@_crypto_needed
 class TestEncodeDecode:
-    """激活码编解码 roundtrip"""
+    """激活码编解码 roundtrip（需要 cryptography）"""
 
     def test_roundtrip(self):
         from trade.license import _make_request_code, _encode_activation_code, _decode_activation_code
@@ -285,8 +295,9 @@ class TestRateLimit:
         assert _check_activate_rate_limit() is False
 
 
+@_crypto_needed
 class TestActivate:
-    """激活执行流程"""
+    """激活执行流程（需要 cryptography）"""
 
     def test_activate_with_empty_code(self):
         from trade.license import activate

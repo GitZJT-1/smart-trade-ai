@@ -44,6 +44,7 @@ jobs:
           pip install pytest pytest-asyncio httpx
           pip install fastapi "uvicorn[standard]" pydantic pyyaml packaging python-multipart
           pip install pymupdf openpyxl python-docx python-pptx xlrd beautifulsoup4
+          pip install cryptography
           pip install -e . --no-deps
 
       - name: Run tests

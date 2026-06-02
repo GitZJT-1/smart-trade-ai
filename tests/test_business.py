@@ -124,7 +124,7 @@ class TestCompanyCRUD:
         assert result["is_active"] is False
 
     def test_delete_company_cascade(self, test_db, company_id):
-        """删除公司应级联删除其库/客户/对话。"""
+        """软删除：delete 设置 is_active=0，数据保留。purge 才物理删除。"""
         from trade import chat_memory, company, customer, library
 
         lib = library.create("Test Lib", "/tmp/test", company_id=company_id)
@@ -132,9 +132,14 @@ class TestCompanyCRUD:
         conv = chat_memory.save(company_id, "test query", "test response",
                                  library_id=lib["id"])
 
-        company.delete(company_id)
+        # 软删除 — 数据仍存在
+        assert company.delete(company_id)
+        c = company.get(company_id)
+        assert c is not None
+        assert c["is_active"] is False
 
-        # 级联删除后，库/客户/对话应不存在
+        # 物理删除 — 级联清除
+        company.purge(company_id)
         assert library.get(lib["id"]) is None
         assert customer.admin_get(cust["id"]) is None
         assert chat_memory.get(company_id, conv["id"]) is None

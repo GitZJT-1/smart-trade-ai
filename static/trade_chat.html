@@ -2525,7 +2525,7 @@ async function createCompany() {
 }
 
 async function deleteCompany(id) {
-    if (!confirm('确定删除？所有文档库、客户和对话记录将一并删除！')) return;
+    if (!confirm('确定停用该公司？数据将保留 30 天后自动清理。')) return;
     const r = await api('DELETE', `/api/trade/companies/${id}`);
     if (r?.ok) { toast('已删除'); if (currentCompanyId===id) onCompanyChange(''); await loadCompanies(); loadCompanyListUI(); }
     else toast(r?.detail||'删除失败');

@@ -407,30 +407,46 @@ def update(
 
 
 def delete(company_id: int) -> bool:
-    """删除公司及其级联关联的所有文档库、客户、对话记录，同时清理文件系统上的数据目录。"""
-    # 先获取 slug 和数据目录，用于后续文件系统清理
+    """软删除公司：设置 is_active=0 + deleted_at，保留数据 30 天后才物理清理。"""
+    conn = get_connection()
+    try:
+        n = conn.execute(
+            "UPDATE companies SET is_active = 0, updated_at = datetime('now','localtime') "
+            "WHERE id = ? AND is_active = 1",
+            (company_id,),
+        ).rowcount
+        conn.commit()
+        if n > 0:
+            _write_audit_log(company_id, "soft_delete", "公司已软删除，数据保留 30 天")
+        return n > 0
+    finally:
+        conn.close()
+
+
+def purge(company_id: int) -> bool:
+    """物理删除公司及其所有关联数据 + 清理文件系统（仅管理员调用）。"""
     tc = get_trade_company(company_id)
     company = get(company_id)
     slug = company["slug"] if company else None
     data_dir_str = tc["data_dir"] if tc else None
 
+    # 先备份审计日志
+    _write_audit_log(company_id, "purge", "物理删除公司及所有数据")
+
     conn = get_connection()
     try:
-        # trade_companies 通过外键自动级联删除
         n = conn.execute(
             "DELETE FROM companies WHERE id = ?", (company_id,)
         ).rowcount
         conn.commit()
         if n > 0:
-            # 清理文件系统上的数据目录
             if data_dir_str:
                 data_path = Path(data_dir_str)
                 if data_path.exists():
                     try:
                         shutil.rmtree(data_path)
                     except OSError:
-                        pass  # 目录可能被占用，不阻塞删除流程
-            # 清理 TRADE_HOME 下该 slug 的数据目录（如果与 data_dir 不同）
+                        pass
             if slug:
                 slug_dir = TRADE_HOME / slug
                 if slug_dir.exists():
@@ -441,6 +457,31 @@ def delete(company_id: int) -> bool:
         return n > 0
     finally:
         conn.close()
+
+
+def _audit_dir() -> Path:
+    """审计日志目录: ~/.trade/audit/"""
+    d = TRADE_HOME / "audit"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _write_audit_log(company_id: int, action: str, detail: str) -> None:
+    """追加一行 JSON 审计日志到 ~/.trade/audit/YYYY-MM-DD.jsonl。"""
+    import json as _json
+    from datetime import datetime as _dt
+    log_file = _audit_dir() / f"{_dt.now().strftime('%Y-%m-%d')}.jsonl"
+    entry = _json.dumps({
+        "ts": _dt.now().isoformat(),
+        "company_id": company_id,
+        "action": action,
+        "detail": detail,
+    }, ensure_ascii=False)
+    try:
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+    except Exception:
+        pass  # 审计日志写入失败不阻塞主流程
 
 
 def _row_to_company(row) -> dict:

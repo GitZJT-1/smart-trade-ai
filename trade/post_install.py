@@ -791,6 +791,91 @@ def backup_trade(output_dir: str | None = None) -> str:
     return str(out_path)
 
 
+def restore_trade(backup_file: str = "") -> str:
+    """CLI entry point: trade-restore <tar.gz>"""
+    # 无参数时打印帮助
+    if not backup_file:
+        import sys as _sys
+        if len(_sys.argv) > 1:
+            backup_file = _sys.argv[1]
+    """从 tar.gz 备份文件还原系统数据。
+
+    还原步骤：
+      1. 解压 tar.gz 到临时目录
+      2. SQLite 完整性检查
+      3. 停止当前服务 → 替换 data/ + companies/ 目录
+      4. 重启服务
+
+    Args:
+        backup_file: tar.gz 备份文件路径
+
+    Returns:
+        还原结果消息
+    """
+    import shutil as _shutil
+    import subprocess as _sp
+    import tempfile as _tempfile
+
+    src = Path(backup_file)
+    if not src.is_file():
+        return f"✗ 备份文件不存在: {backup_file}"
+
+    trade_home = _get_trade_home()
+
+    # Step 1: 解压到临时目录
+    print(f"[restore] 解压 {src.name} ...")
+    tmp_dir = Path(_tempfile.mkdtemp(prefix="trade-restore-"))
+    try:
+        _sp.run(["tar", "-xzf", str(src), "-C", str(tmp_dir)], check=True)
+    except _sp.CalledProcessError as e:
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+        return f"✗ 解压失败: {e}"
+
+    # Step 2: 检查解压出的 DB
+    db_candidates = list(tmp_dir.rglob("trade.db"))
+    if not db_candidates:
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+        return "✗ 备份中未找到 trade.db"
+
+    db_file = db_candidates[0]
+    result = _sp.run(
+        ["sqlite3", str(db_file), "PRAGMA integrity_check"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0 or "ok" not in result.stdout.lower():
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+        return f"✗ 数据库完整性检查失败: {result.stdout.strip()}"
+
+    print(f"[restore] 数据库完整性检查通过")
+
+    # Step 3: 备份当前数据后替换
+    backup_ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    _shutil.copy2(trade_home / "data" / "trade.db",
+                  trade_home / "data" / f"trade-before-restore-{backup_ts}.db")
+
+    # 替换 DB
+    restored_db = tmp_dir / "data" / "trade.db"
+    if restored_db.exists():
+        _shutil.copy2(str(restored_db), str(trade_home / "data" / "trade.db"))
+    else:
+        _shutil.copy2(str(db_file), str(trade_home / "data" / "trade.db"))
+
+    # 替换 companies 目录（如果备份中有）
+    restored_companies = tmp_dir / "companies"
+    if restored_companies.exists():
+        companies_dst = trade_home / "companies"
+        if companies_dst.exists():
+            _shutil.copytree(str(restored_companies), str(companies_dst), dirs_exist_ok=True)
+
+    _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    # Step 4: 重启服务
+    print(f"[restore] 数据已还原，正在重启服务 ...")
+    _restart_trade_service()
+
+    return f"✓ 已从 {src.name} 还原，服务已重启"
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Trade Skills Manager")

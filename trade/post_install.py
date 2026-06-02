@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+from datetime import datetime as _real_datetime
 from pathlib import Path
 
 
@@ -846,10 +847,10 @@ def restore_trade(backup_file: str = "") -> str:
         _shutil.rmtree(tmp_dir, ignore_errors=True)
         return f"✗ 数据库完整性检查失败: {result.stdout.strip()}"
 
-    print(f"[restore] 数据库完整性检查通过")
+    print("[restore] 数据库完整性检查通过")
 
     # Step 3: 备份当前数据后替换
-    backup_ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_ts = _real_datetime.now().strftime("%Y%m%d-%H%M%S")
     _shutil.copy2(trade_home / "data" / "trade.db",
                   trade_home / "data" / f"trade-before-restore-{backup_ts}.db")
 
@@ -870,7 +871,7 @@ def restore_trade(backup_file: str = "") -> str:
     _shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # Step 4: 重启服务
-    print(f"[restore] 数据已还原，正在重启服务 ...")
+    print("[restore] 数据已还原，正在重启服务 ...")
     _restart_trade_service()
 
     return f"✓ 已从 {src.name} 还原，服务已重启"

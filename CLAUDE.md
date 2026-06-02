@@ -24,6 +24,11 @@ trade                               # shortcut for python server.py
 trade-skills-update                 # fetch latest SKILL.md from GitHub main branch
 trade-update                        # git pull + pip install + skills + db
 trade-backup                        # backup ~/.trade/ data to tar.gz
+trade-restore <file.tar.gz>         # restore from backup
+
+# License management
+python -m trade.license generate <申请码> <到期日期>   # 作者生成激活码
+python -m trade.license status                          # 查看当前许可证状态
 
 # Pre-install compatibility check
 python pre_install_check.py
@@ -67,10 +72,13 @@ Tests use temporary databases (monkeypatch `_get_db_path`), no production data i
 static/trade_chat.html          Chat SPA — single-file vanilla JS (~2600 lines), served at /trade
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
         ▼
-server.py                       FastAPI entry point — complex startup sequence (see below)
-  ├── /trade                    Injects session token into SPA HTML
-  ├── /api/trade/*              Mounts trade.api router (session-token protected)
-  ├── /api/status               Health check
+server.py                       Thin entry point (5 lines) — calls bootstrap.setup() + app.main()
+  ├── trade/bootstrap.py        Startup sequence: log filter, sys.path, subcommand dispatch,
+  │                             Hermes version check, .env load, YOLO mode, skills sync
+  ├── trade/app.py              FastAPI app factory + CORS + license check + system endpoints
+  │   ├── /trade                Injects session token into SPA HTML
+  │   ├── /api/trade/*          Mounts trade.api router (session-token protected)
+  │   └── /api/status           Health check
         │
         ▼
 trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
@@ -119,7 +127,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 ## Server Startup Sequence
 
-`server.py` runs a specific, order-dependent startup sequence:
+`trade/bootstrap.py` + `trade/app.py` run a specific, order-dependent startup sequence:
 
 1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
@@ -172,6 +180,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 17. **Test conftest isolation**: `tests/conftest.py` sets `TRADE_HOME` env var to a temp directory before any imports, ensuring tests never touch real user data.
 
+18. **License system**: Ed25519 non-asymmetric signatures — public key built into code, private key held by author only. Activation codes embed machine-id hash + expiry date + Ed25519 signature. 30-day free trial, machine-bound activation (soft-delete on company removal, audit logs at `~/.trade/audit/`).
+
 ## Hermes Coupling Points
 
 Trade depends on these Hermes internals (watch on Hermes upgrades):
@@ -192,7 +202,7 @@ Skills live in two places:
 2. **Runtime**: `~/.hermes/skills/b2b-*/SKILL.md` (what Hermes actually loads)
 
 Sync happens at three points:
-- `server.py` startup — fetches latest from GitHub main, falls back to local hash comparison
+- `trade/bootstrap.py` startup — fetches latest from GitHub main, falls back to local hash comparison
 - `trade-skills-update` CLI — same GitHub fetch logic
 - UI "更新 Skills" button — calls `POST /api/trade/skills/update` (same update logic)
 
@@ -223,7 +233,7 @@ The SPA uses vanilla JS with a custom view-caching router:
 - **`navToView(view, chatCtx, chatName)`** — switches between chat/customers/tasks/history views. Creates DOM once, caches in `viewCache` object, hides/shows on switch. Non-cached children (except `#guidance-bar`) are removed on each switch.
 - **`api(method, path, body)`** — central fetch wrapper. Adds `X-Hermes-Session-Token` + `X-Company-ID` headers. 120s AbortController timeout. Handles 401/402/404/409 with toast. Returns parsed JSON or null.
 - **`$ (id)`** — shorthand for `document.getElementById(id)`.
-- **Guidance bar** — `#guidance-bar` is an absolute-positioned banner inserted into `#main-content`. It's preserved across view switches (skipped in cleanup loop). Rendered by `_renderGuidanceBar()` with cron task schedule matching.
+- **Guidance bar** — `#guidance-bar` is a fixed-height banner (flex-shrink:0, max-height:20vh, scrollable) at the top of `#main-content`. Shows current task guidance + progress bar + today's cron task list. Preserved across view switches (skipped in cleanup loop).
 - **Modals** — a mix of static hidden divs (company-modal, customer-modal, library-modal) toggled via `showModal(id)`/`hideModal(id)`, and dynamically-created backdrops (order-modal, customer-detail-panel, custom-template-modal) that must clean up old instances before creating new ones to avoid duplicate IDs.
 - **Chat** — SSE streaming via `EventSource`-like fetch reader. Tool progress events (`tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done`) rendered inline. Markdown via marked.js + DOMPurify.
 

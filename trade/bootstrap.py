@@ -33,6 +33,9 @@ _warnings.filterwarnings("ignore", message=r".*No module named.*")
 # Hermes 也有 `trade/` 包；我们的 `trade/` 必须优先。
 # NOTE: 当 hermes-agent 作为独立 pip 包发布后，此块可移除。
 def _adjust_sys_path():
+    # PyInstaller 打包后 sys.frozen=True，不需要 sys.path 调整
+    if getattr(sys, "frozen", False):
+        return
     _trade_root = str(Path(__file__).resolve().parent.parent)
     if _trade_root not in sys.path:
         sys.path.insert(0, _trade_root)

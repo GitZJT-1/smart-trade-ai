@@ -7,6 +7,7 @@ Trade AI Assistant — FastAPI application factory.
 import os
 import secrets
 import subprocess as _sp
+import sys
 from pathlib import Path
 
 import uvicorn
@@ -205,7 +206,12 @@ def create_app() -> FastAPI:
 
 def serve_trade_chat(app: FastAPI) -> None:
     """注册 /trade SPA 路由（需要 app 实例和 _SESSION_TOKEN）。"""
-    _TRADE_CHAT_HTML = Path(__file__).resolve().parent.parent / "static" / "trade_chat.html"
+    # PyInstaller 打包后资源文件在 _MEIPASS 目录中
+    if getattr(sys, "frozen", False):
+        _STATIC_DIR = Path(sys._MEIPASS) / "static"
+    else:
+        _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+    _TRADE_CHAT_HTML = _STATIC_DIR / "trade_chat.html"
 
     @app.get("/trade", response_class=HTMLResponse, include_in_schema=False)
     async def trade_chat_ui():

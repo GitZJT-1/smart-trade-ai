@@ -41,6 +41,10 @@ docs = [
   "python-pptx>=1.0.0,<2.0",
   "xlrd>=2.0.0,<3.0",
 ]
+desktop = [
+  "pywebview>=5.0",
+  "pyinstaller>=6.0",
+]
 
 [project.scripts]
 trade = "server:main"
@@ -54,6 +58,7 @@ trade-update = "trade.post_install:update_trade"
 # Backup Trade data to tar.gz
 trade-backup = "trade.post_install:backup_trade"
 trade-restore = "trade.post_install:restore_trade"
+tradewin = "tradewin:main"
 
 [tool.setuptools.packages.find]
 include = ["trade", "trade.*"]

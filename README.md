@@ -55,7 +55,8 @@
 | 方案 | 模型 | 适合场景 | 注册地址 |
 |------|------|---------|---------|
 | **推荐** | DeepSeek V4 Flash | 日常对话、文档分析、开发信 | [platform.deepseek.com](https://platform.deepseek.com) → 充值 → API Keys |
-| **备选** | MiniMax M2.7 | 长篇内容生成、多轮对话 | [minimaxi.cn](https://minimaxi.cn) → 控制台 → Token Plan 订阅 |
+
+> 不再推荐 MiniMax — M3 上线后价格大幅上涨，已无性价比优势。
 
 获取 API Key 后在终端运行 `hermes setup`，选择对应的 provider 并填入 Key 即可。
 

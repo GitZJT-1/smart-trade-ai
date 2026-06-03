@@ -50,12 +50,13 @@ So you can focus on what actually matters — closing deals.
 
 > Smart Trade AI uses Hermes Agent as its AI engine. You need to register with a model provider and get an API Key.
 
-Recommended plans:
+Recommended plan:
 
 | Plan | Model | Best For | Sign Up |
 |------|-------|----------|---------|
 | **Recommended** | DeepSeek V4 Flash | Daily chat, doc analysis, cold emails | [platform.deepseek.com](https://platform.deepseek.com) → Top-up → API Keys |
-| **Alternative** | MiniMax M2.7 | Long-form content, multi-turn conversations | [minimaxi.cn](https://minimaxi.cn) → Console → Token Plan subscription |
+
+> MiniMax is no longer recommended — the M3 launch brought significant price hikes with no remaining cost advantage.
 
 After getting your API Key, run `hermes setup` in terminal, choose your provider, and paste the key.
 

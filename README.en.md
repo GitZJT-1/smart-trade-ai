@@ -62,6 +62,40 @@ After getting your API Key, run `hermes setup` in terminal, choose your provider
 
 ---
 
+## Important Notes
+
+### Network Requirements
+
+The installation process clones repositories from GitHub and downloads Python dependencies. **You need a stable connection to GitHub.** If Hermes installation fails repeatedly, it's almost certainly a network issue:
+
+- **Users in mainland China should use a VPN throughout installation**, otherwise `git clone` and `pip install` will likely time out
+- If your VPN is unstable, retry the install command — the script supports resuming from where it left off
+- Windows users: if the VPN proxy isn't taking effect, set it explicitly in PowerShell first:
+  ```powershell
+  $env:HTTPS_PROXY = "http://127.0.0.1:your-proxy-port"
+  ```
+
+### Tavily Search API (Strongly Recommended)
+
+Trade's search and due diligence features rely on Tavily's AI search engine. Sign up for a free account to get 1,000 free searches per month — more than enough for personal use:
+
+1. Go to [tavily.com](https://tavily.com) and sign up
+2. Go to Dashboard → API Keys and copy your key
+3. Run `hermes setup`, find the Tavily option, and paste the key
+
+> Skipping this won't break chat, but search and due diligence quality will be noticeably degraded.
+
+### If Trade Installation Fails
+
+Manual Trade installation involves three steps (`git clone` + `pip install` + `install-trade-skills`), and network fluctuations can cause any one of them to fail. If you've already successfully installed **Hermes Agent and configured an LLM** but are struggling with the Trade install, simply give the Trade repo URL to Hermes and let it handle the rest:
+
+> Tell Hermes directly in chat:
+> "Help me install Trade from https://github.com/chefroger/smart-trade-ai.git"
+
+Hermes will handle cloning, installing dependencies, and registering skills automatically. This approach has a much higher success rate than manual commands.
+
+---
+
 ## Get started in 3 minutes
 
 ### Option 1: One-liner install

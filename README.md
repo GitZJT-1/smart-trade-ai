@@ -62,6 +62,40 @@
 
 ---
 
+## 特别说明
+
+### 网络环境要求
+
+安装过程中需要从 GitHub 克隆仓库并下载 Python 依赖，**请确保你的网络能稳定访问 GitHub**。如果安装 Hermes 时反复失败，大概率是网络问题：
+
+- **境内用户建议全程开启 VPN（全局模式）**，否则 `git clone` 和 `pip install` 容易超时或中断
+- 如果 VPN 不稳定，可以多次重试安装命令，脚本支持断点续装
+- Windows 用户如果 VPN 代理未生效，尝试在 PowerShell 中先设置代理：
+  ```powershell
+  $env:HTTPS_PROXY = "http://127.0.0.1:你的代理端口"
+  ```
+
+### Tavily Search API（强烈建议注册）
+
+Trade 的搜索和客户尽职调查功能依赖 Tavily 的 AI 搜索引擎。注册免费账号即可获得每月 1000 次免费搜索额度，对个人使用完全够用：
+
+1. 访问 [tavily.com](https://tavily.com) 注册账号
+2. 在 Dashboard → API Keys 中复制你的 API Key
+3. 在终端执行 `hermes setup`，找到 Tavily 选项并填入 Key
+
+> 不注册不影响对话功能，但搜索和客户背调质量会受到明显影响。
+
+### 如果 Trade 安装失败
+
+手动安装 Trade 涉及 `git clone` + `pip install` + `install-trade-skills` 三个步骤，网络波动可能导致某一步失败。如果你已经成功安装了 **Hermes Agent 并配置好了 LLM**，但 Trade 安装遇到困难，可以直接把 Trade 的仓库地址告诉 Hermes，让它帮你完成安装：
+
+> 在 Hermes 对话中直接说：
+> 「帮我安装 Trade，仓库地址是 https://github.com/chefroger/smart-trade-ai.git」
+
+Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，成功率远高于手动操作。
+
+---
+
 ## 3 分钟上手
 
 ### 方式一：一键安装

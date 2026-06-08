@@ -770,8 +770,14 @@ async function doRestartTrade() {
             const r = await fetch('/api/status');
             if (r.ok) { location.reload(); return; }
         } catch(e) {}
-        if (attempts < 30) setTimeout(checkAndReload, 2000);
-        else { toast('⚠️ 服务重启超时，请手动刷新页面'); btn.disabled = false; btn.textContent = '🔄 重启'; }
+        if (attempts < 15) {
+            // 前 5 次 2s，之后递增到 5s
+            const delay = attempts < 5 ? 2000 : 3000 + (attempts - 5) * 1000;
+            setTimeout(checkAndReload, Math.min(delay, 5000));
+        } else {
+            toast('⚠️ 服务重启超时。请在终端手动运行 python server.py 启动，然后刷新页面。');
+            btn.disabled = false; btn.textContent = '🔄 重启';
+        }
     };
     setTimeout(checkAndReload, 3000);
 }

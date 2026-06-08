@@ -127,7 +127,12 @@ def _create_system_router() -> APIRouter:
 
     @router.post("/system/restart")
     def api_restart_trade():
-        """重启 Trade 服务（跨平台）。"""
+        """重启 Trade 服务（跨平台）。
+
+        1. 记录当前 Python 启动命令
+        2. 发送 SIGTERM 优雅关闭当前进程
+        3. 等待端口释放后，以独立子进程重新启动 server
+        """
         trade_home = Path.home() / ".trade" / "data"
         pid_file = trade_home / "trade.pid"
         old_pid = None
@@ -136,6 +141,10 @@ def _create_system_router() -> APIRouter:
                 old_pid = int(pid_file.read_text().strip())
             except (ValueError, OSError):
                 pass
+
+        # 记录重启所需的启动参数（在进程被杀前获取）
+        import sys as _sys
+        _restart_cmd = [_sys.executable] + _sys.argv
 
         if old_pid is not None:
             import signal
@@ -154,6 +163,14 @@ def _create_system_router() -> APIRouter:
                 pid_file.unlink(missing_ok=True)
             except Exception:
                 pass
+
+        # 延迟重启：等待当前 uvicorn 释放端口后，以独立子进程启动新实例
+        import subprocess as _sp
+        _sp.Popen(
+            _restart_cmd,
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            start_new_session=True,  # 脱离父进程会话，父进程退出后子进程继续运行
+        )
 
         return {"ok": True, "message": "重启指令已发送"}
 

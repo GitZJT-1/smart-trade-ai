@@ -189,7 +189,7 @@ class TestLicenseCheck:
         assert "到期" in msg
 
     def test_activated_valid(self, monkeypatch):
-        """已激活且在有效期内"""
+        """已激活且在有效期内 — mock _verify_license 跳过验签"""
         future = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=200)).isoformat()
         monkeypatch.setattr("trade.license._get_license_data",
                            lambda cid=None: {
@@ -197,19 +197,23 @@ class TestLicenseCheck:
                                "activated": True,
                                "expires_at": future,
                            })
+        # 签名校验由 TestLicenseSignature 专门测试，此处 mock 跳过
+        monkeypatch.setattr("trade.license._verify_license", lambda data: True)
 
         from trade.license import check_license
         ok, msg = check_license(company_id=1)
         assert ok
 
     def test_activated_expired(self, monkeypatch):
-        """已激活但过了有效期"""
+        """已激活但过了有效期 — mock _verify_license 跳过验签"""
         monkeypatch.setattr("trade.license._get_license_data",
                            lambda cid=None: {
                                "first_launch_at": "2026-01-01T00:00:00+00:00",
                                "activated": True,
                                "expires_at": "2026-02-01T00:00:00+00:00",
                            })
+        # 签名校验由 TestLicenseSignature 专门测试，此处 mock 跳过
+        monkeypatch.setattr("trade.license._verify_license", lambda data: True)
 
         from trade.license import check_license
         ok, msg = check_license(company_id=1)
@@ -333,6 +337,72 @@ class TestActivate:
         assert not ok
         # DEADBEEF 哈希不在本地机器码中，会被拒绝（签名无效或机器码不匹配）
         assert not ok
+
+
+class TestLicenseSignature:
+    """运行时签名验签 — 防篡改核心机制"""
+
+    def test_verify_with_valid_signature(self, monkeypatch):
+        """有效签名应通过验签"""
+        _setup_temp_ed25519_key(monkeypatch)
+        from trade.license import _sign_license, _verify_license
+        expires = "2027-12-31T00:00:00+00:00"
+        sig = _sign_license(expires)
+        assert sig
+        assert _verify_license({"signature": sig, "expires_at": expires})
+
+    def test_verify_rejects_tampered_expires(self, monkeypatch):
+        """篡改 expires_at 后验签失败"""
+        _setup_temp_ed25519_key(monkeypatch)
+        from trade.license import _sign_license, _verify_license
+        sig = _sign_license("2027-12-31T00:00:00+00:00")
+        # 篡改到期日
+        assert not _verify_license({
+            "signature": sig,
+            "expires_at": "2099-12-31T00:00:00+00:00",
+        })
+
+    def test_verify_rejects_missing_signature(self):
+        """无签名字段应视为无效"""
+        from trade.license import _verify_license
+        assert not _verify_license({
+            "activated": True,
+            "expires_at": "2027-12-31T00:00:00+00:00",
+        })
+
+    def test_verify_rejects_empty_expires(self, monkeypatch):
+        """expires_at 为空时验签失败"""
+        _setup_temp_ed25519_key(monkeypatch)
+        from trade.license import _sign_license, _verify_license
+        sig = _sign_license("2027-12-31T00:00:00+00:00")
+        assert not _verify_license({"signature": sig, "expires_at": ""})
+
+    def test_check_license_rejects_tampered_data(self, monkeypatch):
+        """已激活但签名无效 → check_license 拒绝"""
+        _setup_temp_ed25519_key(monkeypatch)
+        from trade.license import _sign_license
+        # 用另一个日期签名
+        sig = _sign_license("2027-06-01T00:00:00+00:00")
+        # 但 data 中放篡改后的日期
+        monkeypatch.setattr("trade.license._get_license_data",
+                           lambda cid=None: {
+                               "first_launch_at": "2026-01-01T00:00:00+00:00",
+                               "activated": True,
+                               "expires_at": "2099-12-31T00:00:00+00:00",
+                               "signature": sig,
+                           })
+        from trade.license import check_license
+        ok, msg = check_license(company_id=1)
+        assert not ok
+        assert "异常" in msg or "重新激活" in msg
+
+    def test_sign_without_private_key_fails(self, monkeypatch):
+        """无私钥时 _sign_license 抛出异常"""
+        monkeypatch.delenv("TRADE_LICENSE_PRIVATE_KEY", raising=False)
+        with mock.patch.object(Path, "is_file", return_value=False):
+            from trade.license import _sign_license
+            with pytest.raises(ValueError, match="私钥"):
+                _sign_license("2027-12-31T00:00:00+00:00")
 
 
 class TestResolveHermesHome:

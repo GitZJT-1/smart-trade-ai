@@ -13,6 +13,7 @@ CLI:
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
@@ -200,8 +201,11 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
     first = datetime.fromisoformat(data["first_launch_at"])
     days_used = (now - first).days
 
-    # 已激活：检查是否在有效期内
+    # 已激活：验签 + 检查是否在有效期内
     if data.get("activated") and data.get("expires_at"):
+        if not _verify_license(data):
+            # 签名无效 → license_data 被篡改，要求重新激活
+            return False, "许可证数据异常，请使用激活码重新激活。"
         expires = datetime.fromisoformat(data["expires_at"])
         if now < expires:
             return True, ""
@@ -270,6 +274,50 @@ def status(company_id: int | None = None) -> dict:
     return result
 
 
+# ── 许可证签名（运行时验签防篡改）────────────────────────────────────────────
+
+
+def _sign_license(expires_at: str) -> str:
+    """对 expires_at + machine_hash 做 Ed25519 签名，存入 license_data。
+
+    仅在 activate() 时由作者私钥调用。用户端无私钥，无法生成合法签名。
+    返回 base64url 编码的签名字符串。
+    """
+    private_key = _load_private_key()
+    if private_key is None:
+        raise ValueError("私钥未找到，无法签发许可证签名。")
+    payload = (expires_at + _machine_id()).encode()
+    sig = private_key.sign(payload)
+    return base64.urlsafe_b64encode(sig).decode()
+
+
+def _verify_license(data: dict) -> bool:
+    """验签：用公钥验证 license_data 中的 signature 是否匹配 expires_at + machine_hash。
+
+    返回 True 表示签名有效，False 表示数据被篡改或缺少签名。
+    内部静默处理所有异常（cryptography 未安装、签名格式错误等），统一返回 False。
+    """
+    sig_b64 = data.get("signature")
+    if not sig_b64:
+        # 无签名字段 → 旧数据或篡改，视为无效
+        return False
+    expires_at = data.get("expires_at", "")
+    if not expires_at:
+        return False
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+
+        sig = base64.urlsafe_b64decode(sig_b64)
+        payload = (expires_at + _machine_id()).encode()
+        public_key = ed25519.Ed25519PublicKey.from_public_bytes(_PUBLIC_KEY_BYTES)
+        public_key.verify(sig, payload)
+        return True
+    except (InvalidSignature, Exception):
+        # 签名不匹配 或 任何其他异常 — 篡改证据
+        return False
+
+
 # ── 激活码验证 ────────────────────────────────────────────────────────────────
 
 
@@ -320,12 +368,13 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     if now >= datetime.fromisoformat(expires_at):
         return False, f"该激活码已到期（有效期至 {expires_at[:10]}）"
 
-    # 写入激活信息
+    # 写入激活信息（含 Ed25519 签名用于运行时防篡改验签）
     data = _get_license_data(company_id)
     data["activated"] = True
     data["code"] = code
     data["expires_at"] = expires_at
     data["activated_at"] = now.isoformat()
+    data["signature"] = _sign_license(expires_at)
     _save_license_data(data, company_id)
 
     return True, f"激活成功，有效期至 {expires_at[:10]}"

@@ -8,13 +8,81 @@ import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from trade import library as library_module
 from trade.api.deps import require_company
 from trade.api.models import LibraryCreate, LibraryUpdate
 
 router = APIRouter(tags=["libraries"])
+
+
+@router.post("/upload-files")
+async def upload_to_work_dir(
+    subdir: str = Form(),
+    files: list[UploadFile] = File(),  # noqa: B008
+    x_company_id: int = Depends(require_company),
+):
+    """上传文件到公司桌面工作目录的指定子目录。
+
+    拖入文件/目录后，用户选择一个子目录（如「合同」），
+    文件写入该子目录下，保留浏览器传来的相对路径结构。
+    """
+    # 1. 校验子目录名（与 company.py _WORK_DIR_CATEGORIES 同步）
+    from trade.company import _WORK_DIR_CATEGORIES
+    _valid_subdirs = frozenset(name for name, _ in _WORK_DIR_CATEGORIES)
+    if subdir not in _valid_subdirs:
+        raise HTTPException(status_code=400, detail=f"无效的子目录: {subdir}")
+
+    # 2. 获取公司桌面工作目录
+    from trade import company as _co
+    co = _co.get(x_company_id)
+    if not co:
+        raise HTTPException(status_code=404, detail="公司不存在")
+
+    from trade.company import _setup_work_directory
+    work_dir, _ = _setup_work_directory(co["name"], co["slug"])
+    target_dir = work_dir / subdir
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # 3. 路径穿越检测
+    _path_traversal_pattern = re.compile(r"\.\.|^[/\\]|[<>:\"|?*]")
+
+    uploaded = []
+    for f in files:
+        rel = getattr(f, "filename", "") or ""
+        if not rel:
+            rel = os.path.basename(f.filename or "untitled")
+
+        parts = Path(rel).parts
+        safe_parts = []
+        for p in parts:
+            if _path_traversal_pattern.search(p):
+                cleaned = p.replace("..", "_")
+                cleaned = re.sub(r"[<>:\"|?*]", "_", cleaned)
+                safe_parts.append("_sanitized_" + cleaned)
+            else:
+                safe_parts.append(p)
+        safe_parts = [p for p in safe_parts if p and p != "."]
+        if not safe_parts:
+            safe_parts = ["untitled"]
+
+        dest = target_dir.joinpath(*safe_parts)
+        try:
+            dest.resolve().relative_to(work_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"路径穿越拒绝: {rel}")
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        content = await f.read()
+        dest.write_bytes(content)
+        uploaded.append(str(dest.relative_to(work_dir)))
+
+    return {
+        "uploaded": len(uploaded),
+        "files": uploaded,
+        "target_path": str(target_dir),
+    }
 
 
 @router.get("/libraries")
@@ -72,75 +140,6 @@ def delete_library(
     if not library_module.delete(library_id, company_id=x_company_id):
         raise HTTPException(status_code=404, detail="Library not found")
     return {"ok": True}
-
-
-@router.post("/libraries/{library_id}/upload")
-async def upload_files(
-    library_id: int,
-    files: list[UploadFile],
-    x_company_id: int = Depends(require_company),
-):
-    """上传文件到文档库目录。支持多文件 + 保留 webkitRelativePath 目录结构。
-
-    拖拽目录时浏览器会通过 webkitRelativePath 携带相对路径，
-    服务端按该路径在 library root_path 下重建目录结构。
-    """
-    # 1. 校验 library 存在且属于当前公司
-    lib = library_module.get(library_id, company_id=x_company_id)
-    if not lib:
-        raise HTTPException(status_code=404, detail="Library not found")
-
-    root = Path(lib["root_path"])
-    root.mkdir(parents=True, exist_ok=True)
-
-    # 2. 路径穿越检测正则：拒绝含 .. 或绝对路径或非法字符的片段
-    _path_traversal_pattern = re.compile(r"\.\.|^[/\\]|[<>:\"|?*]")
-
-    uploaded = []
-    for f in files:
-        # 获取相对路径（浏览器拖拽目录时通过 webkitRelativePath 携带）
-        rel = getattr(f, "filename", "") or ""
-        # 某些客户端用 filename 字段传递完整路径，取最后一个组件作为安全回退
-        if not rel:
-            rel = os.path.basename(f.filename or "untitled")
-
-        # 路径穿越防护：分解路径片段，逐一检查
-        parts = Path(rel).parts
-        safe_parts = []
-        for p in parts:
-            if _path_traversal_pattern.search(p):
-                # 含非法字符 → 用安全后缀替代，不拒绝整个请求
-                # 替换 .. 为下划线（防止目录穿越），同时清理 Windows 非法字符
-                cleaned = p.replace("..", "_")
-                cleaned = re.sub(r"[<>:\"|?*]", "_", cleaned)
-                safe_parts.append("_sanitized_" + cleaned)
-            else:
-                safe_parts.append(p)
-        # 去空片段，防止空路径
-        safe_parts = [p for p in safe_parts if p and p != "."]
-        if not safe_parts:
-            safe_parts = ["untitled"]
-
-        dest = root.joinpath(*safe_parts)
-        # 二次确认：目标路径必须在 root 子树内（防御符号链接攻击）
-        try:
-            dest.resolve().relative_to(root.resolve())
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"路径穿越拒绝: {rel}")
-
-        # 确保父目录存在
-        dest.parent.mkdir(parents=True, exist_ok=True)
-
-        # 写入文件
-        content = await f.read()
-        dest.write_bytes(content)
-        uploaded.append(str(dest.relative_to(root)))
-
-    return {
-        "uploaded": len(uploaded),
-        "files": uploaded,
-        "target_path": str(root),
-    }
 
 
 @router.get("/libraries/{library_id}/files")

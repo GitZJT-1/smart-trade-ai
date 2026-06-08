@@ -363,108 +363,99 @@ class TestLibraryEndpoints:
         assert library.get(lib["id"], company_id=other["id"]) is None
 
 
-class TestLibraryUpload:
-    """测试文件上传端点（直接调用路由函数 + mock FastAPI deps）。"""
+class TestWorkDirUpload:
+    """测试拖拽文件上传到公司工作目录子目录。"""
 
     @staticmethod
     def _run(coro):
-        """同步包装 async 路由函数。"""
         return asyncio.run(coro)
 
-    def test_upload_single_file(self, test_db, company_id, setup_mocks, tmp_path):
-        """上传单个文件到文档库目录"""
-        from trade import library
-        lib_dir = tmp_path / "upload-lib"
-        lib_dir.mkdir()
-        lib = library.create("Upload Lib", str(lib_dir), company_id=company_id)
-
+    def test_upload_single_file(self, test_db, company_id, setup_mocks, monkeypatch):
+        """上传单个文件到指定子目录"""
         import io
+        import tempfile
 
         from fastapi import UploadFile
 
-        from trade.api.libraries import upload_files
+        work_dir = Path(tempfile.mkdtemp(prefix="trade-work-test-"))
+        monkeypatch.setattr("trade.company._setup_work_directory",
+                           lambda name, slug, suggested_name="": (work_dir, True))
+        monkeypatch.setattr("trade.company.get",
+                           lambda cid: {"name": "Test", "slug": "test"})
+
+        from trade.api.libraries import upload_to_work_dir
 
         f = UploadFile(filename="test.txt", file=io.BytesIO(b"hello world"))
-        result = self._run(upload_files(
-            library_id=lib["id"],
-            files=[f],
-            x_company_id=company_id,
+        result = self._run(upload_to_work_dir(
+            subdir="合同", files=[f], x_company_id=company_id,
         ))
         assert result["uploaded"] == 1
-        assert result["files"] == ["test.txt"]
-        assert (lib_dir / "test.txt").read_text() == "hello world"
+        assert "test.txt" in result["files"][0]
+        assert (work_dir / "合同" / "test.txt").read_text() == "hello world"
 
-    def test_upload_preserves_subdirs(self, test_db, company_id, setup_mocks, tmp_path):
-        """上传带 webkitRelativePath 的文件应保留子目录结构"""
-        from trade import library
-        lib_dir = tmp_path / "upload-lib2"
-        lib_dir.mkdir()
-        lib = library.create("Upload Lib2", str(lib_dir), company_id=company_id)
-
+    def test_upload_preserves_subdirs(self, test_db, company_id, setup_mocks, monkeypatch):
+        """上传带子路径结构的文件"""
         import io
+        import tempfile
 
         from fastapi import UploadFile
 
-        from trade.api.libraries import upload_files
+        work_dir = Path(tempfile.mkdtemp(prefix="trade-work-test-"))
+        monkeypatch.setattr("trade.company._setup_work_directory",
+                           lambda name, slug, suggested_name="": (work_dir, True))
+        monkeypatch.setattr("trade.company.get",
+                           lambda cid: {"name": "Test", "slug": "test"})
+
+        from trade.api.libraries import upload_to_work_dir
 
         f1 = UploadFile(filename="sub/a.txt", file=io.BytesIO(b"aaa"))
         f2 = UploadFile(filename="sub/deep/b.txt", file=io.BytesIO(b"bbb"))
-        result = self._run(upload_files(
-            library_id=lib["id"],
-            files=[f1, f2],
-            x_company_id=company_id,
+        result = self._run(upload_to_work_dir(
+            subdir="客户资料", files=[f1, f2], x_company_id=company_id,
         ))
         assert result["uploaded"] == 2
-        # 兼容 Windows 反斜杠和 Unix 正斜杠
-        files_set = {f.replace("\\", "/") for f in result["files"]}
-        assert "sub/a.txt" in files_set
-        assert "sub/deep/b.txt" in files_set
-        assert (lib_dir / "sub" / "a.txt").read_text() == "aaa"
-        assert (lib_dir / "sub" / "deep" / "b.txt").read_text() == "bbb"
+        # result["files"] 的路径是相对于 work_dir 的，包含子目录前缀
+        assert (work_dir / "客户资料" / "sub" / "a.txt").read_text() == "aaa"
+        assert (work_dir / "客户资料" / "sub" / "deep" / "b.txt").read_text() == "bbb"
 
-    def test_upload_path_traversal_rejected(self, test_db, company_id, setup_mocks, tmp_path):
-        """含 ../ 的文件名应被 sanitize 而非穿越到父目录"""
-        from trade import library
-        lib_dir = tmp_path / "upload-lib3"
-        lib_dir.mkdir()
-        lib = library.create("Upload Lib3", str(lib_dir), company_id=company_id)
-
+    def test_invalid_subdir_rejected(self, test_db, company_id, setup_mocks):
+        """非法的子目录名应返回 400"""
         import io
 
         from fastapi import UploadFile
 
-        from trade.api.libraries import upload_files
-
-        f = UploadFile(filename="../escape.txt", file=io.BytesIO(b"bad"))
-        result = self._run(upload_files(
-            library_id=lib["id"],
-            files=[f],
-            x_company_id=company_id,
-        ))
-        assert result["uploaded"] == 1
-        # 确认未穿越到父目录 — sanitize 后文件名仍含 escape.txt 但不在 lib_dir 外
-        assert "escape.txt" in result["files"][0]
-        assert not (tmp_path / "escape.txt").exists()
-        # 文件应写入 lib_dir 子树内
-        written = lib_dir / result["files"][0]
-        assert written.resolve().is_relative_to(lib_dir.resolve())
-
-    def test_upload_nonexistent_library(self, test_db, company_id, setup_mocks):
-        """上传到不存在的 library 应返回 404"""
-        import io
-
-        from fastapi import UploadFile
-
-        from trade.api.libraries import upload_files
+        from trade.api.libraries import upload_to_work_dir
 
         f = UploadFile(filename="test.txt", file=io.BytesIO(b"test"))
         with pytest.raises(Exception) as exc:
-            self._run(upload_files(
-                library_id=99999,
-                files=[f],
-                x_company_id=company_id,
+            self._run(upload_to_work_dir(
+                subdir="../../../etc", files=[f], x_company_id=company_id,
             ))
-        assert "404" in str(exc.value) or "not found" in str(exc.value).lower()
+        assert "400" in str(exc.value) or "无效" in str(exc.value)
+
+    def test_path_traversal_sanitized(self, test_db, company_id, setup_mocks, monkeypatch):
+        """含 ../ 的文件名应被 sanitize"""
+        import io
+        import tempfile
+
+        from fastapi import UploadFile
+
+        work_dir = Path(tempfile.mkdtemp(prefix="trade-work-test-"))
+        monkeypatch.setattr("trade.company._setup_work_directory",
+                           lambda name, slug, suggested_name="": (work_dir, True))
+        monkeypatch.setattr("trade.company.get",
+                           lambda cid: {"name": "Test", "slug": "test"})
+
+        from trade.api.libraries import upload_to_work_dir
+
+        f = UploadFile(filename="../escape.txt", file=io.BytesIO(b"bad"))
+        result = self._run(upload_to_work_dir(
+            subdir="报价单", files=[f], x_company_id=company_id,
+        ))
+        assert result["uploaded"] == 1
+        assert "escape.txt" in result["files"][0]
+        written = work_dir / "报价单" / result["files"][0]
+        assert written.resolve().is_relative_to(work_dir.resolve())
 
 
 # ── Customer Endpoint Functions ─────────────────────────────────────────────

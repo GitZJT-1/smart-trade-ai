@@ -10,6 +10,7 @@
 | 0.13.0 | ✅ 兼容 | 2026-05-11 | AI | API 检查通过：AIAgent/MemoryProvider/load_config 均无 breaking change |
 | 0.14.0 | ✅ 兼容 | 2026-05-18 | AI | config.model 从嵌套 dict 变为扁平字符串；name_to_models 移除。已适配。 |
 | 0.15.0 | ✅ 兼容 | 2026-05-29 | AI | run_agent.py 拆分到 agent/ 但 AIAgent re-export 正常；config.model / _PROVIDER_MODELS 未变。 |
+| 0.16.0 | ✅ 兼容 | 2026-06-08 | AI | config.model 回归嵌套 dict 格式（与 v0.13 一致）；Trade helpers.py/memory.py 已有 dict/str 双格式兼容，无需改动。 |
 
 ## 升级检查流程
 

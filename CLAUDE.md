@@ -25,6 +25,7 @@ trade-skills-update                 # fetch latest SKILL.md from GitHub main bra
 trade-update                        # git pull + pip install + skills + db
 trade-backup                        # backup ~/.trade/ data to tar.gz
 trade-restore <file.tar.gz>         # restore from backup
+tradewin                            # desktop app (FastAPI + pywebview window)
 
 # License management
 python -m trade.license generate <申请码> <到期日期>   # 作者生成激活码
@@ -39,6 +40,22 @@ python -m trade.database
 
 The server requires `HERMES_YOLO_MODE=true` in the environment (set by Hermes .env, or export manually). Without it, the AI agent will prompt for human approval on every tool call — unworkable for this product's target users (SECURITY.md).
 
+### Desktop App (tradewin)
+
+```bash
+# Install desktop dependencies
+pip install -e ".[desktop]"
+
+# Run desktop app (FastAPI backend thread + pywebview window, no external browser needed)
+tradewin                              # via console_script
+python tradewin.py                    # direct invocation
+
+# Package as standalone .exe
+pyinstaller tradewin.spec             # (if spec file exists)
+```
+
+`tradewin.py` launches the full Trade server in a daemon thread, waits for it to be ready, then opens a native WebView window pointed at the chat UI. Supports Windows and macOS. `trade/bootstrap.py` and `trade/app.py` include PyInstaller `_MEIPASS` path resolution for bundled static assets.
+
 ## Testing & Linting
 
 ```bash
@@ -51,6 +68,7 @@ python -m pytest tests/test_api.py -v
 python -m pytest tests/test_database.py -v
 python -m pytest tests/test_chat_smoke.py -v
 python -m pytest tests/test_osint.py -v
+python -m pytest tests/test_license.py -v
 
 # Run a single test
 python -m pytest tests/test_business.py::test_function_name -v
@@ -73,6 +91,7 @@ static/trade_chat.html          Chat SPA — single-file vanilla JS (~2600 lines
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
         ▼
 server.py                       Thin entry point (5 lines) — calls bootstrap.setup() + app.main()
+tradewin.py                     Desktop app — same backend in daemon thread + pywebview window
   ├── trade/bootstrap.py        Startup sequence: log filter, sys.path, subcommand dispatch,
   │                             Hermes version check, .env load, YOLO mode, skills sync
   ├── trade/app.py              FastAPI app factory + CORS + license check + system endpoints
@@ -181,6 +200,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 17. **Test conftest isolation**: `tests/conftest.py` sets `TRADE_HOME` env var to a temp directory before any imports, ensuring tests never touch real user data.
 
 18. **License system**: Ed25519 non-asymmetric signatures — public key built into code, private key held by author only. Activation codes embed machine-id hash + expiry date + Ed25519 signature. 30-day free trial, machine-bound activation (soft-delete on company removal, audit logs at `~/.trade/audit/`).
+
+19. **Desktop app (tradewin.py)**: PyWebView native window wrapping the same FastAPI backend in a daemon thread. No external browser needed. `[desktop]` optional dependency group includes `pywebview` + `pyinstaller`. Bootstrap and app modules support PyInstaller `_MEIPASS` for bundled static files.
 
 ## Hermes Coupling Points
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
 from trade import library as _library_module
@@ -206,13 +207,20 @@ def _setup_work_directory(company_name: str, slug: str, suggested_name: str = ""
     Returns:
         (work_dir_path, is_new) — 目录路径 + 是否为新创建（False = 目录已存在，用了后缀名）
     """
-    # 测试环境：工作目录写到临时目录，不污染桌面
-    trade_home = os.environ.get("TRADE_HOME", "")
-    if trade_home:
-        # 有 TRADE_HOME 环境变量，说明在测试环境中，使用临时路径
-        base = Path(trade_home) / "work"
+    # 检测是否在 pytest 测试环境中运行（不依赖 TRADE_HOME 环境变量，
+    # 因为 TRADE_HOME 在生产环境 launchd plist 中也可能被设置，会造成误判）
+    _in_test = "pytest" in sys.modules
+    if _in_test:
+        # 测试环境：工作目录写到临时位置，不污染桌面
+        trade_home = os.environ.get("TRADE_HOME", "")
+        if trade_home:
+            base = Path(trade_home) / "work"
+        else:
+            # 极端情况：测试中但 TRADE_HOME 未设置，使用临时目录
+            import tempfile
+            base = Path(tempfile.mkdtemp(prefix="trade-work-"))
     else:
-        # 生产环境：默认放在桌面
+        # 生产环境：始终放在桌面
         base = Path.home() / "Desktop"
         # macOS 中文桌面路径
         if not base.is_dir():

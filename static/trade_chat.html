@@ -149,6 +149,32 @@ body {
 .chat-input-inner button:hover { background: var(--primary-dark); }
 .chat-input-inner button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ── Drag & Drop ──────────────────────────────────────────────────────── */
+.drop-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(59,130,246,0.08); pointer-events: none;
+    align-items: center; justify-content: center;
+}
+.drop-overlay.show { display: flex; pointer-events: all; }
+.drop-overlay-inner {
+    background: var(--bg-card); border: 2px dashed var(--primary);
+    border-radius: 16px; padding: 40px 60px; text-align: center;
+    color: var(--primary); font-size: 16px; font-weight: 600;
+    box-shadow: 0 8px 30px rgba(59,130,246,0.15);
+}
+#drop-file-modal .drop-file-list {
+    max-height: 200px; overflow-y: auto; margin: 12px 0;
+    background: var(--bg-main); border-radius: 8px; padding: 8px;
+    font-size: 13px; text-align: left;
+}
+#drop-file-modal .drop-file-list .file-item {
+    padding: 2px 0; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#drop-file-modal .drop-file-summary {
+    font-size: 13px; color: var(--text-muted); margin-bottom: 8px;
+}
+
 /* ── Empty / Welcome ─────────────────────────────────────────────────── */
 .empty-state {
     flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -901,7 +927,8 @@ function renderChatViewInto(container, ctx, name) {
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
                 <button onclick="sendMsg()" id="send-btn">发送</button>
             </div>
-        </div>`;
+        </div>
+        <div class="drop-overlay" id="drop-overlay"><div class="drop-overlay-inner">&#128193; 释放以添加文件</div></div>`;
 
     if (ctx === 'docs') loadChatLibrarySelect();
     loadChatHistory();
@@ -1094,6 +1121,240 @@ async function loadChatLibrarySelect() {
     });
     sel.innerHTML = '<option value="">— 选择文档库 —</option>' +
         unique.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
+}
+
+// ═════════════════════ DRAG & DROP / PASTE FILES ═════════════════════
+
+const _TEXT_EXTENSIONS = new Set(
+    ['txt','md','csv','json','py','html','xml','yaml','yml','log','css','js','ts',
+     'sh','bat','ps1','cfg','ini','toml','env','sql','tex','rst','svg']
+);
+
+function _isTextFile(name) {
+    const dot = name.lastIndexOf('.');
+    return dot > -1 && _TEXT_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
+}
+
+function _formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+let _pendingDropFiles = [];
+
+async function _collectFilesFromDataTransfer(dt) {
+    const files = [];
+    const entries = [];
+    // 先尝试 webkitGetAsEntry（支持递归目录）
+    if (dt.items && dt.items.length) {
+        for (const item of dt.items) {
+            if (item.kind === 'file') {
+                const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                if (entry) { entries.push(entry); } else { files.push(item.getAsFile()); }
+            }
+        }
+    }
+    // 回退到直接取 files
+    if (!entries.length && dt.files && dt.files.length) {
+        for (const f of dt.files) files.push(f);
+    }
+
+    // 递归读取目录
+    async function _readEntry(entry, prefix) {
+        if (entry.isFile) {
+            const f = await new Promise(r => entry.file(r));
+            // 保留相对路径
+            Object.defineProperty(f, '_relPath', { value: prefix + entry.name, writable: true });
+            files.push(f);
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const subEntries = await new Promise(r => reader.readEntries(r));
+            for (const e of subEntries) await _readEntry(e, prefix + entry.name + '/');
+        }
+    }
+    for (const e of entries) await _readEntry(e, '');
+    return files;
+}
+
+async function _uploadFiles(files, libraryId) {
+    const form = new FormData();
+    let count = 0;
+    for (const f of files) {
+        form.append('files', f, f._relPath || f.name);
+        count++;
+    }
+    if (!count) return { uploaded: 0, files: [] };
+
+    const opts = { method: 'POST', headers: {}, body: form };
+    if (window.TOKEN) opts.headers['X-Hermes-Session-Token'] = window.TOKEN;
+    if (currentCompanyId) opts.headers['X-Company-ID'] = String(currentCompanyId);
+
+    try {
+        const resp = await fetch(`/api/trade/libraries/${libraryId}/upload`, opts);
+        if (resp.ok) return await resp.json();
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || `上传失败 (${resp.status})`);
+    } catch (e) {
+        if (e.message && !e.message.includes('Failed to fetch')) throw e;
+        // fetch 异常
+        throw new Error('网络异常，上传失败');
+    }
+}
+
+async function _readFileAsText(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsText(file);
+    });
+}
+
+function _showDropFileModal(files) {
+    // 清除旧弹窗
+    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+    _pendingDropFiles = files;
+
+    const totalSize = files.reduce((s, f) => s + f.size, 0);
+    const fileListHtml = files.map(f =>
+        `<div class="file-item">${esc(f._relPath || f.name)} <span style="color:var(--text-muted)">${_formatBytes(f.size)}</span></div>`
+    ).join('');
+
+    // 获取 library 列表用于下拉
+    let libOptions = '<option value="">— 选择目标文库 —</option>';
+    const ct = currentChatContainer;
+    if (ct) {
+        const sel = ct.querySelector('#chat-library-select');
+        if (sel) {
+            for (const opt of sel.options) {
+                if (opt.value) libOptions += `<option value="${opt.value}">${esc(opt.textContent)}</option>`;
+            }
+        }
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.id = 'drop-file-modal';
+    backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+    backdrop.innerHTML = `
+    <div class="modal" style="max-width:480px;width:95%;" onclick="event.stopPropagation()">
+        <h3 style="margin:0 0 4px;">📎 拖入 ${files.length} 个文件</h3>
+        <div class="drop-file-summary">总大小: ${_formatBytes(totalSize)}</div>
+        <div class="drop-file-list">${fileListHtml}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="drop-read-btn">📖 读内容</button>
+            <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:200px;">
+                <select id="drop-lib-select" style="flex:1;min-width:120px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);font-size:13px;">${libOptions}</select>
+                <button class="btn" id="drop-upload-btn" style="white-space:nowrap;">📁 导入文库</button>
+            </div>
+        </div>
+        <button class="btn" onclick="this.closest('.modal-backdrop').remove()" style="margin-top:8px;">取消</button>
+    </div>`;
+    document.body.appendChild(backdrop);
+
+    // 「读内容」按钮
+    backdrop.querySelector('#drop-read-btn').onclick = async function() {
+        const input = document.getElementById('msg-input');
+        if (!input) return;
+        let textParts = [];
+        for (const f of _pendingDropFiles) {
+            const name = f._relPath || f.name;
+            if (_isTextFile(name) && f.size <= 10 * 1024 * 1024) {
+                const content = await _readFileAsText(f);
+                if (content !== null) {
+                    textParts.push(`[文件: ${name}]\n\`\`\`\n${content}\n\`\`\``);
+                    continue;
+                }
+            }
+            // 二进制或超大文件
+            textParts.push(`[文件: ${name} (${_formatBytes(f.size)}, 请选择「导入文库」后让 Agent 读取)]`);
+        }
+        input.value = textParts.join('\n\n') + '\n\n' + input.value;
+        input.focus();
+        backdrop.remove();
+        toast(`已读取 ${textParts.length} 个文件内容到输入框`);
+    };
+
+    // 「导入文库」按钮
+    backdrop.querySelector('#drop-upload-btn').onclick = async function() {
+        const libId = backdrop.querySelector('#drop-lib-select').value;
+        if (!libId) { toast('请先选择目标文库'); return; }
+        const btn = backdrop.querySelector('#drop-upload-btn');
+        btn.disabled = true; btn.textContent = '上传中...';
+        try {
+            const result = await _uploadFiles(_pendingDropFiles, parseInt(libId));
+            const libName = backdrop.querySelector('#drop-lib-select option:checked').textContent;
+            toast(`已导入 ${result.uploaded} 个文件到 ${libName}`);
+            const input = document.getElementById('msg-input');
+            if (input) {
+                input.value = `[已导入 ${result.uploaded} 个文件到文库「${libName}」，请在提问中引用这些文件]\n\n` + input.value;
+            }
+            backdrop.remove();
+        } catch (e) {
+            toast('导入失败: ' + e.message);
+            btn.disabled = false; btn.textContent = '📁 导入文库';
+        }
+    };
+}
+
+function setupDropZone() {
+    const overlay = document.getElementById('drop-overlay');
+    let _dragCounter = 0;
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function handleDragEnter(e) {
+        e.preventDefault(); e.stopPropagation();
+        _dragCounter++;
+        if (overlay) overlay.classList.add('show');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault(); e.stopPropagation();
+        _dragCounter--;
+        if (_dragCounter <= 0) { _dragCounter = 0; if (overlay) overlay.classList.remove('show'); }
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault(); e.stopPropagation();
+        _dragCounter = 0;
+        if (overlay) overlay.classList.remove('show');
+
+        const dt = e.dataTransfer;
+        if (!dt || !dt.files.length) return;
+        const files = await _collectFilesFromDataTransfer(dt);
+        if (!files.length) return;
+        _showDropFileModal(files);
+    }
+
+    // 绑定到 body，覆盖全页面
+    document.body.addEventListener('dragover', handleDragOver, false);
+    document.body.addEventListener('dragenter', handleDragEnter, false);
+    document.body.addEventListener('dragleave', handleDragLeave, false);
+    document.body.addEventListener('drop', handleDrop, false);
+
+    // 粘贴文件支持
+    document.addEventListener('paste', async function(e) {
+        if (!e.clipboardData || !e.clipboardData.files.length) return; // 纯文本粘贴不管
+        if (e.target.tagName === 'TEXTAREA' && e.target.id === 'msg-input') {
+            // 在输入框粘贴
+            e.preventDefault();
+            const files = await _collectFilesFromDataTransfer(e.clipboardData);
+            if (!files.length) return;
+            _showDropFileModal(files);
+        }
+    });
+}
+
+// 在 DOM 就绪后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupDropZone);
+} else {
+    setupDropZone();
 }
 
 function showAddLibraryModal() {

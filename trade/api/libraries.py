@@ -110,7 +110,10 @@ async def upload_files(
         for p in parts:
             if _path_traversal_pattern.search(p):
                 # 含非法字符 → 用安全后缀替代，不拒绝整个请求
-                safe_parts.append("_sanitized_" + re.sub(r"[<>:\"|?*]", "_", p))
+                # 替换 .. 为下划线（防止目录穿越），同时清理 Windows 非法字符
+                cleaned = p.replace("..", "_")
+                cleaned = re.sub(r"[<>:\"|?*]", "_", cleaned)
+                safe_parts.append("_sanitized_" + cleaned)
             else:
                 safe_parts.append(p)
         # 去空片段，防止空路径

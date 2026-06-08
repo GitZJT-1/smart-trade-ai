@@ -415,8 +415,10 @@ class TestLibraryUpload:
             x_company_id=company_id,
         ))
         assert result["uploaded"] == 2
-        assert "sub/a.txt" in result["files"]
-        assert "sub/deep/b.txt" in result["files"]
+        # 兼容 Windows 反斜杠和 Unix 正斜杠
+        files_set = {f.replace("\\", "/") for f in result["files"]}
+        assert "sub/a.txt" in files_set
+        assert "sub/deep/b.txt" in files_set
         assert (lib_dir / "sub" / "a.txt").read_text() == "aaa"
         assert (lib_dir / "sub" / "deep" / "b.txt").read_text() == "bbb"
 

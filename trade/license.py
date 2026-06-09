@@ -112,9 +112,21 @@ def _machine_id() -> str:
 
     return f"host:{_plat.node()}"
 
-# 暴力破解限流：内存计数器，记录最近 60 秒内的失败尝试次数
+# 暴力破解限流：持久化到 SQLite license_data 中，进程重启不清零
 _MAX_ACTIVATE_ATTEMPTS = 10  # 每 60 秒最多 10 次激活尝试
-_ACTIVATE_ATTEMPTS: list[float] = []  # 时间戳列表
+
+
+def _get_activate_attempts(company_id: int | None = None) -> list[float]:
+    """从 license_data 读取激活尝试时间戳列表。"""
+    data = _get_license_data(company_id)
+    return data.get("_activate_attempts", [])
+
+
+def _save_activate_attempts(attempts: list[float], company_id: int | None = None) -> None:
+    """将激活尝试时间戳持久化到 license_data。"""
+    data = _get_license_data(company_id)
+    data["_activate_attempts"] = attempts
+    _save_license_data(data, company_id)
 
 
 # ── 数据读写 ──────────────────────────────────────────────────────────────────
@@ -195,7 +207,11 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
     # 首次使用：记录时间
     if "first_launch_at" not in data:
         data["first_launch_at"] = now.isoformat()
-        _save_license_data(data, company_id)
+        try:
+            _save_license_data(data, company_id)
+        except Exception:
+            # 写入失败（权限不足/磁盘满等）→ 不应静默通过，否则每次启动都重置试用
+            return False, "License 状态持久化失败，请检查 ~/.trade/ 目录权限"
         return True, ""
 
     first = datetime.fromisoformat(data["first_launch_at"])
@@ -321,15 +337,20 @@ def _verify_license(data: dict) -> bool:
 # ── 激活码验证 ────────────────────────────────────────────────────────────────
 
 
-def _check_activate_rate_limit() -> bool:
-    """检查激活尝试是否超过限流阈值。返回 True 表示允许继续。"""
-    global _ACTIVATE_ATTEMPTS
+def _check_activate_rate_limit(company_id: int | None = None) -> bool:
+    """检查激活尝试是否超过限流阈值。返回 True 表示允许继续。
+
+    限流状态持久化到 license_data，进程重启不清零。
+    """
     now = time.time()
+    attempts = _get_activate_attempts(company_id)
     # 清理 60 秒之前的时间戳
-    _ACTIVATE_ATTEMPTS = [t for t in _ACTIVATE_ATTEMPTS if now - t < 60]
-    if len(_ACTIVATE_ATTEMPTS) >= _MAX_ACTIVATE_ATTEMPTS:
+    attempts = [t for t in attempts if now - t < 60]
+    if len(attempts) >= _MAX_ACTIVATE_ATTEMPTS:
+        _save_activate_attempts(attempts, company_id)
         return False
-    _ACTIVATE_ATTEMPTS.append(now)
+    attempts.append(now)
+    _save_activate_attempts(attempts, company_id)
     return True
 
 

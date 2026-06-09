@@ -45,8 +45,9 @@ async def upload_to_work_dir(
     target_dir = work_dir / subdir
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # 3. 路径穿越检测
+    # 3. 路径穿越检测 + 文件大小限制
     _path_traversal_pattern = re.compile(r"\.\.|^[/\\]|[<>:\"|?*]")
+    _MAX_FILE_BYTES = 100 * 1024 * 1024  # 单文件 100MB 上限
 
     uploaded = []
     for f in files:
@@ -74,7 +75,14 @@ async def upload_to_work_dir(
             raise HTTPException(status_code=400, detail=f"路径穿越拒绝: {rel}")
 
         dest.parent.mkdir(parents=True, exist_ok=True)
+        # NUL 字节拒绝
+        if "\0" in rel:
+            raise HTTPException(status_code=400, detail="文件名含非法字符")
         content = await f.read()
+        if len(content) > _MAX_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"文件过大: {rel} ({len(content)} bytes)")
+        if not content:
+            raise HTTPException(status_code=400, detail=f"空文件: {rel}")
         dest.write_bytes(content)
         uploaded.append(str(dest.relative_to(work_dir)))
 

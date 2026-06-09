@@ -231,11 +231,19 @@ def _setup_work_directory(company_name: str, slug: str, suggested_name: str = ""
 
     # 确定目录名
     dir_name = suggested_name.strip() if suggested_name.strip() else company_name.strip()
+    # 路径穿越防护：拒绝含 .. 或 NUL 的目录名（无论位置）
+    if ".." in dir_name or "\0" in dir_name:
+        raise ValueError("Invalid directory name")
     # 清理文件名中的非法字符
     dir_name = re.sub(r'[<>:"/\\|?*]', '-', dir_name)
     dir_name = dir_name.strip()
 
     work_dir = base / dir_name
+    # 二次确认：解析后的路径必须在 base 子目录内（防御组合攻击）
+    try:
+        work_dir.resolve().relative_to(base.resolve())
+    except ValueError:
+        raise ValueError("Path traversal detected")
     is_new = True
 
     # 如果目录已存在，尝试加后缀

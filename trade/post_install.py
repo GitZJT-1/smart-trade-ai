@@ -241,8 +241,15 @@ def update_skills() -> None:
                     raw_url,
                     headers={"User-Agent": "Trade-Skills-Updater/1.0"},
                 )
+                # 限制下载大小，防止内存耗尽 (1MB，SKILL.md 实际只需几 KB)
+                _MAX_SKILL_BYTES = 1 * 1024 * 1024
                 with urllib.request.urlopen(req, timeout=15) as resp:
-                    remote_content = resp.read().decode("utf-8")
+                    remote_raw = resp.read(_MAX_SKILL_BYTES + 1)
+                    if len(remote_raw) > _MAX_SKILL_BYTES:
+                        print(f"  ✗ {skill_name} (content too large, possible MITM)", file=sys.stderr)
+                        failed += 1
+                        break
+                    remote_content = remote_raw.decode("utf-8")
 
                 # 下载后二次校验：禁止路径穿越写入磁盘（SKILL.md 本身含换行符，属正常）
                 if remote_content.startswith(".."):

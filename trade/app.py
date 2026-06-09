@@ -149,12 +149,24 @@ def _create_system_router() -> APIRouter:
         if old_pid is not None:
             import signal
             # 安全校验：确认 PID 属于 trade 进程，防止误杀
+            # 优先用 psutil（跨平台），回退到 /proc 子串匹配（Unix）
+            is_trade = False
             try:
-                proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
+                import psutil
+                proc = psutil.Process(old_pid)
+                cmdline = " ".join(proc.cmdline())
+                is_trade = ("server.py" in cmdline and "trade" in cmdline) or "trade" in cmdline
+            except ImportError:
+                # psutil 未安装，回退到 /proc 检查
+                try:
+                    proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
+                except Exception:
+                    proc_cmd = ""
+                is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
             except Exception:
-                proc_cmd = ""
-            is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
-            if is_trade or not proc_cmd:
+                # psutil.NoSuchProcess 或权限不足 → 不杀
+                pass
+            if is_trade:
                 try:
                     os.kill(old_pid, signal.SIGTERM)
                 except OSError:

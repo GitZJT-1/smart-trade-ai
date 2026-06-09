@@ -157,6 +157,10 @@ Download **Python 3.11 ~ 3.13 Windows installer (64-bit)** from [python.org](htt
 After installing Python, **open PowerShell** and run:
 
 ```powershell
+# 0. Enable Windows long path support (run PowerShell as Administrator, one-time only)
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+# Reboot after running this command
+
 # 1. Install Hermes Agent (auto-installs Node.js + Git + dependencies)
 irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 
@@ -170,6 +174,8 @@ cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-
 python server.py
 # → Open http://127.0.0.1:9119/trade
 ```
+
+> If step 3 fails with `Filename too long`, long paths are not enabled. Verify step 0 was run and the machine was rebooted.
 
 ### Build standalone app (double-click to run, no terminal needed)
 

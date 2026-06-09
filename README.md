@@ -157,6 +157,10 @@ python server.py
 安装 Python 后，**重新打开 PowerShell**，执行：
 
 ```powershell
+# 0. 启用 Windows 长路径支持（以管理员身份运行 PowerShell，仅需一次）
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+# 执行后需重启电脑
+
 # 1. 安装 Hermes Agent（自动处理 Node.js + Git + 依赖）
 irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 
@@ -170,6 +174,8 @@ cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-
 python server.py
 # → 浏览器打开 http://127.0.0.1:9119/trade
 ```
+
+> 如果第 3 步 `pip install` 报 `Filename too long` 错误，说明长路径未生效，请确认已完成第 0 步并重启电脑。
 
 ### 打包为独立应用（双击运行，无需终端）
 

@@ -269,8 +269,8 @@ def _setup_work_directory(company_name: str, slug: str, suggested_name: str = ""
                 break
         is_new = False
 
-    # 创建目录结构
-    work_dir.mkdir(parents=True, exist_ok=False)
+    # 创建目录结构（exist_ok=True 防止 TOCTOU 竞争）
+    work_dir.mkdir(parents=True, exist_ok=True)
     for cat_name, _ in _WORK_DIR_CATEGORIES:
         (work_dir / cat_name).mkdir(parents=True, exist_ok=True)
 

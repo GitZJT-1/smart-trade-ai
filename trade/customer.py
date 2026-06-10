@@ -277,7 +277,7 @@ def admin_get(customer_id: int) -> dict | None:
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _row_to_dict(row) -> dict:
-    return {
+    result = {
         "id": row["id"],
         "company_id": row["company_id"],
         "name": row["name"],
@@ -286,6 +286,16 @@ def _row_to_dict(row) -> dict:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
+    # 扩展字段（JSON 列）：前端依赖 extra1/extra2 展示额外信息
+    try:
+        result["extra1"] = row["extra1"] or "{}"
+    except Exception:
+        result["extra1"] = "{}"
+    try:
+        result["extra2"] = row["extra2"] or "{}"
+    except Exception:
+        result["extra2"] = "{}"
+    return result
 
 
 def _library_row_to_dict(row) -> dict:

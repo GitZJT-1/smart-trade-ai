@@ -1164,7 +1164,6 @@ function onChatLibraryChange(libId) {
     } else {
         tag.style.display = 'none';
     }
-    ct.querySelector('#chat-messages').innerHTML = '';
     loadChatHistory();
 }
 
@@ -1228,8 +1227,14 @@ async function _collectFilesFromDataTransfer(dt) {
             files.push(f);
         } else if (entry.isDirectory) {
             const reader = entry.createReader();
-            const subEntries = await new Promise(r => reader.readEntries(r));
-            for (const e of subEntries) await _readEntry(e, prefix + entry.name + '/');
+            // readEntries 每次最多返回 ~100 条，需循环读取直到空
+            const allEntries = [];
+            while (true) {
+                const batch = await new Promise(r => reader.readEntries(r));
+                if (!batch.length) break;
+                allEntries.push(...batch);
+            }
+            for (const e of allEntries) await _readEntry(e, prefix + entry.name + '/');
         }
     }
     for (const e of entries) await _readEntry(e, '');

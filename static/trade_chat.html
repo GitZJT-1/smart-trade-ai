@@ -1250,7 +1250,7 @@ async function _uploadToWorkDir(files, subdir) {
         form.append('files', f, f._relPath || f.name);
     }
     const opts = { method: 'POST', headers: {}, body: form };
-    if (window.TOKEN) opts.headers['X-Hermes-Session-Token'] = window.TOKEN;
+    if (TOKEN) opts.headers['X-Hermes-Session-Token'] = TOKEN;
     if (currentCompanyId) opts.headers['X-Company-ID'] = String(currentCompanyId);
     const resp = await fetch('/api/trade/upload-files', opts);
     if (!resp.ok) {

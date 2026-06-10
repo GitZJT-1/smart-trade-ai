@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 import uvicorn
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -96,7 +96,7 @@ def _ensure_gateway_running() -> None:
 
         _sp.Popen(
             [hermes_bin, "gateway", "run"],
-            env={**os.environ, "GATEWAY_ALLOW_ALL_USERS": "true"},
+            env={**os.environ},
             **kwargs,
         )
         print("  Hermes Gateway → started (cron scheduler active)")
@@ -108,10 +108,11 @@ def _ensure_gateway_running() -> None:
 
 
 def _create_system_router() -> APIRouter:
-    """创建系统管理路由（更新/备份/重启），不需要 session token。"""
+    """创建系统管理路由（更新/备份/重启），需要 session token 认证。"""
     from trade.api.cron import _capture_output
+    from trade.api.deps import require_session
 
-    router = APIRouter(tags=["system"])
+    router = APIRouter(tags=["system"], dependencies=[Depends(require_session)])
 
     @router.post("/system/update")
     def api_update_trade():
@@ -155,7 +156,20 @@ def _create_system_router() -> APIRouter:
                 import psutil
                 proc = psutil.Process(old_pid)
                 cmdline = " ".join(proc.cmdline())
-                is_trade = ("server.py" in cmdline and "trade" in cmdline) or "trade" in cmdline
+                # 二层校验：cmdline 包含 trade/server.py + 实际可执行文件路径匹配
+                is_trade = (
+                    ("server.py" in cmdline and "trade" in cmdline)
+                    or "trade" in cmdline
+                )
+                if is_trade:
+                    # 三层校验：实际 exe 路径与当前进程一致（防御 PID 重用）
+                    try:
+                        my_exe = Path(sys.executable).resolve()
+                        proc_exe = Path(proc.exe()).resolve()
+                        if my_exe != proc_exe:
+                            is_trade = False
+                    except Exception:
+                        pass  # 无权限读取 exe 时退回到 cmdline 匹配结果
             except ImportError:
                 # psutil 未安装，回退到 /proc 检查
                 try:
@@ -218,7 +232,7 @@ def create_app() -> FastAPI:
     from trade.api.license import router as license_router
     app.include_router(license_router, prefix="/api/trade")
 
-    # 挂载 system 路由（无需 session token）
+    # 挂载 system 路由（需要 session token）
     app.include_router(_create_system_router(), prefix="/api/trade")
 
     # 挂载 Trade API 路由
@@ -301,12 +315,14 @@ def main() -> None:
     parser.add_argument("--no-gateway", action="store_true", help="不检查/启动 Hermes Gateway")
     args = parser.parse_args()
 
-    # 写入 PID 文件
+    # 写入 PID 文件（0600 权限防止被其他用户篡改）
     import atexit
     pid_dir = Path.home() / ".trade" / "data"
     pid_dir.mkdir(parents=True, exist_ok=True)
     pid_file = pid_dir / "trade.pid"
     pid_file.write_text(str(os.getpid()))
+    if os.name != "nt":
+        pid_file.chmod(0o600)
     atexit.register(lambda: pid_file.unlink(missing_ok=True))
 
     app = create_app()

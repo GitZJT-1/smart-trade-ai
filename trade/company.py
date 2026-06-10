@@ -338,6 +338,7 @@ def create(
     # 确保 slug 唯一
     data_dir = None
     work_dir = None
+    is_new = True  # 初始化在 try 外，供 except 块的 rollback 清理使用
     conn = get_connection()
     try:
         existing = conn.execute(
@@ -380,9 +381,9 @@ def create(
         return result
     except Exception:
         conn.rollback()
-        # 清理可能已创建的目录
+        # 仅清理本次新创建的目录，不复用已有目录时误删用户数据
         import shutil as _shutil
-        if work_dir and work_dir.exists():
+        if is_new and work_dir and work_dir.exists():
             try:
                 _shutil.rmtree(str(work_dir))
             except OSError:
@@ -517,7 +518,8 @@ def _write_audit_log(company_id: int, action: str, detail: str) -> None:
         with open(log_file, "a", encoding="utf-8") as f:
             f.write(entry + "\n")
     except Exception:
-        pass  # 审计日志写入失败不阻塞主流程
+        import logging
+        logging.warning("审计日志写入失败: %s", log_file)
 
 
 def _row_to_company(row) -> dict:

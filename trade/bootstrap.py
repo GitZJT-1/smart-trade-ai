@@ -19,14 +19,14 @@ from pathlib import Path
 # 确保 Hermes 启动时的可选工具缺失警告被正确屏蔽
 class _ToolImportNoiseFilter(_logging.Filter):
     """过滤 Hermes 启动时无关的可选工具缺失警告。"""
-    _NOISE = ("Could not import tool module", "No module named")
+    _NOISE = ("Could not import tool module", "No module named 'hermes_cli.tools'")
     def filter(self, record: _logging.LogRecord) -> bool:
         return not any(p in record.getMessage() for p in self._NOISE)
 
 
 _logging.getLogger().addFilter(_ToolImportNoiseFilter())
 _warnings.filterwarnings("ignore", message=r".*Could not import tool module.*")
-_warnings.filterwarnings("ignore", message=r".*No module named.*")
+_warnings.filterwarnings("ignore", message=r".*No module named 'hermes_cli\.tools'.*")
 
 
 # ── sys.path 调整：Trade 包优先于 Hermes ──────────────────────────────────

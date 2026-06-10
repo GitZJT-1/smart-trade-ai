@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales teams. A FastAPI server wrapping **Hermes Agent** (AI engine from `NousResearch/hermes-agent`) with a custom business layer (multi-company document libraries, customers, chat memory, skill routing) and a single-page chat UI.
+Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales teams. A FastAPI server wrapping **Hermes Agent** (AI engine from `NousResearch/hermes-agent`) with a custom business layer (multi-company document libraries, customers, chat memory, skill routing) and a single-page chat UI. Also ships as a desktop app (tradewin) via PyWebView.
 
 ## Commands
 
@@ -82,12 +82,12 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 158 tests across 6 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license).
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 168 tests across 6 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license).
 
 ## Architecture
 
 ```
-static/trade_chat.html          Chat SPA — single-file vanilla JS (~2600 lines), served at /trade
+static/trade_chat.html          Chat SPA — single-file vanilla JS (~2900 lines), served at /trade
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
         ▼
 server.py                       Thin entry point (5 lines) — calls bootstrap.setup() + app.main()
@@ -163,7 +163,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 ## Key Design Decisions
 
-1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.5.28` (0.15.0) in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`.
+1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.5.29.2` in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`.
 
 2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
 
@@ -250,7 +250,7 @@ Sync happens at three points:
 
 ## Frontend Architecture (static/trade_chat.html)
 
-The SPA uses vanilla JS with a custom view-caching router:
+The SPA uses vanilla JS with a custom view-caching router (~2900 lines of vanilla JS + embedded CSS):
 - **`navToView(view, chatCtx, chatName)`** — switches between chat/customers/tasks/history views. Creates DOM once, caches in `viewCache` object, hides/shows on switch. Non-cached children (except `#guidance-bar`) are removed on each switch.
 - **`api(method, path, body)`** — central fetch wrapper. Adds `X-Hermes-Session-Token` + `X-Company-ID` headers. 120s AbortController timeout. Handles 401/402/404/409 with toast. Returns parsed JSON or null.
 - **`$ (id)`** — shorthand for `document.getElementById(id)`.
@@ -261,6 +261,15 @@ The SPA uses vanilla JS with a custom view-caching router:
 ## Chat Memory
 
 Every chat message (query + response) is persisted to SQLite `conversations` table with `created_at` auto-populated via `datetime('now', 'localtime')` default. Both `/chat` and `/chat/stream` call `chat_memory.save_with_context()` after agent response, which also optionally syncs to Hindsight long-term memory and Hermes native memory.
+
+## GBrain Configuration (configured by /setup-gbrain)
+- Mode: local-stdio
+- Engine: pglite
+- Config file: ~/.gbrain/config.json (mode 0600)
+- Setup date: 2026-06-10
+- MCP registered: yes
+- Artifacts sync: artifacts-only
+- Current repo policy: read-write
 
 ## Code Annotation Standards
 

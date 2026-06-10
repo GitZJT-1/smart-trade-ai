@@ -348,9 +348,17 @@ def build_query(
     if company_id:
         co = _company.get(company_id)
         if co:
-            # 用户输入字段用引号包裹，防止 prompt 注入
-            name = co['name'].replace('\n', ' ').replace('\r', '')
-            slug = co.get('slug', '').replace('\n', ' ').replace('\r', '')
+            # 用户输入字段清理：去除换行、控制字符、prompt 注入标记，限制长度
+            def _sanitize_identity(s: str, max_len: int = 200) -> str:
+                import re as _re
+                s = s.replace('\n', ' ').replace('\r', '')
+                # 去除 ASCII 控制字符（0x00-0x1F, 0x7F），保留空格
+                s = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
+                # 防止 prompt 注入 — 转义 [ 字符，避免被解析为 markdown 指令
+                s = s.replace('[', '〔').replace(']', '〕')
+                return s[:max_len]
+            name = _sanitize_identity(co['name'])
+            slug = _sanitize_identity(co.get('slug', ''))
             system_prompt += (
                 f"\n\n## 当前工作公司\n"
                 f"- 公司名称：「{name}」\n"

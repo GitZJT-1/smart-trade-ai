@@ -13,7 +13,7 @@ Trade AI Assistant — 公司管理 API 路由。
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from trade import company as company_module
 from trade.api.deps import require_company
@@ -102,10 +102,16 @@ def update_company(
 def delete_company(
     company_id: int,
     x_company_id: int = Depends(require_company),
+    x_confirm_delete: str | None = Header(None, alias="X-Confirm-Delete"),
 ):
-    """删除公司及级联删除其所有库、客户、对话记录。"""
+    """删除公司及级联删除其所有库、客户、对话记录。需要 X-Confirm-Delete header。"""
     if x_company_id != company_id:
         raise HTTPException(status_code=403, detail="Cannot delete another company.")
+    if x_confirm_delete != "yes":
+        raise HTTPException(
+            status_code=400,
+            detail="Destructive operation requires X-Confirm-Delete: yes header.",
+        )
     if not company_module.delete(company_id):
         raise HTTPException(status_code=404, detail="Company not found")
     return {"ok": True}

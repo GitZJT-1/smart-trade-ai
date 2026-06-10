@@ -30,6 +30,10 @@ def _get_hermes_home() -> Path:
     if val:
         # 如果设置了 HERMES_HOME 环境变量，优先使用
         return Path(val)
+    if os.name == "nt":
+        # Windows: 使用 %LOCALAPPDATA%\hermes\，避免 Path.home() 在 SYSTEM 用户下指向 System32
+        _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+        return Path(_local) / "hermes"
     return Path.home() / ".hermes"
 
 

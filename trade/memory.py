@@ -38,8 +38,16 @@ def is_available() -> bool:
         # 如果环境变量中没有 API 密钥，则尝试从配置文件中读取
         if not has_key:
             from pathlib import Path
+            _hermes_env = os.environ.get("HERMES_HOME", "")
+            if _hermes_env:
+                _hermes_root = Path(_hermes_env)
+            elif os.name == "nt":
+                _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+                _hermes_root = Path(_local) / "hermes"
+            else:
+                _hermes_root = Path.home() / ".hermes"
             config_paths = [
-                Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes")) / "hindsight" / "config.json",
+                _hermes_root / "hindsight" / "config.json",
                 Path.home() / ".hindsight" / "config.json",
             ]
             # 遍历所有可能的配置文件路径
@@ -277,8 +285,13 @@ def retain_to_hermes_memory(
     from pathlib import Path as _Path
 
     _hermes_root = _Path(os.environ.get("HERMES_HOME", ""))
-    if not _hermes_root.is_absolute():
-        _hermes_root = _Path.home() / ".hermes"
+    if not _hermes_root.is_absolute() or not str(_hermes_root).strip():
+        # 跨平台解析 Hermes 根目录
+        if os.name == "nt":
+            _local = os.environ.get("LOCALAPPDATA", str(_Path.home() / "AppData" / "Local"))
+            _hermes_root = _Path(_local) / "hermes"
+        else:
+            _hermes_root = _Path.home() / ".hermes"
     MEMORY_FILE = _hermes_root / "memories" / "MEMORY.md"
     LOCK_FILE = _hermes_root / "memories" / "MEMORY.md.lock"
 
@@ -324,7 +337,14 @@ def retain_to_hermes_memory(
         if os.name != "nt":
             import fcntl as _fcntl_module
 
-        _hermes_root = _Path(os.environ.get("HERMES_HOME", _Path.home() / ".hermes"))
+        _hermes_env = os.environ.get("HERMES_HOME", "")
+        if _hermes_env:
+            _hermes_root = _Path(_hermes_env)
+        elif os.name == "nt":
+            _local = os.environ.get("LOCALAPPDATA", str(_Path.home() / "AppData" / "Local"))
+            _hermes_root = _Path(_local) / "hermes"
+        else:
+            _hermes_root = _Path.home() / ".hermes"
         lock_dir = _hermes_root / "memories"
         lock_dir.mkdir(parents=True, exist_ok=True)
         lock_fd = open(str(LOCK_FILE), "w")

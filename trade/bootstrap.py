@@ -62,6 +62,13 @@ def _adjust_sys_path():
         # Hermes 放在第 1 位，Trade 仍在第 0 位（避免 trade/ 包名冲突）
         sys.path.insert(1, _hermes_checkout)
 
+    # 如果 HERMES_HOME 未设置但我们找到了 Hermes 路径，注入环境变量
+    # 防止 hermes_constants.get_hermes_home() 在 Windows 上回退到
+    # Path.home() / ".hermes"（Path.home() 在 SYSTEM 用户下指向 System32）
+    if not os.environ.get("HERMES_HOME") and _hermes_checkout:
+        _hermes_home_dir = str(Path(_hermes_checkout).parent)
+        os.environ["HERMES_HOME"] = _hermes_home_dir
+
 
 # ── 子命令分发 ────────────────────────────────────────────────────────────
 _MIN_HERMES_VERSION = "0.13.0"

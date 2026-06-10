@@ -288,6 +288,66 @@ ruff check trade/ server.py  # 代码检查
 
 ---
 
+## 故障排除
+
+### 系统升级按钮无反应
+
+如果升级按钮点击后没反应（常见于从旧版本升级后），请根据你的操作系统手动执行升级：
+
+**macOS / Linux：**
+
+```bash
+cd ~/.trade/foreign-trade-assistant
+git pull origin main
+pip install -e "."
+install-trade-skills
+```
+
+然后重启 Trade 服务（在 Trade 页面点击「重启」，或终端中重新运行 `python server.py`）。
+
+**Windows：**
+
+```powershell
+cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
+git pull origin main
+pip install -e "."
+install-trade-skills
+```
+
+然后重启 Trade 服务。
+
+> 如果上述命令报 `git` 找不到，说明 Git 未安装或未加入 PATH。可以先在终端执行 `hermes` 命令确认 Hermes 正常运行，再重试。
+
+### 拖拽文件 / 上传报错「拒绝访问」
+
+此问题通常是因为 `HERMES_HOME` 环境变量未正确设置，导致程序尝试在系统目录创建文件。
+
+**快速修复（三平台通用）：**
+
+1. 关闭 Trade 服务
+2. 终端中运行 `hermes` 确认 Hermes 正常工作
+3. 重新启动 Trade：`python server.py` 或 `tradewin`
+
+如果问题依旧，手动设置环境变量后重启：
+
+**Windows (PowerShell)：**
+```powershell
+$env:HERMES_HOME = "$env:LOCALAPPDATA\hermes"
+python server.py
+```
+
+**macOS / Linux：**
+```bash
+export HERMES_HOME="$HOME/.hermes"
+python server.py
+```
+
+### 升级后页面样式异常
+
+浏览器缓存了旧版 CSS/JS，按 `Cmd+Shift+R` (macOS) 或 `Ctrl+Shift+R` (Windows) 强制刷新即可。
+
+---
+
 ## 联系作者
 
 <img src="docs/wechat-contact.jpeg" alt="WeChat Contact" width="200">

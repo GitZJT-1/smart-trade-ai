@@ -104,6 +104,18 @@ def _ensure_gateway_running() -> None:
         print(f"  ⚠️  Hermes Gateway 启动失败: {e}")
 
 
+def _get_trade_data_dir() -> Path:
+    """返回 Trade 数据目录（跨平台），与 database._get_db_path 逻辑一致。"""
+    trade_home = os.environ.get("TRADE_HOME", "").strip()
+    if not trade_home:
+        if os.name == "nt":
+            _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+            trade_home = str(Path(_local) / "trade")
+        else:
+            trade_home = str(Path.home() / ".trade")
+    return Path(trade_home) / "data"
+
+
 # ── System endpoints (无需 session token) ────────────────────────────────────
 
 
@@ -134,8 +146,8 @@ def _create_system_router() -> APIRouter:
         2. 发送 SIGTERM 优雅关闭当前进程
         3. 等待端口释放后，以独立子进程重新启动 server
         """
-        trade_home = Path.home() / ".trade" / "data"
-        pid_file = trade_home / "trade.pid"
+        trade_data = _get_trade_data_dir()
+        pid_file = trade_data / "trade.pid"
         old_pid = None
         if pid_file.is_file():
             try:
@@ -317,7 +329,7 @@ def main() -> None:
 
     # 写入 PID 文件（0600 权限防止被其他用户篡改）
     import atexit
-    pid_dir = Path.home() / ".trade" / "data"
+    pid_dir = _get_trade_data_dir()
     pid_dir.mkdir(parents=True, exist_ok=True)
     pid_file = pid_dir / "trade.pid"
     pid_file.write_text(str(os.getpid()))

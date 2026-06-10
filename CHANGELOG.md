@@ -2,6 +2,37 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
+## [0.6.0] — 2026-06-10
+
+### Added
+- **拖拽/粘贴文件上传**：拖入文件或目录到聊天框 → 选择工作子目录 → 自动导入，Agent 递归读取分析；图片文件提示用 vision 或 Tesseract OCR 识别
+- **版本更新检测**：页面每 30 分钟自动对比 GitHub 最新版本，顶部横幅提醒升级
+- **Windows 开机自启动**：Task Scheduler 用户登录后自动后台启动 Trade
+- **Linux 开机自启动**：systemd user unit
+- **macOS 桌面入口**：tradewin.py PyWebView 独立桌面应用
+
+### Changed
+- **CLAUDE.md** 补充 tradewin 桌面应用、test_license.py、Desktop App 章节
+- **README** 顶端加科学上网提示 + LLM 免责声明
+- **README** Windows 安装增加长路径支持说明
+- **prompt.py** 新增 AI 免责块，禁止输出法律建议和编造数据
+
+### Fixed
+- **P0-1**: update_skills 下载加 1MB 大小限制
+- **P0-2**: license 首次启动写入失败不再静默
+- **P0-3**: 激活限流从内存改为 SQLite 持久化
+- **P0-4**: 公司名路径穿越防护（.. 和 NUL 拒绝）
+- **P1-1**: 重启 PID 校验优先用 psutil
+- **P1-6**: 拖拽上传 100MB 单文件上限
+- **重启按钮修复**：subprocess.Popen 拉起新进程 + 前端轮询自动刷新
+- **拖拽上传 session token 缺失**：window.TOKEN → TOKEN
+- **系统更新按钮三层防御**：event 参数 + DOM 查询兜底，永不失效
+- **upload_to_work_dir** 不再重复创建目录（万花筒-2 问题）
+- **customer._row_to_dict** 补回 extra1/extra2 字段
+- **TOCTOU 目录竞争**：mkdir exist_ok=False → True
+- **大目录拖入**：readEntries 循环读取直到空
+- **slug 从错误表查询**：skill_router 改为从 companies 表查
+
 ## [0.4.4] — 2026-05-21
 
 ### Changed

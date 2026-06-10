@@ -732,6 +732,13 @@ async function doTradeUpdate(e) {
         btn.disabled = false;
         btn.textContent = '⬆️ 系统更新';
     }
+    // 轮询等待服务恢复后自动刷新
+    let attempts = 0;
+    const check = setInterval(async () => {
+        attempts++;
+        try { const r = await fetch('/api/status'); if (r.ok) { location.reload(); return; } } catch(e) {}
+        if (attempts > 30) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
+    }, 2000);
 }
 
 // ── 数据备份 ──

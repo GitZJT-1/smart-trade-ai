@@ -336,13 +336,14 @@ def create(
     # 校验 slug 合法性（防止路径穿越、非法字符）
     slug = _validate_slug(slug)
     # 确保 slug 唯一
+    data_dir = None
+    work_dir = None
     conn = get_connection()
     try:
         existing = conn.execute(
             "SELECT id FROM companies WHERE slug = ?", (slug,)
         ).fetchone()
         if existing:
-            # slug 已存在，不允许重复
             raise ValueError(f"Company with slug '{slug}' already exists")
 
         # 创建 ~/.trade/{slug}/ 数据目录
@@ -373,11 +374,27 @@ def create(
 
         result = get(company_id)
         if result:
-            # 将工作目录和库信息附加到返回结果中
             result["work_dir"] = str(work_dir)
             result["work_dir_is_new"] = is_new
             result["libraries"] = libs
         return result
+    except Exception:
+        conn.rollback()
+        # 清理可能已创建的目录
+        import shutil as _shutil
+        if work_dir and work_dir.exists():
+            try:
+                _shutil.rmtree(str(work_dir))
+            except OSError:
+                pass
+        if data_dir:
+            _data_path = Path(data_dir)
+            if _data_path.exists():
+                try:
+                    _shutil.rmtree(str(_data_path))
+                except OSError:
+                    pass
+        raise
     finally:
         conn.close()
 

@@ -54,9 +54,21 @@ async def upload_to_work_dir(
             pass
 
     if work_dir is None:
-        # 没有保存过路径，回退到桌面查找（只取已存在的不加后缀），找不到就创建
-        from trade.company import _setup_work_directory
-        work_dir, _ = _setup_work_directory(co["name"], co["slug"])
+        # 没有保存过路径，在桌面上查找公司名匹配的已存在目录
+        import re as _re
+        co_name_clean = _re.sub(r'[<>:"/\\|?*]', '-', co["name"]).strip()
+        candidates = [
+            Path.home() / "Desktop" / co_name_clean,
+            Path.home() / "桌面" / co_name_clean,
+        ]
+        for c in candidates:
+            if c.is_dir():
+                work_dir = c
+                break
+        if work_dir is None:
+            # 实在找不到，创建新目录
+            from trade.company import _setup_work_directory
+            work_dir, _ = _setup_work_directory(co["name"], co["slug"])
         # 保存路径供后续使用
         try:
             import json as _json

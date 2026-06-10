@@ -348,11 +348,14 @@ def build_query(
     if company_id:
         co = _company.get(company_id)
         if co:
+            # 用户输入字段用引号包裹，防止 prompt 注入
+            name = co['name'].replace('\n', ' ').replace('\r', '')
+            slug = co.get('slug', '').replace('\n', ' ').replace('\r', '')
             system_prompt += (
                 f"\n\n## 当前工作公司\n"
-                f"- 公司名称：{co['name']}\n"
+                f"- 公司名称：「{name}」\n"
                 f"- 公司 ID：{co['id']}\n"
-                f"- Slug：{co.get('slug', '')}\n\n"
+                f"- Slug：「{slug}」\n\n"
                 "**所有数据操作（记忆读取、客户查询、文档搜索）必须限定在上述公司范围内。**"
             )
 
@@ -363,23 +366,24 @@ def build_query(
         cust = _cust.get(customer_id, company_id=company_id)
         if cust:
             # 构造客户上下文：公司名 + 联系人 + 职位 + 跟进项目 + 联系方式
-            parts = [f"\n[上下文] 用户正在与客户「{cust['name']}」"]
+            c_name = cust['name'].replace('\n', ' ').replace('\r', '')
+            parts = [f"\n[上下文] 用户正在与客户「{c_name}」"]
             # 解析 extra2 JSON 字段获取扩展信息
             extra2 = _json_loads(cust.get("extra2", "{}"))
-            title = extra2.get("title", "") or cust.get("title", "")
-            contact_name = cust.get("contact", "")
-            email = extra2.get("email", "")
-            phone = extra2.get("phone", "") or extra2.get("whatsapp", "")
-            note = cust.get("note", "")
+            title = (extra2.get("title", "") or cust.get("title", "")).replace('\n', ' ').replace('\r', '')
+            contact_name = (cust.get("contact", "")).replace('\n', ' ').replace('\r', '')
+            email = (extra2.get("email", "")).replace('\n', ' ').replace('\r', '')
+            phone = (extra2.get("phone", "") or extra2.get("whatsapp", "")).replace('\n', ' ').replace('\r', '')
+            note = (cust.get("note", "")).replace('\n', ' ').replace('\r', '')
             if contact_name:
-                parts.append(f"联系人：{contact_name}")
+                parts.append(f"联系人：「{contact_name}」")
             if title:
-                parts.append(f"职位：{title}")
+                parts.append(f"职位：「{title}」")
             if note:
-                parts.append(f"跟进内容：{note}")
+                parts.append(f"跟进内容：「{note}」")
             contacts = [x for x in [email, phone] if x]
             if contacts:
-                parts.append(f"联系方式：{' / '.join(contacts)}")
+                parts.append(f"联系方式：「{' / '.join(contacts)}」")
             customer_context = "，".join(parts) + "。"
             # 注入该客户关联的文档库信息
             linked_libs = _cust.get_libraries(customer_id, company_id=company_id)

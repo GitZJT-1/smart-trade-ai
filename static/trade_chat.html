@@ -2041,8 +2041,7 @@ async function saveCustomer() {
     const name = $('cust-name').value.trim();
     if (!name) { toast('请填写客户名称'); return; }
     const editId = $('cust-edit-id').value;
-    // contact 字段用 email 填充（Modal 已改为独立 email/phone 字段）
-    const contact = ($('cust-email')?.value?.trim() || $('cust-phone')?.value?.trim() || '');
+    const contact = ($('cust-contact')?.value?.trim() || '');
     const note = $('cust-note').value.trim();
     const country = $('cust-country').value.trim();
     const tier = $('cust-tier').value;
@@ -2806,6 +2805,8 @@ function onCompanyChange(cid) {
         viewCache[key].element.remove();
         delete viewCache[key];
     }
+    // 清空 cron 输出记录，防止跨公司污染
+    _shownCronOutputs = new Set();
     if (cid) {
         currentCompanyId = parseInt(cid);
         saveState();

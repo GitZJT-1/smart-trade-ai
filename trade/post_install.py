@@ -680,7 +680,7 @@ def update_trade() -> None:
     ok = True
 
     # 1. git pull — 拉取最新代码
-    print("→ Step 1/6: git pull ...")
+    print("→ Step 1/7: git pull ...")
     result = subprocess.run(
         ["git", "pull", "--ff-only", "origin", "main"],
         cwd=str(trade_dir), capture_output=True, text=True,
@@ -725,21 +725,21 @@ def update_trade() -> None:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
 
     # 2. install_skills — 安装新增 b2b-* skill 目录到 ~/.hermes/skills/
-    print("→ Step 2/6: install skills (新增 skill 目录) ...")
+    print("→ Step 2/7: install skills (新增 skill 目录) ...")
     try:
         install_skills()
     except SystemExit:
         ok = False
 
     # 3. update_skills — 从 GitHub 同步每个 skill 的 SKILL.md 内容
-    print("→ Step 3/6: update skills (同步 SKILL.md) ...")
+    print("→ Step 3/7: update skills (同步 SKILL.md) ...")
     try:
         update_skills()
     except SystemExit:
         ok = False
 
     # 4. pip install — 更新包及依赖（包含依赖以确保新版本需求被满足）
-    print("→ Step 4/6: pip install ...")
+    print("→ Step 4/7: pip install ...")
     pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir)]
     result = subprocess.run(pip_args, capture_output=True, text=True)
     if result.returncode != 0:
@@ -774,7 +774,7 @@ def update_trade() -> None:
             print(f"  ⚠ Code sync failed: {e}")
 
     # 5. 同步 .trade-template/ 新增模板文件
-    print("→ Step 5/6: template sync ...")
+    print("→ Step 5/7: template sync ...")
     try:
         # git pull 后的项目根目录下的 .trade-template/
         template_src = trade_dir / ".trade-template"

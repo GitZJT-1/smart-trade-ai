@@ -461,9 +461,9 @@ body {
 
     <div id="license-bar" style="padding:6px 16px;font-size:11px;text-align:center;display:none;"></div>
     <div class="sidebar-footer">
-        <button onclick="doTradeUpdate(event)" title="一键更新系统（git pull + skills + db）">⬆️ 系统更新</button>
-        <button onclick="doRestartTrade(event)" title="重启 Trade 服务">🔄 重启</button>
-        <button onclick="updateSkills(event)" title="从 GitHub 更新 B2B skills 到最新版本">🔄 Skills</button>
+        <button id="system-update-btn" onclick="doTradeUpdate(event)" title="一键更新系统（git pull + skills + db）">⬆️ 系统更新</button>
+        <button id="system-restart-btn" onclick="doRestartTrade(event)" title="重启 Trade 服务">🔄 重启</button>
+        <button id="skills-update-btn" onclick="updateSkills(event)" title="从 GitHub 更新 B2B skills 到最新版本">🔄 Skills</button>
     </div>
 
 </aside>
@@ -709,7 +709,9 @@ async function doActivate() {
 
 // ── 系统更新 ──
 async function doTradeUpdate(e) {
-    const btn = e.target;
+    // 用 currentTarget 或回退到事件对象，再不行直接查 DOM
+    const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#system-update-btn');
+    if (!btn) return;
     btn.disabled = true;
     btn.textContent = '⏳ 更新中...';
     toast('⬆️ 正在更新系统...');
@@ -743,7 +745,8 @@ async function doTradeUpdate(e) {
 
 // ── 数据备份 ──
 async function doRestartTrade(e) {
-    const btn = e.target;
+    const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#system-restart-btn');
+    if (!btn) return;
     btn.disabled = true;
     btn.textContent = '⏳ 重启中...';
     toast('🔄 正在重启 Trade 服务...');
@@ -779,7 +782,8 @@ async function doRestartTrade(e) {
 
 // ── Skills 更新 ──
 async function updateSkills(e) {
-    const btn = e.target;
+    const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#skills-update-btn');
+    if (!btn) return;
     btn.disabled = true;
     btn.textContent = '⏳ 更新中...';
     try {

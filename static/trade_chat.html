@@ -1011,6 +1011,71 @@ function stopCronPolling() {
     if (_cronPollTimer) { clearInterval(_cronPollTimer); _cronPollTimer = null; }
 }
 
+// ── 版本更新检查 ──
+let _currentVersion = '';
+let _versionPollTimer = null;
+
+async function checkVersion() {
+    try {
+        const r = await fetch('/api/status');
+        if (!r.ok) return;
+        const data = await r.json();
+        _currentVersion = data.version || '';
+
+        // 从 GitHub API 获取最新 release tag
+        const ghResp = await fetch('https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest');
+        if (!ghResp.ok) return;
+        const release = await ghResp.json();
+        const latest = (release.tag_name || '').replace(/^v/, '');
+
+        const banner = document.getElementById('update-banner');
+        if (latest && _currentVersion && _currentVersion !== latest) {
+            if (!banner) {
+                const b = document.createElement('div');
+                b.id = 'update-banner';
+                b.style.cssText = 'background:#FEF3C7;color:#92400E;padding:8px 16px;text-align:center;font-size:14px;flex-shrink:0;';
+                b.innerHTML = `系统有新版本 ${esc(latest)}（当前 ${esc(_currentVersion)}）— <a href="#" onclick="doUpdateSystem();return false" style="color:#D97706;font-weight:600;">点击更新</a>`;
+                const main = document.getElementById('main-content');
+                if (main) main.insertBefore(b, main.firstChild);
+            }
+        } else if (banner) {
+            banner.remove();
+        }
+    } catch(e) {}
+}
+
+function startVersionCheck() {
+    stopVersionCheck();
+    checkVersion();
+    _versionPollTimer = setInterval(checkVersion, 30 * 60 * 1000); // 每 30 分钟
+}
+
+function stopVersionCheck() {
+    if (_versionPollTimer) { clearInterval(_versionPollTimer); _versionPollTimer = null; }
+}
+
+async function doUpdateSystem() {
+    const btn = document.getElementById('update-banner');
+    if (btn) btn.textContent = '更新中...';
+    try {
+        const resp = await api('POST', '/api/trade/system/update');
+        if (resp?.ok) {
+            toast('✅ 系统更新完成！正在重启...');
+        } else {
+            toast('⚠️ 更新失败');
+        }
+    } catch(e) {
+        toast('🔄 服务正在重启，页面即将刷新...');
+    }
+    // 轮询等待服务恢复后刷新
+    let attempts = 0;
+    const check = setInterval(async () => {
+        attempts++;
+        try { const r = await fetch('/api/status'); if (r.ok) { location.reload(); } } catch(e) {}
+        if (attempts > 30) { clearInterval(check); }
+    }, 2000);
+}
+
 async function loadCronStatus(isPoll = false) {
     if (!currentCompanyId) return;
     const data = await api('GET', '/api/trade/cron/today');
@@ -2790,6 +2855,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sel) sel.value = currentCompanyId;
         navToView('chat', 'daily', '今日简报');
         startCronPolling();
+        startVersionCheck();
     } else {
         renderNoCompanyPage();
     }

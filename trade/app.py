@@ -228,7 +228,19 @@ def create_app() -> FastAPI:
     # Health check
     @app.get("/api/status", include_in_schema=False)
     async def status():
-        return {"status": "ok", "app": "Foreign Trade Assistant"}
+        # 读取当前版本号（从 pyproject.toml）
+        version = "0.0.0"
+        try:
+            import tomllib as _toml
+        except ImportError:
+            import tomli as _toml
+        try:
+            pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            data = _toml.loads(pyproject.read_text())
+            version = data.get("project", {}).get("version", version)
+        except Exception:
+            pass
+        return {"status": "ok", "app": "Foreign Trade Assistant", "version": version}
 
     return app
 

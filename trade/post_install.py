@@ -545,6 +545,110 @@ def _guess_running_project_dir() -> Path | None:
     return None
 
 
+def _ensure_auto_start(trade_dir: Path) -> None:
+    """确保 Trade 在系统启动时自动运行（幂等操作，已存在则跳过）。
+
+    Windows: Task Scheduler 登录时触发后台任务
+    macOS:   launchd plist 用户级守护进程（Label 与 install.sh 统一）
+    Linux:   systemd user unit
+    """
+    import subprocess
+
+    if os.name == "nt":
+        # ── Windows: Task Scheduler ──
+        task_name = "SmartTradeAI"
+        check = subprocess.run(
+            ["schtasks", "/query", "/tn", task_name],
+            capture_output=True, text=True,
+        )
+        if check.returncode == 0:
+            print("  ✓ 开机自启动任务已存在")
+            return
+
+        py_exe = sys.executable
+        server_py = str(trade_dir / "server.py")
+        result = subprocess.run(
+            [
+                "schtasks", "/create", "/tn", task_name,
+                "/tr", f'"{py_exe}" "{server_py}" --no-browser',
+                "/sc", "onlogon",
+                "/rl", "limited",
+                "/f",
+            ],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            print("  ✓ 已设置开机自启动")
+        else:
+            print(f"  ⚠ 开机自启动设置失败: {result.stderr.strip()}")
+
+    elif sys.platform == "darwin":
+        # ── macOS: launchd plist（Label 与 install.sh 统一为 com.trade.assistant）──
+        plist_dir = Path.home() / "Library" / "LaunchAgents"
+        plist_file = plist_dir / "com.trade.assistant.plist"
+        if plist_file.is_file():
+            print("  ✓ 开机自启动任务已存在")
+            return
+
+        trade_bin = os.environ.get("HOME", str(Path.home())) + "/.local/bin/trade"
+        import textwrap
+        plist_content = textwrap.dedent(f"""\
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>com.trade.assistant</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>{trade_bin}</string>
+                <string>--no-browser</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <true/>
+        </dict>
+        </plist>""")
+        plist_dir.mkdir(parents=True, exist_ok=True)
+        plist_file.write_text(plist_content, encoding="utf-8")
+        subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist_file)],
+                       capture_output=True)
+        print("  ✓ 已设置开机自启动")
+
+    elif sys.platform == "linux":
+        # ── Linux: systemd user unit ──
+        unit_dir = Path.home() / ".config" / "systemd" / "user"
+        unit_file = unit_dir / "trade.service"
+        if unit_file.is_file():
+            print("  ✓ 开机自启动任务已存在")
+            return
+
+        py_exe = sys.executable
+        server_py = str(trade_dir / "server.py")
+        import textwrap
+        unit_content = textwrap.dedent(f"""\
+        [Unit]
+        Description=Smart Trade AI
+        After=network.target
+
+        [Service]
+        Type=simple
+        ExecStart={py_exe} {server_py} --no-browser
+        Restart=on-failure
+        RestartSec=10
+
+        [Install]
+        WantedBy=default.target
+        """)
+        unit_dir.mkdir(parents=True, exist_ok=True)
+        unit_file.write_text(unit_content, encoding="utf-8")
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        subprocess.run(["systemctl", "--user", "enable", "trade.service"], capture_output=True)
+        subprocess.run(["systemctl", "--user", "start", "trade.service"], capture_output=True)
+        print("  ✓ 已设置开机自启动")
+
+
 def update_trade() -> None:
     """一键更新 Foreign Trade Assistant 系统。
 
@@ -554,8 +658,9 @@ def update_trade() -> None:
       3. update_skills()（从 GitHub 同步 SKILL.md 内容）
       4. pip install（更新包及依赖）
       5. _sync_trade_template()（同步 .trade-template/ 新增模板文件）
-      6. 数据库迁移检查
-      7. 自动重启 Trade 服务
+      6. _ensure_auto_start()（Windows/macOS 开机自启动）
+      7. 数据库迁移检查
+      8. 自动重启 Trade 服务
 
     用法：trade-update（或 trade update）
     """
@@ -682,8 +787,15 @@ def update_trade() -> None:
         # 模板同步失败不影响其他步骤
         pass
 
-    # 6. db migration (幂等操作)
-    print("→ Step 6/6: database check ...")
+    # 6. 确保开机自启动（Windows Task Scheduler / macOS launchd）
+    print("→ Step 6/7: auto-start check ...")
+    try:
+        _ensure_auto_start(trade_dir)
+    except Exception as e:
+        print(f"  ⚠ Auto-start setup failed: {e}")
+
+    # 7. db migration (幂等操作)
+    print("→ Step 7/7: database check ...")
     try:
         from trade.database import init_db
         db_path = init_db()

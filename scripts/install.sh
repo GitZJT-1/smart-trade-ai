@@ -252,5 +252,36 @@ PLIST
     else
         echo -e "  ${GREEN}✓${NC} macOS 开机自启动已配置"
     fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 配置 Linux 开机自启动（systemd user unit）
+# ─────────────────────────────────────────────────────────────────────────────
+elif [[ "$(uname -s)" == "Linux" ]]; then
+    UNIT_DIR="$HOME/.config/systemd/user"
+    UNIT_FILE="$UNIT_DIR/trade.service"
+    mkdir -p "$UNIT_DIR"
+
+    if [ ! -f "$UNIT_FILE" ]; then
+        cat > "$UNIT_FILE" << UNIT
+[Unit]
+Description=Smart Trade AI
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$HOME/.local/bin/trade --no-browser
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+UNIT
+        systemctl --user daemon-reload
+        systemctl --user enable trade.service
+        systemctl --user start trade.service
+        echo -e "  ${GREEN}✓${NC} Linux 开机自启动已配置（systemd user unit）"
+    else
+        echo -e "  ${GREEN}✓${NC} Linux 开机自启动已配置"
+    fi
 fi
 echo ""

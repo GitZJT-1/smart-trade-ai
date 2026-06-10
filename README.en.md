@@ -6,6 +6,10 @@
 
 [中文](README.md) | [English](README.en.md)
 
+> **Important Notice**  
+> This tool requires access to GitHub and PyPI for installation and updates — **a stable VPN connection is essential**.  
+> Smart Trade AI generates responses using large language models (LLMs). Due to current technological limitations, LLMs may produce hallucinations. **All output is for reference only and does not constitute professional advice of any kind.** The user is solely responsible for independently verifying accuracy before relying on any information. For critical business decisions involving contracts, pricing, compliance, or due diligence, always consult qualified professionals. Use of this tool is at your own risk.
+
 <div align="center">
   <h3>AI Assistant for International Trade Professionals</h3>
   <p>Runs locally · 15 built-in skills · Your data never leaves your machine</p>

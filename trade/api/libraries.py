@@ -34,14 +34,36 @@ async def upload_to_work_dir(
     if subdir not in _valid_subdirs:
         raise HTTPException(status_code=400, detail=f"无效的子目录: {subdir}")
 
-    # 2. 获取公司桌面工作目录
+    # 2. 获取公司桌面工作目录：从 extra1 取已保存的路径，不存在时重建
     from trade import company as _co
     co = _co.get(x_company_id)
     if not co:
         raise HTTPException(status_code=404, detail="公司不存在")
 
-    from trade.company import _setup_work_directory
-    work_dir, _ = _setup_work_directory(co["name"], co["slug"])
+    work_dir = None
+    tc = _co.get_trade_company(x_company_id)
+    if tc and tc.get("extra1"):
+        # 已保存的工作目录路径，直接使用
+        import json as _json
+        try:
+            _extra = _json.loads(tc["extra1"])
+            saved = Path(_extra.get("work_dir", ""))
+            if saved.is_dir():
+                work_dir = saved
+        except Exception:
+            pass
+
+    if work_dir is None:
+        # 没有保存过路径，回退到桌面查找（只取已存在的不加后缀），找不到就创建
+        from trade.company import _setup_work_directory
+        work_dir, _ = _setup_work_directory(co["name"], co["slug"])
+        # 保存路径供后续使用
+        try:
+            import json as _json
+            _co.update_trade_company(x_company_id, extra1=_json.dumps({"work_dir": str(work_dir)}))
+        except Exception:
+            pass
+
     target_dir = work_dir / subdir
     target_dir.mkdir(parents=True, exist_ok=True)
 

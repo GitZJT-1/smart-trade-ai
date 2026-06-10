@@ -382,6 +382,11 @@ class TestWorkDirUpload:
                            lambda name, slug, suggested_name="": (work_dir, True))
         monkeypatch.setattr("trade.company.get",
                            lambda cid: {"name": "Test", "slug": "test"})
+        # 上传端点会读 trade_companies.extra1 取已保存的工作目录
+        monkeypatch.setattr("trade.company.get_trade_company",
+                           lambda cid: {"extra1": None})
+        monkeypatch.setattr("trade.company.update_trade_company",
+                           lambda cid, **kw: None)
 
         from trade.api.libraries import upload_to_work_dir
 
@@ -405,6 +410,11 @@ class TestWorkDirUpload:
                            lambda name, slug, suggested_name="": (work_dir, True))
         monkeypatch.setattr("trade.company.get",
                            lambda cid: {"name": "Test", "slug": "test"})
+        # 上传端点会读 trade_companies.extra1 取已保存的工作目录
+        monkeypatch.setattr("trade.company.get_trade_company",
+                           lambda cid: {"extra1": None})
+        monkeypatch.setattr("trade.company.update_trade_company",
+                           lambda cid, **kw: None)
 
         from trade.api.libraries import upload_to_work_dir
 
@@ -445,6 +455,11 @@ class TestWorkDirUpload:
                            lambda name, slug, suggested_name="": (work_dir, True))
         monkeypatch.setattr("trade.company.get",
                            lambda cid: {"name": "Test", "slug": "test"})
+        # 上传端点会读 trade_companies.extra1 取已保存的工作目录
+        monkeypatch.setattr("trade.company.get_trade_company",
+                           lambda cid: {"extra1": None})
+        monkeypatch.setattr("trade.company.update_trade_company",
+                           lambda cid, **kw: None)
 
         from trade.api.libraries import upload_to_work_dir
 

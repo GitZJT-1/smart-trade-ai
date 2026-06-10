@@ -359,9 +359,12 @@ def create(
             (name, slug, logo_url, website, contact_name, contact_email, address),
         )
         company_id = cursor.lastrowid
+        # 保存桌面工作目录路径到 extra1，供上传端点复用
+        import json as _json
+        _extra1 = _json.dumps({"work_dir": str(work_dir)})
         conn.execute(
-            "INSERT INTO trade_companies (company_id, data_dir) VALUES (?, ?)",
-            (company_id, data_dir),
+            "INSERT INTO trade_companies (company_id, data_dir, extra1) VALUES (?, ?, ?)",
+            (company_id, data_dir, _extra1),
         )
         conn.commit()
 

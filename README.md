@@ -292,9 +292,13 @@ ruff check trade/ server.py  # 代码检查
 
 ### 系统升级按钮无反应
 
-如果升级按钮点击后没反应（常见于从旧版本升级后），请根据你的操作系统手动执行升级：
+如果点击「系统升级」按钮后没有反应（常见于从旧版本升级后），请按以下步骤手动操作：
 
-**macOS / Linux：**
+**macOS：**
+
+1. 关闭 Trade 页面（浏览器标签页）
+2. 打开「终端」（在 Launchpad 或 Spotlight 搜索"终端"）
+3. 逐行复制粘贴以下命令，每行按回车：
 
 ```bash
 cd ~/.trade/foreign-trade-assistant
@@ -303,9 +307,14 @@ pip install -e "."
 install-trade-skills
 ```
 
-然后重启 Trade 服务（在 Trade 页面点击「重启」，或终端中重新运行 `python server.py`）。
+4. 所有命令执行完后，关闭终端
+5. 双击桌面上的 Trade 图标启动，或重新运行 `python server.py`
 
 **Windows：**
+
+1. 关闭 Trade 页面
+2. 按键盘 `Win + R`，输入 `powershell`，回车
+3. 逐行复制粘贴以下命令，每行按回车：
 
 ```powershell
 cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
@@ -314,29 +323,55 @@ pip install -e "."
 install-trade-skills
 ```
 
-然后重启 Trade 服务。
+4. 所有命令执行完后，关闭 PowerShell
+5. 双击桌面上的 Trade 图标启动，或在终端重新运行 `python server.py`
 
-> 如果上述命令报 `git` 找不到，说明 Git 未安装或未加入 PATH。可以先在终端执行 `hermes` 命令确认 Hermes 正常运行，再重试。
+**Linux：**
+
+1. 关闭 Trade 页面
+2. 打开终端
+3. 逐行复制粘贴以下命令，每行按回车：
+
+```bash
+cd ~/.trade/foreign-trade-assistant
+git pull origin main
+pip install -e "."
+install-trade-skills
+```
+
+4. 重新运行 `python server.py` 启动
+
+> 如果执行 `git pull` 时报错找不到 `git`，说明 Git 未安装。请先打开终端输入 `hermes` 确认 Hermes 正常，或从 [git-scm.com](https://git-scm.com) 下载安装 Git 后再试。
 
 ### 拖拽文件 / 上传报错「拒绝访问」
 
-此问题通常是因为 `HERMES_HOME` 环境变量未正确设置，导致程序尝试在系统目录创建文件。
+如果你在聊天框拖入 Excel 等文件时看到类似 `[WinError 5] 拒绝访问: 'C:\\Windows\\System32\\.hermes'` 的错误，说明程序找不到正确的数据目录。
 
-**快速修复（三平台通用）：**
+**macOS：**
 
-1. 关闭 Trade 服务
-2. 终端中运行 `hermes` 确认 Hermes 正常工作
-3. 重新启动 Trade：`python server.py` 或 `tradewin`
+1. 关闭 Trade 页面，打开「终端」
+2. 执行以下命令再启动：
 
-如果问题依旧，手动设置环境变量后重启：
+```bash
+export HERMES_HOME="$HOME/.hermes"
+python server.py
+```
 
-**Windows (PowerShell)：**
+**Windows：**
+
+1. 关闭 Trade 页面，按 `Win + R`，输入 `powershell`，回车
+2. 执行以下命令再启动：
+
 ```powershell
 $env:HERMES_HOME = "$env:LOCALAPPDATA\hermes"
 python server.py
 ```
 
-**macOS / Linux：**
+**Linux：**
+
+1. 关闭 Trade 页面，打开终端
+2. 执行以下命令再启动：
+
 ```bash
 export HERMES_HOME="$HOME/.hermes"
 python server.py

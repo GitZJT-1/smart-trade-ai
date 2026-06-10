@@ -240,7 +240,28 @@ def create_app() -> FastAPI:
             version = data.get("project", {}).get("version", version)
         except Exception:
             pass
-        return {"status": "ok", "app": "Foreign Trade Assistant", "version": version}
+
+        # 从 GitHub 查最新版本（后端不受浏览器限流影响）
+        latest = ""
+        try:
+            import urllib.request as _ur
+            _req = _ur.Request(
+                "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
+            )
+            with _ur.urlopen(_req, timeout=5) as _resp:
+                import json as _json
+                _data = _json.loads(_resp.read().decode())
+                latest = _data.get("tag_name", "").lstrip("v")
+        except Exception:
+            pass
+
+        return {
+            "status": "ok",
+            "app": "Foreign Trade Assistant",
+            "version": version,
+            "latest_version": latest or None,
+        }
 
     return app
 

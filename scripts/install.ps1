@@ -175,12 +175,29 @@ if ($currentPath -notlike "*$LocalBin*") {
     Write-Host "  ✓ 已将 trade 命令加入 PATH（新终端生效）" -ForegroundColor Green
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 开机自启动（Windows Task Scheduler — 用户登录后以最小窗口运行）
+# ─────────────────────────────────────────────────────────────────────────────
+$TaskName = "SmartTradeAI"
+$ExistingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if (-not $ExistingTask) {
+    $Action = New-ScheduledTaskAction -Execute $PyCmd -Argument "$TradeDir\server.py --no-browser"
+    $Trigger = New-ScheduledTaskTrigger -AtLogon
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+    $Principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal -Description "Smart Trade AI — 外贸 AI 助手开机自启动" -Force | Out-Null
+    Write-Host "  ✓ 已设置开机自启动" -ForegroundColor Green
+} else {
+    Write-Host "  ✓ 开机自启动任务已存在" -ForegroundColor Green
+}
+
 Write-Host ""
 Write-Host "══ 安装完成 ══" -ForegroundColor Green
 Write-Host ""
 Write-Host "  启动方式:"
 Write-Host "    新终端: trade"
 Write-Host "    或: $PyCmd $TradeDir\server.py"
+Write-Host "    Trade 将在每次开机后自动启动（后台静默运行）"
 Write-Host ""
 Write-Host "  启动后打开: http://127.0.0.1:9119/trade"
 Write-Host ""

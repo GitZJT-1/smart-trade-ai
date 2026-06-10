@@ -708,8 +708,8 @@ async function doActivate() {
 }
 
 // ── 系统更新 ──
-async function doTradeUpdate() {
-    const btn = event.target;
+async function doTradeUpdate(e) {
+    const btn = e.target;
     btn.disabled = true;
     btn.textContent = '⏳ 更新中...';
     toast('⬆️ 正在更新系统...');
@@ -735,8 +735,8 @@ async function doTradeUpdate() {
 }
 
 // ── 数据备份 ──
-async function doRestartTrade() {
-    const btn = event.target;
+async function doRestartTrade(e) {
+    const btn = e.target;
     btn.disabled = true;
     btn.textContent = '⏳ 重启中...';
     toast('🔄 正在重启 Trade 服务...');
@@ -771,8 +771,8 @@ async function doRestartTrade() {
 }
 
 // ── Skills 更新 ──
-async function updateSkills() {
-    const btn = event.target;
+async function updateSkills(e) {
+    const btn = e.target;
     btn.disabled = true;
     btn.textContent = '⏳ 更新中...';
     try {
@@ -2862,7 +2862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 页面关闭时清理轮询
-window.addEventListener('beforeunload', () => stopCronPolling());
+window.addEventListener('beforeunload', () => { stopCronPolling(); stopVersionCheck(); });
 
 function renderNoCompanyPage() {
     // 清除视图缓存

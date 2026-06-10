@@ -355,9 +355,9 @@ def augment_query(
     if name == "b2b-data-directory" and company_id:
         from trade import company as _co
         tc = _co.get_trade_company(company_id)
-        # 公司数据目录存在时，提供具体路径让 AI 知道从哪里读取文件
         if tc and tc.get("data_dir"):
-            slug = tc.get("slug", "unknown")
+            # slug 在 companies 表中，不在 trade_companies 表中
+            slug = _co.slug_from_id(company_id) or "unknown"
             data_dir_hint = (
                 f"\n公司数据目录路径：{tc['data_dir']}\n"
                 f"完整路径示例：~/.trade/companies/{slug}/"

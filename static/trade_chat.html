@@ -736,9 +736,9 @@ async function doTradeUpdate(e) {
     let attempts = 0;
     const check = setInterval(async () => {
         attempts++;
-        try { const r = await fetch('/api/status'); if (r.ok) { location.reload(); return; } } catch(e) {}
-        if (attempts > 30) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
-    }, 2000);
+        try { const r = await fetch('/api/status?_=' + Date.now()); if (r.ok) { location.reload(); return; } } catch(e) {}
+        if (attempts > 60) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
+    }, 3000);
 }
 
 // ── 数据备份 ──
@@ -1079,7 +1079,7 @@ async function doUpdateSystem() {
     const check = setInterval(async () => {
         attempts++;
         try { const r = await fetch('/api/status'); if (r.ok) { location.reload(); } } catch(e) {}
-        if (attempts > 30) { clearInterval(check); }
+        if (attempts > 60) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
     }, 2000);
 }
 

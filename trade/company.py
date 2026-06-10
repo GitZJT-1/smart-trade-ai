@@ -542,6 +542,7 @@ def update_trade_company(
     data_dir: str | None = None,
     agent_identity_md: str | None = None,
     is_active: bool | None = None,
+    extra1: str | None = None,
 ) -> dict | None:
     """更新 trade_companies 字段。"""
     conn = get_connection()
@@ -551,17 +552,17 @@ def update_trade_company(
             return None
         fields, vals = [], []
         if data_dir is not None:
-            # 更新数据目录路径
             fields.append("data_dir = ?")
             vals.append(data_dir)
         if agent_identity_md is not None:
-            # 更新 agent 身份标识文本
             fields.append("agent_identity_md = ?")
             vals.append(agent_identity_md)
         if is_active is not None:
-            # 更新 Trade 会话激活状态
             fields.append("is_active = ?")
             vals.append(1 if is_active else 0)
+        if extra1 is not None:
+            fields.append("extra1 = ?")
+            vals.append(extra1)
         if fields:
             # 有字段需要更新时才执行 SQL
             vals.append(company_id)

@@ -2,6 +2,41 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
+## [Unreleased]
+
+### Added
+- **session 级公司绑定**：首次请求自动绑定 session→company_id，跨公司操作返回 403，显式切换需通过 `POST /companies/{id}/switch`
+- **CDN SRI 完整性校验**：marked.js 和 DOMPurify 添加 integrity 哈希
+- **SSRF 内网防护**：tech_stack.py 拒绝 RFC1918/loopback/multicast/保留 IP
+- **README 故障排除章节**：升级按钮无反应、拖拽文件报错、样式异常的三平台手动修复步骤
+
+### Changed
+- **list_companies 脱敏**：仅返回 id/name/slug/is_active，隐藏 contact_email 等 PII
+- **chat 限流按公司隔离**：全局改为 per-company，防止单租户 DoS
+- **PID 验证三层防御**：cmdline → psutil exe 路径比对 → chmod 0600
+- **system 端点加 session token 认证**：update/backup/restart 不再无认证暴露
+- **delete 公司要求 X-Confirm-Delete header**：防止误操作或 XSS 触发永久删除
+
+### Fixed
+- **C-1**: 系统端点无认证（第五轮审计）
+- **C-2**: 移除 GATEWAY_ALLOW_ALL_USERS
+- **C-3**: License 端点支持 company_id 多租户隔离
+- **H-4**: warning filter 缩小到 hermes_cli.tools 路径，不再吞所有 ImportError
+- **H-5**: chat 限流按 company_id 隔离
+- **H-6**: _capture_output 加 threading.Lock 防并发 stdout 污染
+- **H-7**: memory.py 锁文件前检查 is_symlink()
+- **M-1**: 公司创建 rollback 仅清理 is_new 目录
+- **M-2**: 审计日志写入失败改 logging.warning
+- **M-5**: prompt 注入防御加强（控制字符清理、[] 转义、200 字符限制）
+- **M-8**: tech_stack.py SSRF 防护
+- **M-9**: email_intel json.loads 后检查 list 类型
+- **M-10**: skill_router 环境变量解析加 try/except
+- **M-11**: 删除 skill_registry 未使用的 _COMPILED 预编译正则
+- **路径跨平台**：.hermes/.trade 在 Windows 上统一走 LOCALAPPDATA，bootstrap 启动时注入 HERMES_HOME
+- **并发安全**：_ACTIVE_COMPANY dict、_FILE_CACHE、_INJECTION_CACHE 加 threading.Lock
+- **边界条件**：WHOIS 不支持的 TLD 优雅降级、DNS MX TC 截断检测、LIKE 通配符转义
+- **代码质量**：get_event_loop → get_running_loop、SSE 加 Cache-Control header、限流字典简化
+
 ## [0.6.0] — 2026-06-10
 
 ### Added

@@ -14,10 +14,17 @@ the product unusable.
 ### Mitigations
 
 1. **Network isolation**: Bind to `127.0.0.1` only. Do not expose to LAN/WAN.
-2. **Firewall**: Ensure port 9119 is not reachable from outside.
-3. **API Key safety**: Store in `~/.hermes/.env` with `chmod 600`.
-4. **Regular backups**: Back up `~/.trade/` and desktop work directories.
-5. **Least privilege**: Run as a regular user, never as root.
+2. **Session token**: 随机 32 字节 url-safe token，注入前端 HTML，所有 API 需携带。`secrets.compare_digest` 时序安全比较。
+3. **Session-company binding**: 首次请求自动绑定 session 到 company_id，跨公司操作返回 403。切换需通过显式端点。
+4. **CDN SRI**: 前端外部脚本（marked.js、DOMPurify）有 integrity 哈希校验。
+5. **SSRF防护**: tech_stack.py 拒绝内网/保留 IP 段（RFC1918、loopback、multicast）。
+6. **PID 三层校验**: 重启时 psutil.cmdline + exe 路径比对 + pid 文件 0600 权限。
+7. **X-Confirm-Delete**: 删除公司需要确认 header。
+8. **SQL 全参数化**: 所有查询使用 `?` 占位符，无 f-string 拼接。
+9. **路径穿越防护**: slug/root_path/文件名均校验 `..`、`/`、NUL。
+10. **API Key safety**: Store in `~/.hermes/.env` with `chmod 600`.
+11. **Regular backups**: Back up `~/.trade/` and desktop work directories.
+12. **Least privilege**: Run as a regular user, never as root.
 
 ### If you find a vulnerability
 
@@ -32,8 +39,9 @@ We do not currently run a bug bounty program.
 
 | Version | Supported |
 |---------|-----------|
-| 0.5.0   | ✅ Active |
-| < 0.4   | ❌ Unsupported |
+| 0.6.x   | ✅ Active |
+| 0.5.x   | ⚠️ Security fixes only |
+| < 0.5   | ❌ Unsupported |
 
 ## 法律与合规声明
 

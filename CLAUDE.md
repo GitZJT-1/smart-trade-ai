@@ -171,7 +171,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 4. **Dual chat endpoints**: `/chat` is synchronous (thread pool + 600s timeout); `/chat/stream` uses SSE to emit `tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done` events for real-time tool progress in the UI.
 
-5. **Multi-company isolation via `X-Company-ID` header**. Every business-data endpoint requires this header. `require_company()` validates the company exists and is active; `opt_company()` allows optional company context. Database queries always filter by `company_id`.
+5. **Multi-company isolation via `X-Company-ID` header + session binding**. Every business-data endpoint requires `X-Company-ID`. On first request, the session token is bound to that company — subsequent requests with a different company ID return 403. Use `POST /api/trade/companies/{id}/switch` to explicitly switch. `list_all()` returns only id/name/slug/is_active (PII redacted) for the company selector.
 
 6. **Document libraries = filesystem directories**. Each library has a `root_path` pointing to a real directory. The AI agent uses `read_file` / `list_dir` tools to analyze files.
 

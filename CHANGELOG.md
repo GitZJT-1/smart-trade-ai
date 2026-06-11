@@ -2,7 +2,7 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
-## [Unreleased]
+## [0.6.1] — 2026-06-11
 
 ### Added
 - **session 级公司绑定**：首次请求自动绑定 session→company_id，跨公司操作返回 403，显式切换需通过 `POST /companies/{id}/switch`

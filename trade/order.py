@@ -273,12 +273,14 @@ def search_orders(company_id: int, query: str) -> str | None:
 
 
 def _search_by_customer_and_product(customer_id: int, product_kw: str, limit: int = 5) -> list[dict]:
+    # 转义 LIKE 通配符，防止产品名中的 % 或 _ 匹配意外行
+    safe_kw = product_kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT * FROM orders WHERE customer_id = ? AND product_name LIKE ? "
+            "SELECT * FROM orders WHERE customer_id = ? AND product_name LIKE ? ESCAPE '\\' "
             "ORDER BY created_at DESC LIMIT ?",
-            (customer_id, f"%{product_kw}%", limit),
+            (customer_id, f"%{safe_kw}%", limit),
         ).fetchall()
         return [_row_to_dict(r) for r in rows]
     finally:

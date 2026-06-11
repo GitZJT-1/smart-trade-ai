@@ -226,7 +226,7 @@ async def _run_email_check(email: str) -> dict:
     email_intel.email_background_check 是同步的，不适合在 async 上下文中直接调用，
     所以放到 executor 中执行。
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         result = await loop.run_in_executor(
             None, email_intel.email_background_check, email

@@ -8,6 +8,7 @@ Trade AI Assistant — API 依赖函数。
 from __future__ import annotations
 
 import secrets
+import threading
 
 from fastapi import Header, HTTPException, Request
 
@@ -20,6 +21,7 @@ _SESSION_TOKEN: str = ""
 
 # session → 绑定的活跃公司 ID（单用户场景下防止修改 header 跨公司越权）
 _ACTIVE_COMPANY: dict[str, int] = {}
+_company_bind_lock = threading.Lock()
 
 
 def set_session_token(token: str) -> None:
@@ -30,8 +32,8 @@ def set_session_token(token: str) -> None:
 
 def set_active_company(token: str, company_id: int) -> None:
     """绑定 session token 到指定公司（前端切换公司时调用）。"""
-    global _ACTIVE_COMPANY
-    _ACTIVE_COMPANY[token] = company_id
+    with _company_bind_lock:
+        _ACTIVE_COMPANY[token] = company_id
 
 
 def require_session(request: Request) -> None:

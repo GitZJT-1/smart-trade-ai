@@ -32,7 +32,7 @@ def _enforce_company_binding(
     首次携带 company_id 的请求自动绑定 session 到该公司；
     后续请求必须携带匹配的 company_id。
     """
-    from trade.api.deps import _ACTIVE_COMPANY
+    from trade.api.deps import _ACTIVE_COMPANY, _company_bind_lock
 
     token = request.headers.get("X-Hermes-Session-Token", "")
     if not token:
@@ -46,15 +46,16 @@ def _enforce_company_binding(
     except ValueError:
         return  # 无效 ID 由 require_company 处理
 
-    bound = _ACTIVE_COMPANY.get(token)
-    if bound is not None and cid != bound:
-        raise HTTPException(
-            status_code=403,
-            detail=f"X-Company-ID {cid} does not match active session. "
-                   f"Use POST /api/trade/companies/{cid}/switch to switch.",
-        )
-    if bound is None:
-        _ACTIVE_COMPANY[token] = cid
+    with _company_bind_lock:
+        bound = _ACTIVE_COMPANY.get(token)
+        if bound is not None and cid != bound:
+            raise HTTPException(
+                status_code=403,
+                detail=f"X-Company-ID {cid} does not match active session. "
+                       f"Use POST /api/trade/companies/{cid}/switch to switch.",
+            )
+        if bound is None:
+            _ACTIVE_COMPANY[token] = cid
 
 
 # 所有 /api/trade/* 路由默认要求 session token + 公司绑定

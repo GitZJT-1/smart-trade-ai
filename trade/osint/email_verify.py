@@ -164,6 +164,11 @@ def _query_mx_records(domain: str) -> tuple[list[str], bool]:
                 logger.debug("DNS txid mismatch: %s", dns_server)
                 continue
 
+            # 检查 TC（Truncation）标志：bit 9 of flags，响应超过 512 字节被截断
+            if len(data) >= 4 and (data[2] & 0x02):
+                logger.debug("DNS response truncated for %s (TC flag set)", domain)
+                # 截断的 MX 响应可能不完整，结果仅供参考
+
             mx_servers = _parse_dns_mx_response(data)
             # 解析到至少一条 MX 记录即为成功
             return mx_servers, len(mx_servers) > 0

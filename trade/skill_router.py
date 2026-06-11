@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 
 # ─────────────────────────────────────────────────────────────────────────────
 # mtime 缓存：OrderedDict LRU（上限 128，远大于 15 个 skill）
@@ -27,6 +28,7 @@ from trade.skill_registry import (
     skill_names,
 )
 
+_injection_cache_lock = threading.Lock()
 try:
     _INJECTION_CACHE_MAX = int(os.environ.get("TRADE_SKILL_CACHE_MAX", "128"))
 except (ValueError, TypeError):
@@ -135,9 +137,10 @@ def _load_injection_prompt(skill_name: str) -> str | None:
 
     # mtime 缓存命中
     cache_key = skill_name
-    cached = _INJECTION_CACHE.get(cache_key)
-    if cached is not None and cached[0] == mtime:
-        return cached[1]
+    with _injection_cache_lock:
+        cached = _INJECTION_CACHE.get(cache_key)
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
 
     # 读取文件并解析 frontmatter
     try:
@@ -150,11 +153,12 @@ def _load_injection_prompt(skill_name: str) -> str | None:
     injection = fm.get("injection_prompt", "")
 
     if injection:
-        # LRU: 移动到末尾 + 超限时弹出最老项
-        _INJECTION_CACHE.pop(cache_key, None)
-        _INJECTION_CACHE[cache_key] = (mtime, injection)
-        while len(_INJECTION_CACHE) > _INJECTION_CACHE_MAX:
-            _INJECTION_CACHE.popitem(last=False)
+        with _injection_cache_lock:
+            # LRU: 移动到末尾 + 超限时弹出最老项
+            _INJECTION_CACHE.pop(cache_key, None)
+            _INJECTION_CACHE[cache_key] = (mtime, injection)
+            while len(_INJECTION_CACHE) > _INJECTION_CACHE_MAX:
+                _INJECTION_CACHE.popitem(last=False)
 
     return injection or None
 

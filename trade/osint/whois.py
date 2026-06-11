@@ -62,6 +62,10 @@ def domain_whois(domain: str) -> dict:
     # 确定 WHOIS 服务器（顶级域名对应的主 WHOIS 服务器）
     tld = domain.rsplit(".", 1)[-1]
     whois_server = _get_whois_server_for_tld(tld)
+    # 不支持的 TLD → 优雅降级，避免传 None 给 socket.create_connection
+    if not whois_server:
+        result["error"] = f"不支持的顶级域名: .{tld}"
+        return result
 
     try:
         # Step 1: 通过 socket 发送 WHOIS 请求

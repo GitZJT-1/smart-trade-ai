@@ -19,6 +19,7 @@ mtime 缓存：文件未变更时不重复读磁盘。
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 
 from trade.prompt import TRADE_SYSTEM_PROMPT as _CODE_FALLBACK
@@ -28,6 +29,7 @@ from trade.prompt import TRADE_SYSTEM_PROMPT as _CODE_FALLBACK
 # ─────────────────────────────────────────────────────────────────────────────
 
 _FILE_CACHE: dict[str, tuple[float, str]] = {}
+_cache_lock = threading.Lock()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 内部 helpers
@@ -70,11 +72,11 @@ def _load_file(path: Path, fallback: str = "") -> str:
         return fallback
 
     cache_key = str(path.resolve())
-    cached = _FILE_CACHE.get(cache_key)
-
-    # mtime 未变化时直接返回缓存内容，避免重复磁盘 I/O
-    if cached is not None and cached[0] == mtime:
-        return cached[1]
+    with _cache_lock:
+        cached = _FILE_CACHE.get(cache_key)
+        # mtime 未变化时直接返回缓存内容，避免重复磁盘 I/O
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
 
     try:
         content = path.read_text(encoding="utf-8").strip()
@@ -82,7 +84,8 @@ def _load_file(path: Path, fallback: str = "") -> str:
         # 读取文件内容失败（如文件被删除或权限变更），返回 fallback
         return fallback
 
-    _FILE_CACHE[cache_key] = (mtime, content)
+    with _cache_lock:
+        _FILE_CACHE[cache_key] = (mtime, content)
     return content
 
 
@@ -234,7 +237,9 @@ def invalidate_cache(path: Path | str | None = None) -> None:
     """
     # 不传 path 时清空整个缓存，适用于全局重载
     if path is None:
-        _FILE_CACHE.clear()
+        with _cache_lock:
+            _FILE_CACHE.clear()
         return
     key = str(Path(path).resolve())
-    _FILE_CACHE.pop(key, None)
+    with _cache_lock:
+        _FILE_CACHE.pop(key, None)

@@ -6,7 +6,9 @@ Trade AI Assistant — REST API Router。
 server.py 通过 ``from trade.api import router`` 挂载到 /api/trade。
 """
 
-from fastapi import APIRouter, Depends
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from trade.api.chat import router as chat_router
 from trade.api.companies import router as companies_router
@@ -19,8 +21,47 @@ from trade.api.memory import router as memory_router
 from trade.api.onboarding import router as onboarding_router
 from trade.api.orders import router as orders_router
 
-# 所有 /api/trade/* 路由默认要求 session token
-router = APIRouter(tags=["trade"], dependencies=[Depends(require_session)])
+
+def _enforce_company_binding(
+    request: Request,
+    x_company_id: str | None = Header(None, alias="X-Company-ID"),
+) -> None:
+    """session 级活跃公司绑定：防止修改 header 跨公司越权。
+
+    作为全局 trade router 的依赖，在每个业务请求前自动执行。
+    首次携带 company_id 的请求自动绑定 session 到该公司；
+    后续请求必须携带匹配的 company_id。
+    """
+    from trade.api.deps import _ACTIVE_COMPANY
+
+    token = request.headers.get("X-Hermes-Session-Token", "")
+    if not token:
+        return  # 无 session token 不检查
+
+    if not x_company_id or not x_company_id.strip():
+        return  # 无 company_id 不检查（由 require_company 端点自行处理）
+
+    try:
+        cid = int(x_company_id.strip())
+    except ValueError:
+        return  # 无效 ID 由 require_company 处理
+
+    bound = _ACTIVE_COMPANY.get(token)
+    if bound is not None and cid != bound:
+        raise HTTPException(
+            status_code=403,
+            detail=f"X-Company-ID {cid} does not match active session. "
+                   f"Use POST /api/trade/companies/{cid}/switch to switch.",
+        )
+    if bound is None:
+        _ACTIVE_COMPANY[token] = cid
+
+
+# 所有 /api/trade/* 路由默认要求 session token + 公司绑定
+router = APIRouter(
+    tags=["trade"],
+    dependencies=[Depends(require_session), Depends(_enforce_company_binding)],
+)
 
 # 按业务域挂载子路由
 router.include_router(companies_router)

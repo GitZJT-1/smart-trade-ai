@@ -2753,7 +2753,7 @@ function loadCompanyListUI() {
     container.innerHTML = companies.map(c => `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-light);">
             <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(c.name)}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${esc(c.slug)} · ${esc(c.contact_email||'无邮箱')}</div></div>
+            <div style="font-size:11px;color:var(--text-muted);">${esc(c.slug)} · ${c.contact_email ? ' · ' + esc(c.contact_email) : ''}</div></div>
             <button class="btn btn-danger btn-xs" onclick="deleteCompany(${c.id})">删除</button>
         </div>`).join('');
 }

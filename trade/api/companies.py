@@ -13,10 +13,10 @@ Trade AI Assistant — 公司管理 API 路由。
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from trade import company as company_module
-from trade.api.deps import require_company
+from trade.api.deps import require_company, set_active_company
 from trade.api.models import (
     AgentIdentityUpdate,
     CompanyCreate,
@@ -115,6 +115,48 @@ def delete_company(
     if not company_module.delete(company_id):
         raise HTTPException(status_code=404, detail="Company not found")
     return {"ok": True}
+
+
+# ── 公司切换 ─────────────────────────────────────────────────────────────────
+
+@router.post("/companies/{company_id}/switch")
+def switch_company(
+    company_id: int,
+    request: Request,
+):
+    """显式切换当前 session 的活跃公司。
+
+    切换后，后续所有请求的 X-Company-ID 必须匹配新公司。
+    写审计日志记录切换操作。
+    """
+    # 校验目标公司存在且激活
+    tc = company_module.get_trade_company(company_id)
+    if not tc or not tc.get("is_active"):
+        raise HTTPException(status_code=404, detail="Company not found or inactive")
+
+    token = request.headers.get("X-Hermes-Session-Token", "")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing session token")
+
+    old_cid = None
+    # 尝试从 headers 获取当前活跃公司（可能不存在于首次切换）
+    x_cid = request.headers.get("X-Company-ID", "")
+    if x_cid:
+        try:
+            old_cid = int(x_cid)
+        except ValueError:
+            pass
+
+    set_active_company(token, company_id)
+
+    # 写审计日志
+    company_module._write_audit_log(
+        company_id,
+        "switch_company",
+        f"Session switched active company (from={old_cid}, to={company_id})",
+    )
+
+    return {"active_company_id": company_id, "previous_company_id": old_cid}
 
 
 # ── Agent 身份 ─────────────────────────────────────────────────────────────

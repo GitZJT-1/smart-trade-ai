@@ -42,8 +42,12 @@ def _check_chat_rate_limit(company_id: int) -> bool:
     with _rate_limit_lock:
         stamps = _chat_timestamps.get(company_id, [])
         stamps = [t for t in stamps if now - t < _WINDOW_SECONDS]
-        if len(stamps) >= _MAX_CHAT_PER_MINUTE:
+        if stamps:
             _chat_timestamps[company_id] = stamps
+        else:
+            # 空列表 → 删除条目，防止 company 删除后内存泄漏
+            _chat_timestamps.pop(company_id, None)
+        if len(stamps) >= _MAX_CHAT_PER_MINUTE:
             return False
         stamps.append(now)
         _chat_timestamps[company_id] = stamps

@@ -18,11 +18,20 @@ from trade import company as company_module
 # 由 server.py 在启动时设置
 _SESSION_TOKEN: str = ""
 
+# session → 绑定的活跃公司 ID（单用户场景下防止修改 header 跨公司越权）
+_ACTIVE_COMPANY: dict[str, int] = {}
+
 
 def set_session_token(token: str) -> None:
     """设置当前会话的 token（server.py 启动时调用）。"""
     global _SESSION_TOKEN
     _SESSION_TOKEN = token
+
+
+def set_active_company(token: str, company_id: int) -> None:
+    """绑定 session token 到指定公司（前端切换公司时调用）。"""
+    global _ACTIVE_COMPANY
+    _ACTIVE_COMPANY[token] = company_id
 
 
 def require_session(request: Request) -> None:
@@ -49,22 +58,20 @@ def require_company(
 ) -> int:
     """解析并验证 X-Company-ID header，返回 company_id。
 
-    验证步骤：
-      1. header 存在且非空
-      2. 可解析为整数
-      3. 公司存在且 is_active=True
+    session 级别的活跃公司绑定在路由层通过 _check_company_binding() 完成。
 
     Raises:
         HTTPException(401): header 缺失、无效、或公司不存在/未激活
     """
-    if not x_company_id or not x_company_id.strip():
+    cid_str = x_company_id if isinstance(x_company_id, str) else ""
+    if not cid_str or not cid_str.strip():
         raise HTTPException(
             status_code=401,
             detail="X-Company-ID header is required. "
                    "Call GET /api/trade/companies first to get your company IDs.",
         )
     try:
-        cid = int(x_company_id.strip())
+        cid = int(cid_str.strip())
     except ValueError as e:
         raise HTTPException(status_code=401, detail="X-Company-ID must be an integer.") from e
 
@@ -74,6 +81,7 @@ def require_company(
         raise HTTPException(status_code=401, detail=f"Company {cid} not found in Trade system.")
     if not tc.get("is_active"):
         raise HTTPException(status_code=401, detail=f"Company {cid} is inactive.")
+
     return cid
 
 

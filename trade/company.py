@@ -137,15 +137,19 @@ def _rename_template_placeholders(base: Path, slug: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def list_all() -> list[dict]:
-    """返回所有公司列表，按名称排序。"""
+    """返回所有公司列表（脱敏版），按名称排序。
+
+    仅返回 id/name/slug/is_active，隐藏 contact_email/address 等 PII。
+    详情端 get() 仍返回完整字段供公司内部使用。
+    """
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT id, name, slug, logo_url, website, contact_name, "
-            "contact_email, address, is_active, created_at, updated_at "
+            "SELECT id, name, slug, is_active "
             "FROM companies ORDER BY name"
         ).fetchall()
-        return [_row_to_company(r) for r in rows]
+        return [{"id": r["id"], "name": r["name"], "slug": r["slug"],
+                 "is_active": bool(r["is_active"])} for r in rows]
     finally:
         conn.close()
 

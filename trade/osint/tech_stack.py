@@ -7,11 +7,38 @@ Trade AI Assistant — OSINT Layer 5: 技术栈检测（BuiltWith-style）。
 
 from __future__ import annotations
 
+import ipaddress
 import re
+import socket
 import urllib.parse
 import urllib.request
 
 from trade.osint.constants import FREE_PLATFORMS
+
+# 禁止访问的内网 / 保留 IP 段（防 SSRF）
+_BLOCKED_RANGES = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("0.0.0.0/8"),
+    ipaddress.ip_network("224.0.0.0/4"),  # multicast
+    ipaddress.ip_network("240.0.0.0/4"),  # reserved
+]
+
+
+def _is_private_host(hostname: str) -> bool:
+    """检查主机名是否解析到内网/保留 IP 地址。"""
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        # 不是 IP 地址字面量，做 DNS 解析
+        try:
+            addr = ipaddress.ip_address(socket.gethostbyname(hostname))
+        except (socket.gaierror, OSError):
+            return False  # DNS 解析失败，放行（让 urlopen 自己报错）
+    return any(addr in net for net in _BLOCKED_RANGES)
 
 
 def detect_tech_stack(url: str) -> dict:
@@ -51,6 +78,13 @@ def detect_tech_stack(url: str) -> dict:
     }
 
     try:
+        # SSRF 防护：拒绝访问内网/保留 IP
+        parsed = urllib.parse.urlparse(url)
+        hostname = parsed.hostname or ""
+        if _is_private_host(hostname):
+            result["error"] = f"Blocked: {hostname} resolves to a private/reserved IP"
+            return result
+
         req = urllib.request.Request(
             url,
             headers={"User-Agent": "Mozilla/5.0 (compatible; Trade-AI/1.0)"},

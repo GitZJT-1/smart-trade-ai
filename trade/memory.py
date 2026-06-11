@@ -347,6 +347,9 @@ def retain_to_hermes_memory(
             _hermes_root = _Path.home() / ".hermes"
         lock_dir = _hermes_root / "memories"
         lock_dir.mkdir(parents=True, exist_ok=True)
+        # 防御符号链接攻击：如果锁文件已是 symlink，拒绝跟随
+        if LOCK_FILE.is_symlink():
+            return False
         lock_fd = open(str(LOCK_FILE), "w")
         # 最多重试 5 次获取文件锁，避免死锁
         for _attempt in range(5):

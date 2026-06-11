@@ -27,7 +27,10 @@ from trade.skill_registry import (
     skill_names,
 )
 
-_INJECTION_CACHE_MAX = int(os.environ.get("TRADE_SKILL_CACHE_MAX", "128"))
+try:
+    _INJECTION_CACHE_MAX = int(os.environ.get("TRADE_SKILL_CACHE_MAX", "128"))
+except (ValueError, TypeError):
+    _INJECTION_CACHE_MAX = 128
 _INJECTION_CACHE: OrderedDict[str, tuple[float, str]] = OrderedDict()
 
 # ─────────────────────────────────────────────────────────────────────────────

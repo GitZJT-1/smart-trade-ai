@@ -381,6 +381,8 @@ def email_background_check(email: str) -> dict:
             if result.returncode != 0:
                 return _error_result(email, f"holehe error: {result.stderr.strip() or 'unknown'}")
             raw_results = json.loads(result.stdout)
+            if not isinstance(raw_results, list):
+                return _error_result(email, f"holehe unexpected output type: {type(raw_results).__name__}")
         except subprocess.TimeoutExpired:
             # 子进程超时，120 秒未返回
             return _error_result(email, "holehe timeout after 120s")
@@ -492,6 +494,9 @@ class EmailBackgroundChecker:
                 yield {"type": "error", "message": f"holehe error: {err_text}"}
                 return
             raw_results = json.loads(stdout)
+            if not isinstance(raw_results, list):
+                yield {"type": "error", "message": f"holehe unexpected output: {type(raw_results).__name__}"}
+                return
         except json.JSONDecodeError as exc:
             # holehe 输出 JSON 解析失败
             yield {"type": "error", "message": f"holehe parse error: {exc}"}

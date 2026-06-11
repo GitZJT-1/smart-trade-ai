@@ -27,24 +27,26 @@ _log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
-# ── 简单内存限流（per-process，适合单机部署）──────────────────────────────────
-# 60 秒窗口内最多 20 次 chat 请求（含 sync + SSE）
+# ── 简单内存限流（per-process，按公司隔离）──────────────────────────────────
+# 每个公司 60 秒窗口内最多 20 次 chat 请求（含 sync + SSE）
 _MAX_CHAT_PER_MINUTE = 20
 _WINDOW_SECONDS = 60.0
-_chat_timestamps: list[float] = []
+_chat_timestamps: dict[int, list[float]] = {}  # company_id → [timestamps]
 _rate_limit_lock = threading.Lock()
 
 
-def _check_chat_rate_limit() -> bool:
-    """检查是否超过 chat 限流阈值。返回 True 表示允许继续。"""
+def _check_chat_rate_limit(company_id: int) -> bool:
+    """检查指定公司是否超过 chat 限流阈值。返回 True 表示允许继续。"""
     global _chat_timestamps
     now = time.time()
-    # 线程安全：执行器线程和主线程可能同时访问
     with _rate_limit_lock:
-        _chat_timestamps = [t for t in _chat_timestamps if now - t < _WINDOW_SECONDS]
-        if len(_chat_timestamps) >= _MAX_CHAT_PER_MINUTE:
+        stamps = _chat_timestamps.get(company_id, [])
+        stamps = [t for t in stamps if now - t < _WINDOW_SECONDS]
+        if len(stamps) >= _MAX_CHAT_PER_MINUTE:
+            _chat_timestamps[company_id] = stamps
             return False
-        _chat_timestamps.append(now)
+        stamps.append(now)
+        _chat_timestamps[company_id] = stamps
         return True
 
 # ── 同步聊天 ──────────────────────────────────────────────────────────────
@@ -64,7 +66,7 @@ async def trade_chat(
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
 
-    if not _check_chat_rate_limit():
+    if not _check_chat_rate_limit(cid):
         raise HTTPException(status_code=429, detail="请求过于频繁，请稍后重试。")
 
     full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)
@@ -144,7 +146,7 @@ async def trade_chat_stream(
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
 
-    if not _check_chat_rate_limit():
+    if not _check_chat_rate_limit(cid):
         raise HTTPException(status_code=429, detail="请求过于频繁，请稍后重试。")
 
     full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 from datetime import date, datetime
 from pathlib import Path
 
@@ -209,24 +210,31 @@ def get_active_jobs():
     return jobs
 
 
+_capture_lock = threading.Lock()
+
+
 def _capture_output(func, *args, **kwargs) -> dict:
-    """在内存中捕获函数的 print 输出，返回 {"ok": True, "output": str} 或 error。"""
-    try:
-        import io
-        _buf = io.StringIO()
-        _orig_stdout = sys.stdout
-        sys.stdout = _buf
+    """在内存中捕获函数的 print 输出，返回 {"ok": True, "output": str} 或 error。
+
+    线程安全：全局锁防止并发请求时 sys.stdout 重定向互相污染。
+    """
+    with _capture_lock:
         try:
-            result = func(*args, **kwargs)
-        finally:
-            sys.stdout = _orig_stdout
-        output = _buf.getvalue()
-        resp = {"ok": True, "output": output}
-        if isinstance(result, str) and result:
-            resp["file"] = result
-        return resp
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+            import io
+            _buf = io.StringIO()
+            _orig_stdout = sys.stdout
+            sys.stdout = _buf
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                sys.stdout = _orig_stdout
+            output = _buf.getvalue()
+            resp = {"ok": True, "output": output}
+            if isinstance(result, str) and result:
+                resp["file"] = result
+            return resp
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
 
 @router.post("/skills/update")

@@ -729,22 +729,6 @@ _EXPLICIT_RE = re.compile(
     re.IGNORECASE,
 )
 
-# 所有 skill 触发词的正则（与 _SKILLS 列表一一对应）
-_COMPILED: list[tuple[re.Pattern, dict]] = []
-for _skill in _SKILLS:
-    # 跳过无触发词的 skill（如 chat-memory，由 LLM 根据 tool description 自行调用）
-    if not _skill["triggers"]:
-        continue
-    patterns = []
-    for kw in _skill["triggers"]:
-        escaped = re.escape(kw)
-        # 词边界精确匹配
-        patterns.append(r'\b' + escaped + r'\b')
-        # 宽松子串匹配（处理中文后缀/前缀）
-        patterns.append(escaped)
-    combined = "|".join(patterns)
-    _COMPILED.append((re.compile(combined, re.IGNORECASE), _skill))
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public query API（仅数据查询，不包含匹配逻辑）

@@ -1028,9 +1028,10 @@ let _versionPollTimer = null;
 async function checkVersion() {
     try {
         const r = await fetch('/api/status');
-        if (!r.ok) return;
+        if (!r.ok) { console.log('Version check: HTTP ' + r.status); return; }
         const data = await r.json();
         const latest = data.latest_version || '';
+        console.log('Version check: current=' + data.version + ' latest=' + latest);
 
         const banner = document.getElementById('update-banner');
         if (latest && data.version && data.version !== latest) {
@@ -1045,13 +1046,13 @@ async function checkVersion() {
         } else if (banner) {
             banner.remove();
         }
-    } catch(e) {}
+    } catch(e) { console.log('Version check error:', e); }
 }
 
 function startVersionCheck() {
     stopVersionCheck();
     checkVersion();
-    _versionPollTimer = setInterval(checkVersion, 30 * 60 * 1000); // 每 30 分钟
+    _versionPollTimer = setInterval(checkVersion, 60 * 1000); // 每分钟检查一次
 }
 
 function stopVersionCheck() {

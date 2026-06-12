@@ -41,13 +41,15 @@ class TestWHOIS:
     def test_www_prefix_stripped(self):
         """www. 前缀应被自动去除。"""
         result = domain_whois("www.example.com")
-        if result.get("error"): pytest.skip(f"WHOIS error: {result['error']}")
+        if result.get("error"):
+            pytest.skip(f"WHOIS error: {result['error']}")
         assert result["domain"] == "example.com"
 
     def test_https_prefix_stripped(self):
         """https:// 前缀应被自动去除。"""
         result = domain_whois("https://example.com")
-        if result.get("error"): pytest.skip(f"WHOIS error: {result['error']}")
+        if result.get("error"):
+            pytest.skip(f"WHOIS error: {result['error']}")
         assert result["domain"] == "example.com"
 
     def test_invalid_domain(self):
@@ -64,7 +66,8 @@ class TestWHOIS:
     def test_result_has_all_fields(self):
         """返回结果应包含所有定义字段。"""
         result = domain_whois("example.com")
-        if result.get("error"): pytest.skip(f"WHOIS error: {result['error']}")
+        if result.get("error"):
+            pytest.skip(f"WHOIS error: {result['error']}")
         expected_fields = {
             "domain", "registered", "registrar", "creation_date",
             "expiry_date", "days_old", "age_category", "dns_servers",
@@ -76,7 +79,8 @@ class TestWHOIS:
     def test_google_com_too(self):
         """google.com 应返回已注册。"""
         result = domain_whois("google.com")
-        if result.get("error"): pytest.skip(f"WHOIS error: {result['error']}")
+        if result.get("error"):
+            pytest.skip(f"WHOIS error: {result['error']}")
         assert result["registered"] is True
 
 
@@ -124,7 +128,8 @@ class TestEmailVerification:
     def test_mx_records_attempted(self):
         """企业邮箱应尝试查询 MX 记录。DNS 查询可能因网络失败。"""
         result = verify_corporate_email("admin@google.com")
-        if result.get("error"): pytest.skip(f"DNS query failed: {result['error']}")
+        if result.get("error"):
+            pytest.skip(f"DNS query failed: {result['error']}")
         assert "mx_found" in result
 
     def test_result_has_all_fields(self):

@@ -3,7 +3,6 @@
 """
 
 import datetime
-import os
 from pathlib import Path
 from unittest import mock
 
@@ -11,7 +10,7 @@ import pytest
 
 # CI 环境可能没有 cryptography 包，需要 Ed25519 的测试自动跳过
 try:
-    from cryptography.hazmat.primitives.asymmetric import ed25519
+    import cryptography  # noqa: F401
     _HAS_CRYPTO = True
 except ImportError:
     _HAS_CRYPTO = False
@@ -72,8 +71,8 @@ class TestRequestCode:
 
 def _setup_temp_ed25519_key(monkeypatch):
     """设置临时 Ed25519 测试密钥对，替换内置公钥 + 私钥加载函数。"""
-    from cryptography.hazmat.primitives.asymmetric import ed25519
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ed25519
     pk = ed25519.Ed25519PrivateKey.generate()
     pub_raw = pk.public_key().public_bytes(
         encoding=serialization.Encoding.Raw,
@@ -88,7 +87,11 @@ class TestEncodeDecode:
 
     def test_roundtrip(self, monkeypatch):
         _setup_temp_ed25519_key(monkeypatch)
-        from trade.license import _make_request_code, _encode_activation_code, _decode_activation_code
+        from trade.license import (
+            _decode_activation_code,
+            _encode_activation_code,
+            _make_request_code,
+        )
 
         req = _make_request_code()
         code = _encode_activation_code(req, "2027-06-01")
@@ -101,7 +104,11 @@ class TestEncodeDecode:
 
     def test_decode_rejects_tampered_code(self, monkeypatch):
         _setup_temp_ed25519_key(monkeypatch)
-        from trade.license import _make_request_code, _encode_activation_code, _decode_activation_code
+        from trade.license import (
+            _decode_activation_code,
+            _encode_activation_code,
+            _make_request_code,
+        )
 
         req = _make_request_code()
         code = _encode_activation_code(req, "2027-06-01")
@@ -119,7 +126,7 @@ class TestEncodeDecode:
     def test_different_machines_different_hash(self, monkeypatch):
         """不同机器码应产生不同的激活码哈希"""
         _setup_temp_ed25519_key(monkeypatch)
-        from trade.license import _encode_activation_code, _decode_activation_code
+        from trade.license import _decode_activation_code, _encode_activation_code
 
         code1 = _encode_activation_code("TRADE-REQ-AAAA-BBBB", "2027-06-01")
         code2 = _encode_activation_code("TRADE-REQ-CCCC-DDDD", "2027-06-01")
@@ -149,7 +156,6 @@ class TestLicenseCheck:
 
     def test_first_launch(self, monkeypatch):
         """新安装：首次检查应通过"""
-        from trade.license import _get_license_data, _save_license_data
 
         # mock 数据库操作
         saved = {}
@@ -300,15 +306,16 @@ class TestRateLimit:
     """激活限流"""
 
     def test_allows_up_to_max(self):
-        from trade.license import _check_activate_rate_limit, _MAX_ACTIVATE_ATTEMPTS
+        from trade.license import _MAX_ACTIVATE_ATTEMPTS, _check_activate_rate_limit
         for _ in range(_MAX_ACTIVATE_ATTEMPTS):
             assert _check_activate_rate_limit() is True
 
     def test_blocks_after_max(self):
-        from trade.license import _check_activate_rate_limit, _MAX_ACTIVATE_ATTEMPTS
         # 消耗掉所有配额（测试隔离：rate limit 计数器已被上一个测试填充）
         # 只测超过上限的行为
         import time
+
+        from trade.license import _MAX_ACTIVATE_ATTEMPTS, _check_activate_rate_limit
         time.sleep(61)  # 等 60s 窗口过期
         for _ in range(_MAX_ACTIVATE_ATTEMPTS):
             _check_activate_rate_limit()

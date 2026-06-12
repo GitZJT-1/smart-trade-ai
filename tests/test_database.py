@@ -211,7 +211,7 @@ class TestV0ToV1Migration:
         conn = sqlite3.connect(str(db_path))
         self._create_v0_schema(conn)
 
-        migrated = _migrate_from_v0(conn)
+        _migrate_from_v0(conn)
         conn.commit()
 
         # 旧 library 数据应保留且 company_id=1

@@ -36,7 +36,6 @@ def test_db(monkeypatch, tmp_path):
 
     # 把桌面工作目录重定向到 tmp_path，避免污染真实桌面
     import trade.company as _co
-    original_setup = _co._setup_work_directory
 
     def _mock_work_dir(company_name, slug, suggested_name=""):
         work_dir = tmp_path / (suggested_name or company_name)

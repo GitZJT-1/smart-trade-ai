@@ -12,12 +12,10 @@
 
 <div align="center">
   <h3>外贸业务员的 AI 助手</h3>
-  <p>本地运行 · 15 项专业能力 · 数据不出电脑</p>
+  <p>在本地运行，数据留在自己电脑里</p>
 </div>
 
-**你的外贸团队每天花 3 小时写开发信、查客户背景、维护 B2B 平台？这个工具帮你把重复劳动压缩到 10 分钟。**
-
-让你专注于最重要的那件事——跟客户谈生意。
+**写开发信、查客户背景、维护 B2B 平台——这些重复劳动，这个工具帮你 10 分钟搞定。**
 
 ---
 
@@ -102,7 +100,7 @@ Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，�
 
 ## 3 分钟上手
 
-### 方式一：一键安装
+### 最省事：一键脚本
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -117,7 +115,7 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 > bash install.sh
 > ```
 
-### 方式二：从 Release 安装（固定版本）
+### 想固定版本？从 Release 装
 
 访问 [Releases](https://github.com/chefroger/smart-trade-ai/releases) 下载最新版，或指定版本：
 
@@ -128,7 +126,7 @@ install-trade-skills
 python server.py
 ```
 
-### 方式三：手动安装
+### 或者一步步手动装
 
 **前置条件**：Python >= 3.11 · Git · LLM API Key（OpenAI / Anthropic / DeepSeek / MiniMax 等）
 
@@ -193,34 +191,21 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ## 15 项专业能力
 
-### 获客引流
-| 能力 | 说明 |
+| 场景 | 能力 | 
 |------|------|
 | 平台诊断 | 分析阿里国际站/中国制造网产品页面，输出优化建议 |
 | 社媒营销 | 生成 Facebook/Instagram/TikTok/YouTube 内容日历 |
 | LinkedIn 运营 | Profile 优化 + 内容策略 + InMail 模板 |
 | 海关数据 | 分析进出口数据，筛选高价值采购商 |
 | 客户开发 | 根据目标市场+产品生成开发信和跟进序列 |
-
-### 销售转化
-| 能力 | 说明 |
-|------|------|
 | 客户管理 | A/B/C 分级、详情面板、文档库关联 |
-| 文档分析 | 读取本地 PDF/Word/Excel/PPT，Agent 自动解析 |
+| 文档分析 | 读取本地 PDF/Word/Excel/PPT，AI 自动解析 |
 | 商务文档生成 | 一键生成报价单、PI、合同（DOCX/XLSX/PPTX） |
 | 报价谈判 | 基于产品知识库和客户画像给出谈判策略 |
-
-### 效率工具
-| 能力 | 说明 |
-|------|------|
 | 客户背调 | 6 层验证：邮箱→WHOIS→制裁→邮箱验证→技术栈→LinkedIn |
 | 每日简报 | 实时汇率+大宗商品+市场新闻+客户跟进提醒 |
 | 定时任务 | 工作日自动化：早报/开发信/社媒/每日总结 |
 | 对话记录 | 按公司隔离的聊天记忆，支持搜索/回溯 |
-
-### 系统能力
-| 能力 | 说明 |
-|------|------|
 | Skill 生成器 | 用自然语言描述需求，自动生成新 skill 并注册到系统 |
 
 ---
@@ -391,4 +376,4 @@ python server.py
 
 ---
 
-**Smart Trade AI** — 把重复劳动交给 AI，把时间留给客户。
+Smart Trade AI — 外贸业务员的本地 AI 助手。

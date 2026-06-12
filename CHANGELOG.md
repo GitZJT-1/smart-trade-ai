@@ -2,6 +2,18 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式规范。
 
+## [Unreleased]
+
+### Changed
+- **OSINT Phase 1 搜索决策树**：从固定 5 轮 STOP RULE 升级为状态驱动的 A/B/C/D 四分支决策，避免无效搜索浪费 token
+- **OSINT 输出格式增强**：公司概况表格新增「来源」列，新增「引用验证」章节（3 级可信度），新增「数据合规」声明
+- **b2b-doc-generation 引用来源清单**：开发信/提案生成时输出引用来源表和 4 级可信度标注
+
+### Added
+- **Token 成本优化**：非首轮对话自动使用 `TRADE_SYSTEM_PROMPT_MINIMAL` 精简版 prompt（节约 ~2100 tokens/次）
+- **Skill 注入缓存**：连续使用同一 skill 时跳过完整 injection_prompt 注入（节约 ~1500 tokens/次）
+- **回滚标签**：`pre-token-optimization` 指向优化前版本，影响质量时可快速回退
+
 ## [0.6.1] — 2026-06-11
 
 ### Added

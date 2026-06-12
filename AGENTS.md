@@ -1,12 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Git Commit Policy
-
-- 所有 git commit 只使用 `Roger Lau <chefrogerlau@126.com>` 作为作者
-- **禁止**在 commit message 中附加 `Co-Authored-By` 行
-- **禁止**使用 `git commit --amend` 修改已发布的提交
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -210,9 +204,9 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 19. **Desktop app (tradewin.py)**: PyWebView native window wrapping the same FastAPI backend in a daemon thread. No external browser needed. `[desktop]` optional dependency group includes `pywebview` + `pyinstaller`. Bootstrap and app modules support PyInstaller `_MEIPASS` for bundled static files.
 
 20. **Token cost optimization** (2026-06-12): Two mechanisms to reduce repeated token spending for MiniMax M3 pay-per-token model:
-    - **System prompt tiering**: `build_query()` checks `conversations` table — first message in a company session gets full `TRADE_SYSTEM_PROMPT`, subsequent messages get `TRADE_SYSTEM_PROMPT_MINIMAL` (~400 vs ~2500 tokens). `TRADE_SYSTEM_PROMPT_MINIMAL` only has Disclaimer + Role + Language Policy + Company Isolation.
-    - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive use of the same skill sends a brief hint (`"继续使用 {name} 技能，规则同上一次。"`) instead of the full injection_prompt (~1500 tokens). Process restart clears cache (safe degradation).
-    - Rollback tag: `pre-token-optimization` points to the commit before these changes.
+    - **System prompt tiering**: `build_query()` checks `conversations` table — first message in a company session gets full `TRADE_SYSTEM_PROMPT`, subsequent messages get `TRADE_SYSTEM_PROMPT_MINIMAL` (~400 vs ~2500 tokens).
+    - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive same-skill sends brief hint instead of full injection_prompt (~1500 tokens).
+    - Rollback tag: `pre-token-optimization`.
 
 ## Hermes Coupling Points
 

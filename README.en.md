@@ -12,12 +12,10 @@
 
 <div align="center">
   <h3>AI Assistant for International Trade Professionals</h3>
-  <p>Runs locally · 15 built-in skills · Your data never leaves your machine</p>
+  <p>Runs on your machine. Your data stays with you.</p>
 </div>
 
-**Your team spends 3 hours a day writing cold emails, researching clients, and managing B2B platforms? This tool compresses that drudgery into 10 minutes.**
-
-So you can focus on what actually matters — closing deals.
+**Cold emails, client research, B2B platform management — this tool handles the repetitive stuff so you don't have to.**
 
 ---
 
@@ -100,9 +98,9 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 
 ---
 
-## Get started in 3 minutes
+## Get started
 
-### Option 1: One-liner install
+### Quickest: one command
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -117,7 +115,7 @@ The script handles: Python check → Hermes Agent → Smart Trade AI → 15 skil
 > bash install.sh
 > ```
 
-### Option 2: Install from Release (pinned version)
+### Want a specific version? Use a release
 
 Visit [Releases](https://github.com/chefroger/smart-trade-ai/releases) or specify a version:
 
@@ -128,7 +126,7 @@ install-trade-skills
 python server.py
 ```
 
-### Option 3: Manual install
+### Or do it step by step
 
 **Prerequisites**: Python >= 3.11 · Git · LLM API Key (OpenAI / Anthropic / DeepSeek / MiniMax etc.)
 
@@ -193,7 +191,6 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ## 15 Professional Skills
 
-### Lead Generation
 | Skill | Description |
 |------|------|
 | Platform Diagnostics | Analyze Alibaba / Made-in-China product pages, output optimization suggestions |
@@ -201,26 +198,14 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | LinkedIn Operations | Profile optimization + content strategy + InMail templates |
 | Customs Data | Analyze import/export data, identify high-value buyers |
 | Client Development | Generate cold emails and follow-up sequences by target market + product |
-
-### Sales Conversion
-| Skill | Description |
-|------|------|
 | Client Management | A/B/C grading, detail panel, document library linking |
 | Document Analysis | Read local PDF / Word / Excel / PPT files, AI auto-parses |
 | Business Doc Generation | One-click quotes, proforma invoices, contracts (DOCX / XLSX / PPTX) |
 | Quote & Negotiation | Negotiation strategy based on product knowledge base + client profile |
-
-### Productivity Tools
-| Skill | Description |
-|------|------|
 | Due Diligence | 6-layer verification: email → WHOIS → sanctions → MX → tech stack → LinkedIn |
 | Morning Brief | Live FX rates + commodities + market news + client follow-up reminders |
 | Cron Tasks | Workday automations: morning brief / outreach / social posts / daily summary |
 | Chat History | Per-company chat memory, searchable and retraceable |
-
-### System
-| Skill | Description |
-|------|------|
 | Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
 
 ---
@@ -293,4 +278,4 @@ Scan to add on WeChat (note: "Trade"). For business or support, email lauroge@gm
 
 ---
 
-**Smart Trade AI** — Let AI handle the grind. You handle the deals.
+Smart Trade AI — an AI assistant for international trade professionals, running locally.

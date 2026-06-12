@@ -2,8 +2,8 @@
 
 ## HERMES_YOLO_MODE
 
-Smart Trade AI runs with `HERMES_YOLO_MODE=true`. AI Agent tool calls
-(read/write files, terminal commands) execute **without human approval**.
+Smart Trade AI 在启动时通过 `trade/bootstrap.py` 自动设置 `HERMES_YOLO_MODE=true`。
+AI Agent 工具调用（文件读写、终端命令等）**无需人工审批**。
 
 ### Why
 

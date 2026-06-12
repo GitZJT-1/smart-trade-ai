@@ -15,6 +15,10 @@ build/
 # Worktrees
 .worktrees/
 
+# Code intelligence indices (local only)
+.codegraph/
+.cursor/
+
 # Misc local files
 *.md.tmp
 文件类型处理方法整理.md

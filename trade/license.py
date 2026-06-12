@@ -63,16 +63,21 @@ _TRIAL_DAYS = 30
 
 
 def _machine_id() -> str:
-    """获取本机唯一硬件标识符。
+    """获取本机唯一硬件标识符（首次计算后持久化缓存）。
 
-    macOS → IOPlatformUUID (稳定，重装系统前不变)
-    Linux   → /etc/machine-id
-    Windows → 注册表 MachineGuid
-    其他平台 → hostname (fallback)
+    首次调用时尝试从系统获取最稳定的标识符（macOS IOPlatformUUID 等），
+    成功后立即持久化到 license_data 中。后续调用直接返回缓存值，
+    避免因运行环境不同（终端 vs launchd vs 后台进程）导致结果不一致。
     """
+    # 从持久化缓存读取
+    cached = _get_license_data().get("_machine_id")
+    if cached:
+        return cached
+
     import platform as _plat
     import subprocess as _sp
 
+    mid = ""
     sys_name = _plat.system()
     if sys_name == "Darwin":
         try:
@@ -83,7 +88,8 @@ def _machine_id() -> str:
             for line in result.stdout.splitlines():
                 if "IOPlatformUUID" in line:
                     uuid = line.strip().split('"')[-2]
-                    return f"mac:{uuid}"
+                    mid = f"mac:{uuid}"
+                    break
         except Exception:
             pass
 
@@ -92,7 +98,8 @@ def _machine_id() -> str:
             try:
                 mid = Path(path).read_text().strip()
                 if mid:
-                    return f"linux:{mid}"
+                    mid = f"linux:{mid}"
+                    break
             except Exception:
                 continue
 
@@ -106,11 +113,22 @@ def _machine_id() -> str:
             guid, _ = winreg.QueryValueEx(key, "MachineGuid")
             winreg.CloseKey(key)
             if guid:
-                return f"win:{guid}"
+                mid = f"win:{guid}"
         except Exception:
             pass
 
-    return f"host:{_plat.node()}"
+    if not mid:
+        mid = f"host:{_plat.node()}"
+
+    # 持久化到 license_data，后续调用直接读取
+    try:
+        data = _get_license_data()
+        data["_machine_id"] = mid
+        _save_license_data(data)
+    except Exception:
+        pass  # 持久化失败不影响使用，只是下次仍需重新检测
+
+    return mid
 
 # 暴力破解限流：持久化到 SQLite license_data 中，进程重启不清零
 _MAX_ACTIVATE_ATTEMPTS = 10  # 每 60 秒最多 10 次激活尝试

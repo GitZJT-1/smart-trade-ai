@@ -307,6 +307,8 @@ def build_query(
     library_id: int | None,
     query: str,
     customer_id: int | None = None,
+    *,
+    last_skill_name: str | None = None,
 ) -> tuple[str, str | None]:
     """组装完整的用户 prompt：公司身份 + 文档库上下文 + Skill 注入。
 
@@ -317,6 +319,7 @@ def build_query(
     company_id 决定注入哪家公司身份到 system prompt。
     library_id 可选地添加文档库上下文。
     customer_id 可选地添加客户上下文（客户名称、关联文档库）。
+    last_skill_name 上次使用的 skill 名称，连续同 skill 时跳过重复注入。
     """
 
     # 0. Skill auto-detection — 评分排序后取最高置信度 skill
@@ -324,19 +327,39 @@ def build_query(
     matched_name = matched_skills[0]["skill_name"] if matched_skills else None
     matched_skill = _skill_router.get_skill_by_name(matched_name) if matched_name else None
 
-    augmented_query = _skill_router.augment_query(
-        query, company_id=company_id
-    )
+    # 连续同 skill 时跳过完整注入，大幅节约 token（injection_prompt 通常 1000-2000 tokens）
+    same_skill_repeat = bool(last_skill_name and matched_name == last_skill_name)
 
-    # 1. Company identity — OSINT 类 skill 用精简 prompt，减少无关内容占用上下文
+    if same_skill_repeat and matched_name and matched_name not in _OSINT_SKILL_NAMES:
+        # 非 OSINT 且连续同 skill → augmented_query 仅含简短提示，不重复注入完整规则
+        augmented_query = (
+            f"[SKILL AUGMENTATION]\n"
+            f"继续使用 {matched_name} 技能，规则同上一次。\n\n"
+            f"## 用户原始问题\n{query}\n"
+            f"[SKILL AUGMENTATION]"
+        )
+    else:
+        augmented_query = _skill_router.augment_query(
+            query, company_id=company_id
+        )
+
+    # 1. Company identity — 根据场景选择不同深度的 system prompt
     company_slug = _company.slug_from_id(company_id) if company_id else None
     db_identity = _company.get_agent_identity(company_id) if company_id else None
+
+    # 检查是否有历史对话记录，用于判断是否首轮
+    has_history = bool(company_id and _cm.get_recent(company_id, limit=1))
+
     if matched_name in _OSINT_SKILL_NAMES:
         # OSINT 背调场景使用精简 system prompt，去掉销售相关的指令以减少 token 浪费
         from trade.prompt import TRADE_SYSTEM_PROMPT_OSINT
         code_fallback = TRADE_SYSTEM_PROMPT_OSINT
+    elif has_history:
+        # 非首轮对话 — 首轮已发送过完整版，后续注入精简版节约 token
+        from trade.prompt import TRADE_SYSTEM_PROMPT_MINIMAL
+        code_fallback = TRADE_SYSTEM_PROMPT_MINIMAL
     else:
-        # 非 OSINT 场景使用标准销售 prompt（包含产品知识、报价流程等）
+        # 首轮非 OSINT 对话 — 使用完整版 system prompt（含文档生成指南、Cognee 等）
         code_fallback = None
     system_prompt = _prompts.resolve_system_prompt(
         company_slug=company_slug,
@@ -433,16 +456,21 @@ def build_query(
     # 6. Skill system hint — OSINT 类 skill 的注入指令作为 system 层独立传入
     skill_system_hint: str | None = None
     if matched_name in _OSINT_SKILL_NAMES and matched_skill:
-        # 加载 skill 的 injection_prompt 作为 system 层指令
-        augment = _skill_router._load_injection_prompt(matched_name)
-        if augment is None:
-            # 如果从 SKILL.md 加载失败，回退到 skill_registry 中的 augment_prompt
-            augment = matched_skill.get("augment_prompt", "")
-        if augment:
-            # 构造 system hint，标记当前技能的名称和注入指令
+        if same_skill_repeat:
+            # 同一 skill 连续使用 → 简短提示，不重复发送完整规则
             skill_system_hint = (
-                f"## 当前技能：{matched_name}\n\n{augment}"
+                f"## 当前技能：{matched_name}\n"
+                f"继续使用 {matched_name} 技能，规则同上一次。"
             )
+        else:
+            # 首轮或切换 skill → 完整注入
+            augment = _skill_router._load_injection_prompt(matched_name)
+            if augment is None:
+                augment = matched_skill.get("augment_prompt", "")
+            if augment:
+                skill_system_hint = (
+                    f"## 当前技能：{matched_name}\n\n{augment}"
+                )
         # OSINT skill 的 system hint 已单独抽出，augmented_query 中无需
         # 再拼 [SKILL AUGMENTATION] 块。用原始 query 替代。
         augmented_query = query

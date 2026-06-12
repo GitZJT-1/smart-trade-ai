@@ -34,6 +34,10 @@ _WINDOW_SECONDS = 60.0
 _chat_timestamps: dict[int, list[float]] = {}  # company_id → [timestamps]
 _rate_limit_lock = threading.Lock()
 
+# 进程内 skill 缓存：记录每个 company 上次使用的 skill 名称，用于跳过重复注入
+_last_skill_per_company: dict[int, str] = {}
+_skill_cache_lock = threading.Lock()
+
 
 def _check_chat_rate_limit(company_id: int) -> bool:
     """检查指定公司是否超过 chat 限流阈值。返回 True 表示允许继续。"""
@@ -69,7 +73,27 @@ async def trade_chat(
     if not _check_chat_rate_limit(cid):
         raise HTTPException(status_code=429, detail="请求过于频繁，请稍后重试。")
 
-    full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)
+    # 读取上次使用的 skill 名称（用于跳过重复注入）
+    with _skill_cache_lock:
+        last_skill = _last_skill_per_company.get(cid)
+
+    full_query, skill_hint = build_query(
+        cid, payload.library_id, query, customer_id=payload.customer_id,
+        last_skill_name=last_skill,
+    )
+
+    # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
+    # OSINT 场景：skill_hint 中有 "## 当前技能：{name}"
+    # 非 OSINT 场景：full_query 中有 "## 技能触发：{name}"
+    import re as _re
+    _skill_match = (
+        _re.search(r'##\s*当前技能[：:]\s*(\S+)', skill_hint or '') or
+        _re.search(r'##\s*技能触发[：:]\s*(\S+)', full_query)
+    )
+    current_skill = _skill_match.group(1) if _skill_match else None
+    with _skill_cache_lock:
+        if current_skill:
+            _last_skill_per_company[cid] = current_skill
 
     _MAX_AGENT_RETRIES = 1  # 最多重试 1 次（共 2 次尝试），避免 Token 费用翻倍
 
@@ -149,7 +173,25 @@ async def trade_chat_stream(
     if not _check_chat_rate_limit(cid):
         raise HTTPException(status_code=429, detail="请求过于频繁，请稍后重试。")
 
-    full_query, skill_hint = build_query(cid, payload.library_id, query, customer_id=payload.customer_id)
+    # 读取上次使用的 skill 名称（用于跳过重复注入）
+    with _skill_cache_lock:
+        last_skill = _last_skill_per_company.get(cid)
+
+    full_query, skill_hint = build_query(
+        cid, payload.library_id, query, customer_id=payload.customer_id,
+        last_skill_name=last_skill,
+    )
+
+    # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
+    import re as _re2
+    _skill_match = (
+        _re2.search(r'##\s*当前技能[：:]\s*(\S+)', skill_hint or '') or
+        _re2.search(r'##\s*技能触发[：:]\s*(\S+)', full_query)
+    )
+    current_skill = _skill_match.group(1) if _skill_match else None
+    with _skill_cache_lock:
+        if current_skill:
+            _last_skill_per_company[cid] = current_skill
 
     loop = asyncio.get_running_loop()
     event_queue: asyncio.Queue = asyncio.Queue(maxsize=1000)

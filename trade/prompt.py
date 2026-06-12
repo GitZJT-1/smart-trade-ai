@@ -36,6 +36,14 @@ When using `memory_recall`, `cognee_recall`, `read_file`, or any tool that retur
 
 TRADE_SYSTEM_PROMPT = TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK
 
+# 精简版 prompt — 仅核心规则，用于非首轮对话（首轮已发送过完整版）
+# 包含 Disclaimer + Role + Language Policy + Data Isolation，节约 ~2000 tokens
+TRADE_SYSTEM_PROMPT_MINIMAL = TRADE_DISCLAIMER_BLOCK + """
+
+# Role
+You are Trade AI Assistant, an intelligent assistant for B2B trade and manufacturing sales teams.
+""" + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK
+
 # OSINT/情报类精简 prompt — 只保留 Role + Language Policy，去掉文档生成/Cognee 等无关段落
 TRADE_SYSTEM_PROMPT_OSINT = TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK + """
 

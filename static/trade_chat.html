@@ -729,6 +729,7 @@ async function doTradeUpdate(e) {
     btn.disabled = true;
     btn.textContent = '⏳ 更新中...';
     toast('⬆️ 正在更新系统...');
+    var updateFailed = false;
     try {
         const resp = await api('POST', '/api/trade/system/update');
         if (resp && resp.ok) {
@@ -736,17 +737,22 @@ async function doTradeUpdate(e) {
             console.log(resp.output);
         } else if (resp && resp.error) {
             toast('❌ 更新失败: ' + resp.error);
+            updateFailed = true;
         } else {
-            // resp 为 null 可能是因为服务器重启导致连接断开，
-            // 更新脚本本身可能在服务端已成功执行
-            toast('✅ 更新指令已执行，服务正在重启...');
+            toast('⚠️ 更新结果未知，请检查网络后重试');
+            updateFailed = true;
         }
     } catch(e) {
-        // 服务器重启时连接断开属于正常现象
-        toast('✅ 更新指令已执行，服务正在重启...');
+        toast('⚠️ 更新请求失败，请检查网络连接后重试');
+        updateFailed = true;
     } finally {
         btn.disabled = false;
         btn.textContent = '⬆️ 系统更新';
+    }
+    if (updateFailed) {
+        btn.disabled = false;
+        btn.textContent = '⬆️ 系统更新';
+        return;
     }
     // 轮询等待服务恢复后自动刷新
     let attempts = 0;

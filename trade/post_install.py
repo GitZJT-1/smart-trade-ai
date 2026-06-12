@@ -723,8 +723,9 @@ def update_trade() -> None:
                 print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
                 ok = False
         else:
-            print("  (继续后续步骤...数据不受影响)")
-            ok = False
+            # git pull 失败（非 stash 问题，如网络不通）→ 后续步骤无意义，立即中止
+            print("  ❌ git pull 失败，无法更新。请检查网络后重试。")
+            raise SystemExit("git pull failed")
     else:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
 

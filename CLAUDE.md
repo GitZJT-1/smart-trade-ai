@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Commit Policy
+
+- 所有 git commit 只使用 `Roger Lau <chefrogerlau@126.com>` 作为作者
+- **禁止**在 commit message 中附加 `Co-Authored-By` 行
+- **禁止**使用 `git commit --amend` 修改已发布的提交
+
 ## Project Overview
 
 Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales teams. A FastAPI server wrapping **Hermes Agent** (AI engine from `NousResearch/hermes-agent`) with a custom business layer (multi-company document libraries, customers, chat memory, skill routing) and a single-page chat UI. Also ships as a desktop app (tradewin) via PyWebView.
@@ -38,7 +44,7 @@ python pre_install_check.py
 python -m trade.database
 ```
 
-The server requires `HERMES_YOLO_MODE=true` in the environment (set by Hermes .env, or export manually). Without it, the AI agent will prompt for human approval on every tool call — unworkable for this product's target users (SECURITY.md).
+`HERMES_YOLO_MODE=true` is set programmatically by `trade/bootstrap.py` — no manual env setup needed. Without YOLO mode, the AI agent would prompt for human approval on every tool call.
 
 ### Desktop App (tradewin)
 
@@ -73,7 +79,7 @@ python -m pytest tests/test_license.py -v
 # Run a single test
 python -m pytest tests/test_business.py::test_function_name -v
 
-# Lint (rules configured in pyproject.toml [tool.ruff])
+# Lint (rules: E/F/W/I/B/C4/UP/N in pyproject.toml; E501/E402/B904/N806/E741/F601 ignored)
 ruff check .
 ruff check --fix .                 # auto-fix
 
@@ -167,7 +173,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
 
-3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~2600 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
+3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~2900 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
 
 4. **Dual chat endpoints**: `/chat` is synchronous (thread pool + 600s timeout); `/chat/stream` uses SSE to emit `tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done` events for real-time tool progress in the UI.
 

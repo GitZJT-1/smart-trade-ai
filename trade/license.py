@@ -279,9 +279,12 @@ def status(company_id: int | None = None) -> dict:
         first = datetime.fromisoformat(data["first_launch_at"])
         result["trial_used"] = min((now - first).days, _TRIAL_DAYS)
 
+    # 未激活时始终返回申请码，方便用户在试用期内提前申请激活
+    if not result["activated"]:
+        result["request_code"] = _make_request_code()
+
     if not result["activated"] and result["days_remaining"] <= 0:
         result["status"] = "expired"
-        result["request_code"] = _make_request_code()
     elif result["activated"]:
         result["status"] = "active"
     else:

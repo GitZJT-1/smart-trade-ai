@@ -45,12 +45,14 @@ class TestMachineId:
 
     def test_machine_id_fallback_hostname(self):
         """模拟所有平台检测失败时的 hostname fallback"""
-        with mock.patch("platform.system", return_value="SunOS"):
-            with mock.patch("subprocess.run", side_effect=OSError):
-                with mock.patch("platform.node", return_value="myhost"):
-                    from trade.license import _machine_id
-                    mid = _machine_id()
-                    assert mid == "host:myhost"
+        with mock.patch("trade.license._get_license_data", return_value={}):
+            with mock.patch("trade.license._save_license_data"):
+                with mock.patch("platform.system", return_value="SunOS"):
+                    with mock.patch("subprocess.run", side_effect=OSError):
+                        with mock.patch("platform.node", return_value="myhost"):
+                            from trade.license import _machine_id
+                            mid = _machine_id()
+                            assert mid == "host:myhost"
 
 
 class TestRequestCode:
@@ -275,7 +277,8 @@ class TestLicenseStatus:
         s = status(company_id=1)
         assert s["status"] == "trial"
         assert s["activated"] is False
-        assert s["request_code"] == ""
+        # 未激活状态下始终返回申请码（方便用户在试用期内提前申请激活）
+        assert s["request_code"].startswith("TRADE-REQ-")
 
     def test_expired_shows_request_code(self, monkeypatch):
         forty_days_ago = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=40)).isoformat()

@@ -148,61 +148,53 @@ def _save_activate_attempts(attempts: list[float], company_id: int | None = None
 
 
 # ── 数据读写 ──────────────────────────────────────────────────────────────────
+# license 数据全局存储（一台电脑一份 license，非 per-company）
+
+_LICENSE_FILE: Path | None = None
+
+
+def _license_file_path() -> Path:
+    """返回 license JSON 文件的路径：~/.trade/data/license.json"""
+    global _LICENSE_FILE
+    if _LICENSE_FILE is not None:
+        return _LICENSE_FILE
+    from pathlib import Path
+    val = os.environ.get("TRADE_HOME", "").strip()
+    if val:
+        base = Path(val)
+    elif os.name == "nt":
+        local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+        base = Path(local) / "trade"
+    else:
+        base = Path.home() / ".trade"
+    _LICENSE_FILE = base / "data" / "license.json"
+    return _LICENSE_FILE
 
 
 def _get_license_data(company_id: int | None = None) -> dict:
-    """读取 license_data JSON 字段。
+    """读取全局 license 数据（一台电脑一份，所有公司共享）。
 
-    当 company_id 提供时，读取该公司的 license；否则读取第一个激活公司的。
-    如果 trade_companies 表不存在则返回空。
+    company_id 参数保留向后兼容，实际被忽略。
     """
-    from trade.database import get_connection
-    conn = get_connection()
+    path = _license_file_path()
     try:
-        if company_id is not None:
-            row = conn.execute(
-                "SELECT license_data FROM trade_companies WHERE company_id = ?",
-                (company_id,),
-            ).fetchone()
-        else:
-            row = conn.execute(
-                "SELECT license_data FROM trade_companies WHERE is_active = 1 LIMIT 1"
-            ).fetchone()
-        if row and row[0]:
-            try:
-                return json.loads(row[0])
-            except json.JSONDecodeError:
-                return {}
-        return {}
-    except Exception:
-        # 表可能尚未创建（首次启动时）
-        return {}
-    finally:
-        conn.close()
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        pass
+    return {}
 
 
 def _save_license_data(data: dict, company_id: int | None = None) -> None:
-    """写入 license_data JSON 字段。
+    """写入全局 license 数据。
 
-    当 company_id 提供时写入该公司，否则写入第一个激活的公司。
+    company_id 参数保留向后兼容，实际被忽略。
     """
-    from trade.database import get_connection
-    conn = get_connection()
-    try:
-        payload = json.dumps(data, ensure_ascii=False)
-        if company_id is not None:
-            conn.execute(
-                "UPDATE trade_companies SET license_data = ? WHERE company_id = ?",
-                (payload, company_id),
-            )
-        else:
-            conn.execute(
-                "UPDATE trade_companies SET license_data = ? WHERE is_active = 1",
-                (payload,),
-            )
-        conn.commit()
-    finally:
-        conn.close()
+    path = _license_file_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    if os.name != "nt":
+        path.chmod(0o600)
 
 
 # ── 许可证检查 ────────────────────────────────────────────────────────────────

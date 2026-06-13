@@ -391,7 +391,8 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     if not code or len(code.strip()) < 8:
         return False, "无效的激活码格式"
 
-    code = code.strip().upper()
+    code = code.strip()
+    # 不调 .upper() —— 激活码含 base64url 编码的 Ed25519 签名，大小写敏感
 
     # 解码激活码
     try:
@@ -406,8 +407,9 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
 
     expires_at = decoded["expires_at"]
     now = datetime.now(UTC)
+    expires_dt = datetime.fromisoformat(expires_at).replace(tzinfo=UTC)
 
-    if now >= datetime.fromisoformat(expires_at):
+    if now >= expires_dt:
         return False, f"该激活码已到期（有效期至 {expires_at[:10]}）"
 
     # 写入激活信息（含 Ed25519 签名用于运行时防篡改验签）

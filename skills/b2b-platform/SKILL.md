@@ -25,6 +25,7 @@ injection_prompt: |
      - 行动清单：第一周做什么、第二周做什么
 ---
 
+```
 Good: "High-Quality Stainless Steel Ball Valve DN50 PN16 for Industrial Use | ISO Certified"
 Good: "Custom OEM [Product Type] Manufacturer | [X] Years Experience | Fast Delivery"
 Bad:   "Product A001" (too short, no keywords)

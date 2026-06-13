@@ -43,6 +43,7 @@ injection_prompt: |
     - 无标注 = AI 通用话术，不涉及客户具体信息
 ---
 
+```
 Parties: Seller and Buyer legal names, addresses
 Whereas: Background recitals
 Article 1: Definitions

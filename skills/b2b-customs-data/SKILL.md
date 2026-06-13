@@ -220,7 +220,9 @@ Would you be open to a brief call to explore if we're a fit?"
 3. **Currency consistency**: Note currency in value fields; flag inconsistencies
 4. **No assumptions**: If a field is ambiguous, note it rather than guess
 5. **Source citation**: Always cite the source file and row numbers for key findings
-6. **Completeness**: Include all relevant fields in output, even if values are missing
+6. **Column mapping disclosure**: 分析报告中首次引用数据时，注明对应的原始文件列名。
+   例如："进口量数据来自文件中「Total Import QTY」列"。这样用户可以快速判断列解读是否正确。
+7. **Completeness**: Include all relevant fields in output, even if values are missing
 
 ## Common Pitfalls
 

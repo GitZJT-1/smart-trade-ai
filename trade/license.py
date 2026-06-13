@@ -232,7 +232,7 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
             return False, "License 状态持久化失败，请检查 ~/.trade/ 目录权限"
         return True, ""
 
-    first = datetime.fromisoformat(data["first_launch_at"])
+    first = datetime.fromisoformat(data["first_launch_at"]).replace(tzinfo=UTC)
     days_used = (now - first).days
 
     # 已激活：验签 + 检查是否在有效期内
@@ -240,7 +240,7 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
         if not _verify_license(data):
             # 签名无效 → license_data 被篡改，要求重新激活
             return False, "许可证数据异常，请使用激活码重新激活。"
-        expires = datetime.fromisoformat(data["expires_at"])
+        expires = datetime.fromisoformat(data["expires_at"]).replace(tzinfo=UTC)
         if now < expires:
             return True, ""
         else:
@@ -260,12 +260,12 @@ def days_remaining(company_id: int | None = None) -> int:
     now = datetime.now(UTC)
 
     if data.get("activated") and data.get("expires_at"):
-        expires = datetime.fromisoformat(data["expires_at"])
+        expires = datetime.fromisoformat(data["expires_at"]).replace(tzinfo=UTC)
         remaining = (expires - now).days
         return max(0, remaining)
 
     if "first_launch_at" in data:
-        first = datetime.fromisoformat(data["first_launch_at"])
+        first = datetime.fromisoformat(data["first_launch_at"]).replace(tzinfo=UTC)
         used = (now - first).days
         return max(0, _TRIAL_DAYS - used)
 
@@ -294,7 +294,7 @@ def status(company_id: int | None = None) -> dict:
     }
 
     if "first_launch_at" in data:
-        first = datetime.fromisoformat(data["first_launch_at"])
+        first = datetime.fromisoformat(data["first_launch_at"]).replace(tzinfo=UTC)
         result["trial_used"] = min((now - first).days, _TRIAL_DAYS)
 
     # 未激活时始终返回申请码，方便用户在试用期内提前申请激活

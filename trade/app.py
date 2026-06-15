@@ -116,21 +116,132 @@ def _get_trade_data_dir() -> Path:
     return Path(trade_home) / "data"
 
 
+def _kill_gateway() -> None:
+    """终止当前 Hermes Gateway 进程（升级/重启时调用，新进程会重启它）。
+
+    跨平台：Unix 用 pgrep+SIGTERM，Windows 用 taskkill 按命令行匹配。
+    失败静默——Gateway 是独立进程，杀不掉也不影响主服务重启。
+    """
+    try:
+        if os.name == "nt":
+            # Windows: taskkill 不直接支持命令行匹配，回退到通过端口找进程
+            # （需 psutil；没有就跳过——下次启动时新 Trade 启动会判端口已占用而跳过启动新 Gateway）
+            try:
+                import psutil
+                for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+                    try:
+                        cmdline = " ".join(proc.info.get("cmdline") or [])
+                        if "hermes" in cmdline.lower() and "gateway" in cmdline.lower():
+                            proc.terminate()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except ImportError:
+                pass
+        else:
+            _sp.run(
+                ["pkill", "-TERM", "-f", "hermes.*gateway"],
+                capture_output=True, timeout=5,
+            )
+    except Exception:
+        # 杀 Gateway 失败不阻塞主流程
+        pass
+
+
+def _perform_restart() -> None:
+    """终止当前 Trade 进程并以独立子进程启动新实例（含三层 PID 安全校验）。
+
+    供 /system/restart 直接调用，也供 /system/update 在响应返回后通过
+    BackgroundTasks 触发——这样升级完成的响应能先送达前端。
+    """
+    import signal as _signal
+    import sys as _sys
+
+    trade_data = _get_trade_data_dir()
+    pid_file = trade_data / "trade.pid"
+    old_pid = None
+    if pid_file.is_file():
+        try:
+            old_pid = int(pid_file.read_text().strip())
+        except (ValueError, OSError):
+            pass
+
+    # 在杀自己之前必须先记录启动命令，否则 kill 后访问不到
+    _restart_cmd = [_sys.executable] + _sys.argv
+
+    # 先杀 Gateway（独立进程，新 Trade 启动时会重新拉起）
+    _kill_gateway()
+
+    if old_pid is not None:
+        # 三层 PID 校验：psutil 优先，回退 /proc，防止 PID 重用误杀
+        is_trade = False
+        try:
+            import psutil
+            proc = psutil.Process(old_pid)
+            cmdline = " ".join(proc.cmdline())
+            is_trade = (
+                ("server.py" in cmdline and "trade" in cmdline)
+                or "trade" in cmdline
+            )
+            if is_trade:
+                try:
+                    my_exe = Path(_sys.executable).resolve()
+                    proc_exe = Path(proc.exe()).resolve()
+                    if my_exe != proc_exe:
+                        is_trade = False
+                except Exception:
+                    pass
+        except ImportError:
+            try:
+                proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
+            except Exception:
+                proc_cmd = ""
+            is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
+        except Exception:
+            pass
+        if is_trade:
+            try:
+                os.kill(old_pid, _signal.SIGTERM)
+            except OSError:
+                pass
+        try:
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    # 用独立会话启动新实例，等当前 uvicorn 释放端口后由它接管
+    _sp.Popen(
+        _restart_cmd,
+        stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+        start_new_session=True,
+    )
+
+
 # ── System endpoints (无需 session token) ────────────────────────────────────
 
 
 def _create_system_router() -> APIRouter:
     """创建系统管理路由（更新/备份/重启），需要 session token 认证。"""
+    from fastapi import BackgroundTasks
+
     from trade.api.cron import _capture_output
     from trade.api.deps import require_session
 
     router = APIRouter(tags=["system"], dependencies=[Depends(require_session)])
 
     @router.post("/system/update")
-    def api_update_trade():
-        """一键更新 Trade 系统。"""
+    def api_update_trade(background_tasks: BackgroundTasks):
+        """一键更新 Trade 系统。
+
+        升级成功后通过 BackgroundTasks 调度全量重启——这样响应能先送达前端，
+        前端拿到 restart_scheduled=True 后开始轮询服务状态，等待重启完成。
+        """
         from trade.post_install import update_trade as _do_update
-        return _capture_output(_do_update)
+        result = _capture_output(_do_update)
+        # 仅当升级成功才触发重启，失败时保留当前进程供用户排查
+        if result.get("ok"):
+            background_tasks.add_task(_perform_restart)
+            result["restart_scheduled"] = True
+        return result
 
     @router.post("/system/backup")
     def api_backup_trade():
@@ -142,74 +253,9 @@ def _create_system_router() -> APIRouter:
     def api_restart_trade():
         """重启 Trade 服务（跨平台）。
 
-        1. 记录当前 Python 启动命令
-        2. 发送 SIGTERM 优雅关闭当前进程
-        3. 等待端口释放后，以独立子进程重新启动 server
+        委托给 _perform_restart()——含三层 PID 安全校验和 Gateway 协同重启。
         """
-        trade_data = _get_trade_data_dir()
-        pid_file = trade_data / "trade.pid"
-        old_pid = None
-        if pid_file.is_file():
-            try:
-                old_pid = int(pid_file.read_text().strip())
-            except (ValueError, OSError):
-                pass
-
-        # 记录重启所需的启动参数（在进程被杀前获取）
-        import sys as _sys
-        _restart_cmd = [_sys.executable] + _sys.argv
-
-        if old_pid is not None:
-            import signal
-            # 安全校验：确认 PID 属于 trade 进程，防止误杀
-            # 优先用 psutil（跨平台），回退到 /proc 子串匹配（Unix）
-            is_trade = False
-            try:
-                import psutil
-                proc = psutil.Process(old_pid)
-                cmdline = " ".join(proc.cmdline())
-                # 二层校验：cmdline 包含 trade/server.py + 实际可执行文件路径匹配
-                is_trade = (
-                    ("server.py" in cmdline and "trade" in cmdline)
-                    or "trade" in cmdline
-                )
-                if is_trade:
-                    # 三层校验：实际 exe 路径与当前进程一致（防御 PID 重用）
-                    try:
-                        my_exe = Path(sys.executable).resolve()
-                        proc_exe = Path(proc.exe()).resolve()
-                        if my_exe != proc_exe:
-                            is_trade = False
-                    except Exception:
-                        pass  # 无权限读取 exe 时退回到 cmdline 匹配结果
-            except ImportError:
-                # psutil 未安装，回退到 /proc 检查
-                try:
-                    proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
-                except Exception:
-                    proc_cmd = ""
-                is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
-            except Exception:
-                # psutil.NoSuchProcess 或权限不足 → 不杀
-                pass
-            if is_trade:
-                try:
-                    os.kill(old_pid, signal.SIGTERM)
-                except OSError:
-                    pass
-            try:
-                pid_file.unlink(missing_ok=True)
-            except Exception:
-                pass
-
-        # 延迟重启：等待当前 uvicorn 释放端口后，以独立子进程启动新实例
-        import subprocess as _sp
-        _sp.Popen(
-            _restart_cmd,
-            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
-            start_new_session=True,  # 脱离父进程会话，父进程退出后子进程继续运行
-        )
-
+        _perform_restart()
         return {"ok": True, "message": "重启指令已发送"}
 
     return router

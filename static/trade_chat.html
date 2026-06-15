@@ -721,6 +721,54 @@ async function doActivate() {
     }
 }
 
+// ── 重启协调 ──
+// 清理前端运行时缓存，但保留用户上下文（trade_cid 让重启后不必重新选公司）
+function _clearRuntimeCaches() {
+    try {
+        // 清理视图缓存（DOM 引用 + 渲染状态），强制重启后重新拉取
+        if (typeof viewCache === 'object') {
+            for (const k of Object.keys(viewCache)) delete viewCache[k];
+        }
+        // 仅清理与服务端 schema 强耦合的会话状态，保留 trade_cid（公司选择）
+        const preserveKeys = new Set(['trade_cid']);
+        const ssKeys = [];
+        for (let i = 0; i < sessionStorage.length; i++) ssKeys.push(sessionStorage.key(i));
+        ssKeys.forEach(k => { if (!preserveKeys.has(k)) sessionStorage.removeItem(k); });
+    } catch(_) { /* sessionStorage 在隐私模式下可能抛错，忽略 */ }
+}
+
+// 等待服务先 DOWN 再 UP，然后 hard-reload（带 cache-bust 参数绕过浏览器缓存）
+// onTimeout: 超时回调，让按钮恢复可点击状态
+async function _waitForRestartAndReload(onTimeout) {
+    let phase = 'wait_down';   // 第一阶段：等待旧进程下线
+    let attempts = 0;
+    const maxAttempts = 90;    // 90 × 2s = 3 分钟兜底
+    const tick = async () => {
+        attempts++;
+        let isUp = false;
+        try {
+            const r = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
+            isUp = r.ok;
+        } catch(_) { isUp = false; }
+        if (phase === 'wait_down') {
+            // 旧进程已退出（或新进程还没起来），切到 wait_up
+            if (!isUp) phase = 'wait_up';
+        } else if (phase === 'wait_up' && isUp) {
+            // 新进程已就绪，强制刷新（cache-bust）
+            _clearRuntimeCaches();
+            location.href = '/trade?_=' + Date.now();
+            return;
+        }
+        if (attempts >= maxAttempts) {
+            toast('⚠️ 服务重启超时，请手动刷新页面');
+            if (typeof onTimeout === 'function') onTimeout();
+            return;
+        }
+        setTimeout(tick, 2000);
+    };
+    setTimeout(tick, 1500); // 给后端 BackgroundTasks 一点起跑时间
+}
+
 // ── 系统更新 ──
 async function doTradeUpdate(e) {
     // 用 currentTarget 或回退到事件对象，再不行直接查 DOM
@@ -730,11 +778,18 @@ async function doTradeUpdate(e) {
     btn.textContent = '⏳ 更新中...';
     toast('⬆️ 正在更新系统...');
     var updateFailed = false;
+    var restartScheduled = false;
     try {
         const resp = await api('POST', '/api/trade/system/update');
         if (resp && resp.ok) {
-            toast('✅ 系统更新完成！正在重启...');
             console.log(resp.output);
+            restartScheduled = !!resp.restart_scheduled;
+            if (restartScheduled) {
+                toast('✅ 系统更新完成！正在重启...');
+            } else {
+                // 后端没安排重启（极少见，例如更新脚本被外部 patch 后），提醒用户手动重启
+                toast('✅ 更新完成。请点击"🔄 重启"以应用新版本。');
+            }
         } else if (resp && resp.error) {
             toast('❌ 更新失败: ' + resp.error);
             updateFailed = true;
@@ -745,22 +800,17 @@ async function doTradeUpdate(e) {
     } catch(e) {
         toast('⚠️ 更新请求失败，请检查网络连接后重试');
         updateFailed = true;
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '⬆️ 系统更新';
     }
-    if (updateFailed) {
+    if (updateFailed || !restartScheduled) {
         btn.disabled = false;
         btn.textContent = '⬆️ 系统更新';
         return;
     }
-    // 轮询等待服务恢复后自动刷新
-    let attempts = 0;
-    const check = setInterval(async () => {
-        attempts++;
-        try { const r = await fetch('/api/status?_=' + Date.now()); if (r.ok) { location.reload(); return; } } catch(e) {}
-        if (attempts > 60) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
-    }, 3000);
+    // 后端已通过 BackgroundTasks 调度重启——等待服务先 DOWN 再 UP，然后 hard-reload
+    _waitForRestartAndReload(() => {
+        btn.disabled = false;
+        btn.textContent = '⬆️ 系统更新';
+    });
 }
 
 // ── 数据备份 ──
@@ -781,23 +831,11 @@ async function doRestartTrade(e) {
         // 重启后服务器可能立即断开，请求抛异常属正常
         toast('🔄 服务正在重启，页面即将刷新...');
     }
-    let attempts = 0;
-    const checkAndReload = async () => {
-        attempts++;
-        try {
-            const r = await fetch('/api/status');
-            if (r.ok) { location.reload(); return; }
-        } catch(e) {}
-        if (attempts < 15) {
-            // 前 5 次 2s，之后递增到 5s
-            const delay = attempts < 5 ? 2000 : 3000 + (attempts - 5) * 1000;
-            setTimeout(checkAndReload, Math.min(delay, 5000));
-        } else {
-            toast('⚠️ 服务重启超时。请在终端手动运行 python server.py 启动，然后刷新页面。');
-            btn.disabled = false; btn.textContent = '🔄 重启';
-        }
-    };
-    setTimeout(checkAndReload, 3000);
+    // 统一通过 wait_down → wait_up → hard reload 流程，自动清理前端 cache
+    _waitForRestartAndReload(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 重启';
+    });
 }
 
 // ── Skills 更新 ──
@@ -1082,23 +1120,28 @@ function stopVersionCheck() {
 async function doUpdateSystem() {
     const btn = document.getElementById('update-banner');
     if (btn) btn.textContent = '更新中...';
+    var restartScheduled = false;
     try {
         const resp = await api('POST', '/api/trade/system/update');
         if (resp?.ok) {
-            toast('✅ 系统更新完成！正在重启...');
+            restartScheduled = !!resp.restart_scheduled;
+            toast(restartScheduled ? '✅ 系统更新完成！正在重启...' : '✅ 更新完成。请点击"🔄 重启"以应用新版本。');
         } else {
             toast('⚠️ 更新失败');
         }
     } catch(e) {
+        // 升级请求路径上服务器有可能抢先重启，吞异常并继续走重启等待流程
         toast('🔄 服务正在重启，页面即将刷新...');
+        restartScheduled = true;
     }
-    // 轮询等待服务恢复后刷新
-    let attempts = 0;
-    const check = setInterval(async () => {
-        attempts++;
-        try { const r = await fetch('/api/status'); if (r.ok) { location.reload(); } } catch(e) {}
-        if (attempts > 60) { clearInterval(check); toast('⚠️ 服务重启超时，请手动刷新页面'); }
-    }, 2000);
+    if (!restartScheduled) {
+        if (btn) btn.textContent = '⬆️ 升级';
+        return;
+    }
+    // 后端 BackgroundTasks 已调度重启——等待 DOWN→UP 后强制刷新（清 cache + cache-bust）
+    _waitForRestartAndReload(() => {
+        if (btn) btn.textContent = '⬆️ 升级';
+    });
 }
 
 async function loadCronStatus(isPoll = false) {

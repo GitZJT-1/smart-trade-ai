@@ -2,7 +2,4 @@ theme: jekyll-theme-slate
 title: Smart Trade AI
 description: "外贸业务员的 AI 助手 — 本地运行，数据安全"
 logo: docs/screenshot-2.png
-show_downloads: true
-github:
-  zip_url: https://github.com/chefroger/smart-trade-ai/archive/refs/heads/main.zip
-  tar_url: https://github.com/chefroger/smart-trade-ai/archive/refs/heads/main.tar.gz
+show_downloads: false

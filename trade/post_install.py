@@ -450,34 +450,6 @@ def _restart_trade_service() -> None:
         print("     或手动运行: trade")
 
 
-def _force_sync_from_source(src_dir: Path, dst_dir: Path) -> None:
-    """将源码目录的代码强制同步到运行目录（覆盖已有文件，保留 .git 和用户数据）。
-
-    用于 git pull 在运行目录失败（本地修改/冲突）时的强制同步策略。
-    只覆盖项目代码文件，不删除运行目录特有的内容（如 .git/、venv/ 等）。
-    """
-    import shutil as _shutil
-
-    # 排除列表：这些目录/文件不覆盖（.git 由运行目录自己管理，venv 是运行时环境）
-    _skip = {".git", "__pycache__", ".pytest_cache", ".DS_Store", "venv", ".venv",
-             "node_modules", ".codegraph", ".cursor", ".idea", ".vscode",
-             "foreign_trade_assistant.egg-info", "smart_trade_ai.egg-info"}
-    _synced = 0
-    for _src_item in src_dir.iterdir():
-        _name = _src_item.name
-        if _name in _skip or _name.startswith(".") or _name.startswith("~"):
-            continue
-        _dst = dst_dir / _name
-        if _src_item.is_dir():
-            _sync_dir_rsync(_src_item, _dst)
-            _synced += 1
-        else:
-            _dst.parent.mkdir(parents=True, exist_ok=True)
-            _shutil.copy2(_src_item, _dst)
-            _synced += 1
-    print(f"  ✓ Force synced {_synced} items from source to runtime dir")
-
-
 def _sync_dir_rsync(src: Path, dst: Path) -> None:
     """递归同步目录 src → dst，覆盖旧文件，删除目标多余文件。
 
@@ -550,31 +522,6 @@ def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
         prompts_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(prompts_src, prompts_dst)
         prompts_dst.chmod(0o644)
-
-
-def _guess_running_project_dir() -> Path | None:
-    """推断当前运行中的 Trade 项目目录。
-
-    通过 server.py 的 __file__ 路径推断（开发环境 / 桌面安装）。
-    如果 server.py 在 site-packages 中（pip install 方式），返回 None。
-    """
-    # 最可靠：通过检查运行中的 server 模块的 __file__ 路径
-    # post_install.py 位于 trade/ 包中，向上找项目根
-    # 但如果是从 pip install -e 安装的开发版本，这里返回的是安装源目录
-    self_dir = Path(__file__).resolve().parent.parent  # post_install.py -> trade/ -> project root
-    if (self_dir / "server.py").is_file() and (self_dir / ".git").is_dir():
-        return self_dir
-
-    # 尝试通过 sys.modules 寻找已加载的 server 模块
-    import sys as _sys
-    for _mod_name in ("server", "__main__"):
-        _mod = _sys.modules.get(_mod_name)
-        if _mod and hasattr(_mod, "__file__") and _mod.__file__:
-            _p = Path(_mod.__file__).resolve().parent
-            if (_p / "server.py").is_file() and (_p / ".git").is_dir():
-                return _p
-
-    return None
 
 
 def _ensure_auto_start(trade_dir: Path) -> None:
@@ -685,25 +632,21 @@ def update_trade() -> None:
     """一键更新 Foreign Trade Assistant 系统。
 
     执行步骤：
-      1. git pull（拉取最新代码）
+      1. git pull（在运行目录拉取最新代码）
       2. install_skills()（安装新增的 b2b-* skill 目录 + 模板）
       3. update_skills()（从 GitHub 同步 SKILL.md 内容）
       4. pip install（更新包及依赖）
       5. _sync_trade_template()（同步 .trade-template/ 新增模板文件）
       6. _ensure_auto_start()（Windows/macOS 开机自启动）
       7. 数据库迁移检查
-      8. 自动重启 Trade 服务
 
     用法：trade-update（或 trade update）
     """
     import subprocess
 
-    # 优先使用当前运行 server.py 所在的项目目录（开发环境/桌面安装），
-    # 确保更新的是正在运行的代码而非其他安装副本
-    _running_dir = _guess_running_project_dir()
-    trade_dir = (_running_dir
-                 if _running_dir and (_running_dir / ".git").is_dir()
-                 else _get_trade_home() / "foreign-trade-assistant")
+    # 运行目录是唯一的代码管理位置（~/.trade/foreign-trade-assistant/），
+    # 不依赖桌面开发目录。git pull 和 pip install 都在这里执行。
+    trade_dir = _get_trade_home() / "foreign-trade-assistant"
     if not trade_dir.is_dir():
         print("[update_trade] ERROR: Trade install directory not found.", file=sys.stderr)
         print(f"  Expected: {trade_dir}", file=sys.stderr)
@@ -711,7 +654,7 @@ def update_trade() -> None:
 
     ok = True
 
-    # 1. git pull — 拉取最新代码
+    # 1. git pull — 在运行目录拉取最新代码
     print("→ Step 1/7: git pull ...")
     # timeout 防止网络挂起时整个 update 流程永久阻塞（与 _capture_lock 联动会卡住所有 system 接口）
     result = subprocess.run(
@@ -721,39 +664,35 @@ def update_trade() -> None:
     if result.returncode != 0:
         err_text = result.stderr.strip()
         print(f"  ⚠ git pull failed: {err_text}")
-        if "not something we can merge" in err_text or "uncommitted" in err_text:
-            print("  💡 本地代码有修改。尝试自动 stash 后重试...")
-            # 自动 stash + pull + pop，降低用户操作门槛
-            _stash = subprocess.run(
-                ["git", "stash"],
-                cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
+        # 常见原因：运行目录有本地修改（如 pip install -e 修改 egg-info）
+        # 策略：stash → pull → pop，自动恢复
+        print("  💡 尝试自动 stash 后重试...")
+        _stash = subprocess.run(
+            ["git", "stash"],
+            cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
+        )
+        if _stash.returncode == 0:
+            _pull2 = subprocess.run(
+                ["git", "pull", "--ff-only", "origin", "main"],
+                cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
             )
-            if _stash.returncode == 0:
-                _pull2 = subprocess.run(
-                    ["git", "pull", "--ff-only", "origin", "main"],
-                    cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
+            if _pull2.returncode == 0:
+                print(f"  ✓ git pull (after stash) — {_pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else 'OK'}")
+                # 尝试恢复用户本地修改
+                _pop = subprocess.run(
+                    ["git", "stash", "pop"],
+                    cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
                 )
-                if _pull2.returncode == 0:
-                    print(f"  ✓ git pull (after stash) — {_pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else 'OK'}")
-                    # 尝试恢复用户本地修改
-                    _pop = subprocess.run(
-                        ["git", "stash", "pop"],
-                        cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
-                    )
-                    if _pop.returncode == 0:
-                        print("  ✓ 本地修改已恢复")
-                    else:
-                        print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
-                        print("    恢复: cd ~/.trade/foreign-trade-assistant && git stash pop")
+                if _pop.returncode == 0:
+                    print("  ✓ 本地修改已恢复")
                 else:
-                    print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
-                    ok = False
+                    print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
+                    print("    恢复: cd ~/.trade/foreign-trade-assistant && git stash pop")
             else:
-                print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
+                print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
                 ok = False
         else:
-            # git pull 失败（非 stash 问题，如网络不通）→ 后续步骤无意义，立即中止
-            print("  ❌ git pull 失败，无法更新。请检查网络后重试。")
+            print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
             ok = False
     else:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
@@ -783,49 +722,9 @@ def update_trade() -> None:
     else:
         print("  ✓ Package updated")
 
-    # 4.5. 确保运行目录的代码与源码目录同步
-    # 关键：即使运行目录有 .git（是独立 git clone），也需要同步，
-    # 因为 git pull 可能因本地修改失败导致运行目录代码滞后。
-    _runtime_dir = _get_trade_home() / "foreign-trade-assistant"
-    _need_sync = _runtime_dir.is_dir() and _runtime_dir.resolve() != trade_dir.resolve()
-    if _need_sync:
-        # 运行目录是独立副本（git clone 或纯拷贝），与源码目录不同
-        # 先尝试在运行目录也执行 git pull（可能因本地修改失败）
-        if (_runtime_dir / ".git").is_dir():
-            print("→ Step 4.5a: git pull in runtime dir ...")
-            _rt_pull = subprocess.run(
-                ["git", "pull", "--ff-only", "origin", "main"],
-                cwd=str(_runtime_dir), capture_output=True, text=True, timeout=120,
-            )
-            if _rt_pull.returncode == 0:
-                print(f"  ✓ Runtime dir: {_rt_pull.stdout.strip().split(chr(10))[-1] if _rt_pull.stdout.strip() else 'OK'}")
-            else:
-                # git pull 失败（本地修改/冲突），强制用源码目录覆盖运行目录
-                print("  ⚠ Runtime dir git pull failed, forcing file sync from source ...")
-                _force_sync_from_source(trade_dir, _runtime_dir)
-        else:
-            # 非/git 管理的运行目录，直接同步
-            print("→ Step 4.5: sync to runtime dir ...")
-            _force_sync_from_source(trade_dir, _runtime_dir)
-
-        # 验证同步结果：检查运行目录的版本号是否已更新
-        try:
-            import re as _re
-            _rt_pyproject = (_runtime_dir / "pyproject.toml").read_text()
-            _rt_ver_match = _re.search(r'version\s*=\s*"([^"]+)"', _rt_pyproject)
-            _src_ver_match = _re.search(r'version\s*=\s*"([^"]+)"', (trade_dir / "pyproject.toml").read_text())
-            if _rt_ver_match and _src_ver_match:
-                if _rt_ver_match.group(1) == _src_ver_match.group(1):
-                    print(f"  ✓ Runtime dir version confirmed: {_rt_ver_match.group(1)}")
-                else:
-                    print(f"  ⚠ Version mismatch! source={_src_ver_match.group(1)} runtime={_rt_ver_match.group(1)}")
-        except Exception:
-            pass
-
     # 5. 同步 .trade-template/ 新增模板文件
     print("→ Step 5/7: template sync ...")
     try:
-        # git pull 后的项目根目录下的 .trade-template/
         template_src = trade_dir / ".trade-template"
         trade_home = _get_trade_home()
         trade_home.mkdir(parents=True, exist_ok=True)
@@ -833,7 +732,6 @@ def update_trade() -> None:
         print("  ✓ Templates synced")
     except Exception as e:
         print(f"  ⚠ Template sync failed: {e}")
-        # 模板同步失败不影响其他步骤
         pass
 
     # 6. 确保开机自启动（Windows Task Scheduler / macOS launchd）

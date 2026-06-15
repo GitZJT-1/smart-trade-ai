@@ -2,6 +2,14 @@
 layout: default
 ---
 
+<style>
+  /* 全宽布局：覆盖 slate 主题的窄容器限制 */
+  .container { max-width: 100% !important; padding: 0 2rem !important; }
+  .container .content { max-width: 100% !important; }
+  pre, code { white-space: pre !important; overflow-x: auto !important; }
+  pre { padding: 1rem !important; }
+</style>
+
 <!-- Hero -->
 <div style="text-align:center; padding:2rem 1rem 1rem;">
   <h1 style="font-size:2.4rem; margin-bottom:0.2em;">Smart Trade AI</h1>

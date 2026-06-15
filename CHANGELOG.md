@@ -16,8 +16,15 @@
 - **Hermes 兼容版本范围扩大**：`0.13.0 <= version < 0.17.0`（v0.16.0 已验证无 breaking change）
 - **系统升级流程重构**：`_perform_restart()` 统一重启逻辑（含 Gateway 协同 + 三层 PID 安全校验）；`/system/update` 通过 BackgroundTasks 调度重启，响应先送达前端
 - **前端重启等待机制**：`_waitForRestartAndReload()` 先等服务 DOWN 再等 UP；`_clearRuntimeCaches()` 清 viewCache + sessionStorage（保留 trade_cid）；重载带 cache-bust 参数
+- **Skill 总数 15→17**：全仓库 .md 文档同步更新（README/CLAUDE/AGENTS/docs/业务概览/使用说明书），能力表格新增 trade-ops 和 trade-compliance
+- **Hermes 安装源全局修正**：所有文档和脚本中 `chefroger/hermes-agent` → `NousResearch/hermes-agent`（与 pyproject.toml 一致）；pre_install_check 源检查逻辑反转
 
 ### Added
+- **b2b-trade-ops 技能**：覆盖 11 个履约场景（催款/索赔/展会/验厂/节日/样品/物流/售后/满意度/年度总结），每场景含邮件模板 + Quality Gate Checklist
+- **b2b-trade-compliance 技能**：覆盖文化禁忌速查/46 个外贸缩写全称/11 个 Incoterms 2020 速查/翻译二审/投标检查/跨境电商违禁词
+- **Accuracy Protocol (R0-R7)**：文档分析防幻觉体系——完整读取禁止截断、结构保真、数字溯源、置信度标注（[确切]/[计算]/[推断]/[不确定]）、冲突标记、缺失报告、验证重读
+- **General Information Sourcing Rules**：用户粘贴/web搜索/浏览器抓取/数据库四类来源统一溯源规范，每claim必附来源URL
+- **b2b-lead-generation Quality Gate Checklist**：8 个销售场景的发送前 60 秒自检清单
 - **Token 成本优化**：非首轮对话自动使用 `TRADE_SYSTEM_PROMPT_MINIMAL` 精简版 prompt（节约 ~2100 tokens/次）
 - **Skill 注入缓存**：连续使用同一 skill 时跳过完整 injection_prompt 注入（节约 ~1500 tokens/次）
 - **回滚标签**：`pre-token-optimization` 指向优化前版本，影响质量时可快速回退

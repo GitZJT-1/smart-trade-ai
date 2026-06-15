@@ -34,6 +34,12 @@ def _check_license():
 
 _SESSION_TOKEN = secrets.token_urlsafe(32)
 
+# ── GitHub latest-version 缓存（TTL 10 分钟）──────────────────────────────
+# 避免 /api/status 每次请求都调 GitHub API，在 _waitForRestartAndReload
+# 轮询期间（最多 90 次 × 2s = 3min）触发 API 限流（60 次/小时）。
+_latest_version_cache: dict = {"value": None, "ts": 0.0}
+_LATEST_VERSION_TTL = 600  # 10 分钟
+
 
 def _install_cors(app: FastAPI, port: int) -> None:
     """根据实际监听端口注册 CORS 中间件（仅本机）。"""
@@ -312,12 +318,6 @@ def create_app() -> FastAPI:
     # 挂载 Trade API 路由
     from trade.api import router as trade_router
     app.include_router(trade_router, prefix="/api/trade")
-
-    # ── GitHub latest-version 缓存（TTL 10 分钟）────────────────────────
-    # 避免 /api/status 每次请求都调 GitHub API，在 _waitForRestartAndReload
-    # 轮询期间（最多 90 次 × 2s = 3min）触发 API 限流（60 次/小时）。
-    _latest_version_cache: dict = {"value": None, "ts": 0.0}
-    _LATEST_VERSION_TTL = 600  # 10 分钟
 
     # Health check
     @app.get("/api/status", include_in_schema=False)

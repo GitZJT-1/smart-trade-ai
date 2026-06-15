@@ -4,11 +4,11 @@ layout: default
 
 <!-- Hero -->
 <div style="text-align:center; padding:2rem 1rem 1rem;">
-  <h1 style="font-size:2.4rem; margin-bottom:0.2em;">🚀 Smart Trade AI</h1>
+  <h1 style="font-size:2.4rem; margin-bottom:0.2em;">Smart Trade AI</h1>
   <p style="font-size:1.2rem; color:#58a6ff; margin:0;">外贸业务员的本地 AI 助手</p>
   <p style="color:#8b949e;">在本地运行，数据留在自己电脑里</p>
   <a href="https://github.com/chefroger/smart-trade-ai" class="btn btn-primary" style="margin:0.5rem;">View on GitHub</a>
-  <a href="#quick-start" class="btn" style="margin:0.5rem;">3 分钟上手 →</a>
+  <a href="#windows-install" class="btn" style="margin:0.5rem;">Windows 安装 →</a>
 </div>
 
 ---
@@ -40,6 +40,168 @@ layout: default
 
 ---
 
+## <a id="windows-install"></a>Windows 安装指南
+
+> Windows 是最常见的使用平台，以下提供 3 种安装方式，按难度从低到高排列。
+
+### 方式一：一键安装脚本（推荐）
+
+只需提前安装 Python，其余全自动。
+
+**Step 0 — 安装 Python**
+
+从 [python.org](https://www.python.org/downloads/) 下载 **Python 3.11 ~ 3.13 Windows installer (64-bit)**。
+
+> **必须勾选「Add Python to PATH」**，否则后续命令找不到 python。
+
+安装完成后，**重新打开 PowerShell**，验证：
+
+```powershell
+python --version
+# 应显示 Python 3.11.x 或更高
+```
+
+**Step 1 — 启用长路径支持（以管理员身份运行 PowerShell，仅需一次）**
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+```
+
+> 执行后**需重启电脑**。不开启的话，后续 `pip install` 可能报 `Filename too long` 错误。
+
+**Step 2 — 下载并运行安装脚本**
+
+```powershell
+irm https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.ps1 | iex
+```
+
+脚本自动完成：Python 检查 → 创建 venv → 安装 Hermes Agent → 安装 Trade → 15 个 skills → 数据库初始化 → 注册 `trade` 命令 → 设置开机自启动。
+
+安装完成后，启动方式：
+
+```powershell
+trade                              # 新终端直接运行
+# 或
+python server.py                   # 在安装目录下
+```
+
+浏览器自动打开 http://127.0.0.1:9119/trade 。开机也会自动后台启动。
+
+> **如果脚本执行报错**，可能是网络问题（GitHub 访问不稳定）。参考下方「网络注意事项」。
+
+### 方式二：逐步手动安装
+
+适合想控制每一步的用户，或者一键脚本失败后排查问题。
+
+**前置条件**：Python >= 3.11（已加入 PATH）· 网络能访问 GitHub
+
+```powershell
+# 0. 启用长路径支持（管理员 PowerShell，仅需一次，执行后重启电脑）
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+
+# 1. 安装 Hermes Agent（AI 引擎，自动处理 Node.js + Git + 依赖）
+irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
+
+# 2. 配置 LLM API Key
+hermes setup
+# 按提示选择 provider（推荐 DeepSeek），粘贴 API Key
+
+# 3. 安装 Smart Trade AI
+git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
+cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
+pip install -e "."
+install-trade-skills
+
+# 4. 启动
+python server.py
+# → 浏览器打开 http://127.0.0.1:9119/trade
+```
+
+> 如果第 3 步 `pip install` 报 `Filename too long`，说明长路径未生效，请确认第 0 步已完成并重启电脑。
+
+### 方式三：打包为独立 EXE（双击运行，无需终端）
+
+适合不想用终端的用户，或需要分发给同事。
+
+```powershell
+pip install pyinstaller
+powershell -File scripts/build.ps1
+# 生成 dist/Smart Trade AI.exe
+```
+
+双击 EXE 即可运行，无需 Python 环境。
+
+### LLM API Key 配置
+
+Smart Trade AI 需要 LLM API Key 才能工作。推荐方案：
+
+| 方案 | 模型 | 适合场景 | 注册地址 |
+|------|------|---------|---------|
+| **推荐** | DeepSeek V4 Flash | 日常对话、文档分析、开发信 | [platform.deepseek.com](https://platform.deepseek.com) → 充值 → API Keys |
+
+注册后获取 Key，运行 `hermes setup`，选择对应 provider 并填入即可。
+
+> 还建议注册 [Tavily](https://tavily.com)（免费，每月 1000 次搜索），用于客户背调和实时信息检索。同样通过 `hermes setup` 配置。
+
+### 网络注意事项
+
+安装过程需要从 GitHub 克隆仓库并下载 Python 依赖。**境内用户请注意**：
+
+- **建议全程开启 VPN（全局模式）**，否则 `git clone` 和 `pip install` 容易超时
+- 如果 VPN 不稳定，可以多次重试安装命令，脚本支持断点续装
+- VPN 代理未生效时，在 PowerShell 中手动设置：
+  ```powershell
+  $env:HTTPS_PROXY = "http://127.0.0.1:你的代理端口"
+  ```
+
+### 常见问题
+
+| 问题 | 解决方案 |
+|------|---------|
+| `python` 命令找不到 | 重新安装 Python，勾选「Add Python to PATH」，然后重新打开 PowerShell |
+| `Filename too long` | 以管理员 PowerShell 执行长路径注册命令（见 Step 1），然后重启电脑 |
+| `git clone` 超时 | 开启 VPN 全局模式；或设置 `$env:HTTPS_PROXY` |
+| `pip install` 报红字 | 通常是网络问题，重试即可；确认 VPN 正常 |
+| 升级后页面样式异常 | 按 `Ctrl+Shift+R` 强制刷新浏览器缓存 |
+
+---
+
+## macOS / Linux 安装
+
+### 一键脚本
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
+```
+
+> 审查后执行：
+> ```bash
+> curl -fsSLO https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh
+> less install.sh && bash install.sh
+> ```
+
+### 手动安装
+
+```bash
+# 1. 安装 Hermes Agent
+git clone --branch main https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
+cd ~/.hermes/hermes-agent && pip install -e "."
+
+# 2. 配置 LLM
+hermes setup
+
+# 3. 安装 Smart Trade AI
+git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
+cd ~/.trade/foreign-trade-assistant && pip install -e "."
+
+# 4. 启动
+install-trade-skills
+python server.py
+# → 浏览器打开 http://127.0.0.1:9119/trade
+```
+
+---
+
 ## 15 项专业能力
 
 | 场景 | 能力 |
@@ -58,47 +220,6 @@ layout: default
 | 定时任务 | 工作日自动化：早报/开发信/社媒/每日总结 |
 | 对话记录 | 按公司隔离的聊天记忆，支持搜索/回溯 |
 | Skill 生成器 | 用自然语言描述需求，自动生成新 skill 并注册到系统 |
-
----
-
-## <a id="quick-start"></a>3 分钟上手
-
-### 一键脚本（推荐）
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
-```
-
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 15 个 skills → 数据库初始化。
-
-> 如果你想先审查脚本：
-> ```bash
-> curl -fsSLO https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh
-> less install.sh       # 审查后
-> bash install.sh
-> ```
-
-### 手动安装
-
-**前置条件**：Python >= 3.11 · Git · LLM API Key（DeepSeek / OpenAI / Anthropic 等）
-
-```bash
-# 1. 安装 Hermes Agent（AI 引擎）
-git clone --branch main https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
-cd ~/.hermes/hermes-agent && pip install -e "."
-
-# 2. 配置 LLM
-hermes setup
-
-# 3. 安装 Smart Trade AI
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
-cd ~/.trade/foreign-trade-assistant && pip install -e "."
-
-# 4. 安装 skills 并启动
-install-trade-skills
-python server.py
-# → 浏览器打开 http://127.0.0.1:9119/trade
-```
 
 ---
 

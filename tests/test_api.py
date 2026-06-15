@@ -306,9 +306,9 @@ class TestSkillRouter:
         assert augment_query(original) == original
 
     def test_skill_registry_count(self):
-        """注册表应有 15 个 skill（14个业务 + 1个 skill-generator）。"""
+        """注册表应有 17 个 skill（16个业务 + 1个 skill-generator）。"""
         from trade.skill_registry import _SKILLS
-        assert len(_SKILLS) == 15
+        assert len(_SKILLS) == 17
 
     def test_no_duplicate_triggers(self):
         """每个 skill 的触发词不应有重复。"""

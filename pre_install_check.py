@@ -5,7 +5,7 @@ This module runs BEFORE pip install of the trade package.
 It checks:
   1. Is hermes-agent installed at all?
   2. Is the installed version compatible with trade's requirements?
-  3. If not compatible → print instructions to install from chefroger fork first.
+  3. If not compatible → print instructions to install from NousResearch/hermes-agent first.
 
 Exit codes:
   0  = compatible, proceed with trade install
@@ -26,11 +26,11 @@ import urllib.request
 # Version compatibility matrix
 # ─────────────────────────────────────────────────────────────────────────────
 
-# trade requires hermes-agent from chefroger fork at or above this version.
-# The chefroger fork diverged from NousResearch at v0.12.0.
-MIN_COMPATIBLE_VERSION = "0.12.0"
+# trade requires hermes-agent from NousResearch/hermes-agent at or above this version.
+# (Prior to v0.4.0, the chefroger/hermes-agent fork was used; now migrated to upstream.)
+MIN_COMPATIBLE_VERSION = "0.13.0"
 
-# If hermes-agent is installed from a different source (e.g. NousResearch direct),
+# If hermes-agent is installed from a different source,
 # it may be incompatible even if version number looks OK.
 # List of known-incompatible package names (PyPI releases from other sources).
 INCOMPATIBLE_SOURCES: list[str] = [
@@ -152,15 +152,15 @@ def _find_version_in_path() -> str | None:
     return None
 
 
-def is_hermes_from_chefroger() -> bool:
-    """Check if installed hermes-agent came from chefroger/hermes-agent fork.
+def is_hermes_from_official_source() -> bool:
+    """Check if installed hermes-agent came from NousResearch/hermes-agent.
 
     Since hermes-agent has no PyPI release, we check the install location:
-    - Path contains 'chefroger' → fork ✓
-    - Path contains 'NousResearch' → upstream ✗
+    - Path contains 'NousResearch' → official ✓
+    - Path contains 'chefroger' → old fork (deprecated, may be outdated) ✗
     - Anything else (homebrew, apt, etc.) → unknown, assume OK
 
-    Returns True if confirmed from fork or if not installed at all (no fork needed).
+    Returns True if confirmed from official source or if not installed at all.
     """
     import pathlib
 
@@ -171,23 +171,23 @@ def is_hermes_from_chefroger() -> bool:
         pkg = p / "hermes_agent"
         if pkg.is_dir():
             path_str = str(pkg.resolve())
-            if "chefroger" in path_str:
-                return True
             if "NousResearch" in path_str:
+                return True
+            if "chefroger" in path_str:
                 return False
     # Not found in site-packages → treat as not installed (caller decides)
     return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GitHub API — check latest chefroger release / commit
+# GitHub API — check latest NousResearch release / commit
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_latest_chefroger_version() -> str | None:
-    """Query GitHub API for the latest release tag on chefroger/hermes-agent."""
+def get_latest_official_version() -> str | None:
+    """Query GitHub API for the latest release tag on NousResearch/hermes-agent."""
     try:
         req = urllib.request.Request(
-            "https://api.github.com/repos/chefroger/hermes-agent/releases/latest",
+            "https://api.github.com/repos/NousResearch/hermes-agent/releases/latest",
             headers={"Accept": "application/vnd.github+json",
                      "User-Agent": "trade-pre-install-check/1.0"},
             timeout=10,
@@ -200,11 +200,11 @@ def get_latest_chefroger_version() -> str | None:
         return None
 
 
-def get_latest_chefroger_commit() -> str | None:
-    """Get the latest commit SHA on main branch of chefroger/hermes-agent."""
+def get_latest_official_commit() -> str | None:
+    """Get the latest commit SHA on main branch of NousResearch/hermes-agent."""
     try:
         req = urllib.request.Request(
-            "https://api.github.com/repos/chefroger/hermes-agent/commits/main",
+            "https://api.github.com/repos/NousResearch/hermes-agent/commits/main",
             headers={"Accept": "application/vnd.github+json",
                      "User-Agent": "trade-pre-install-check/1.0"},
             timeout=10,
@@ -262,13 +262,13 @@ def run_check() -> int:
         return 1
 
     print_info(f"Installed hermes-agent version: {installed_version}")
-    from_fork = is_hermes_from_chefroger()
-    print_info(f"Installed from chefroger fork: {'yes' if from_fork else 'NO (NousResearch upstream)'}")
+    from_official = is_hermes_from_official_source()
+    print_info(f"Installed from NousResearch/hermes-agent: {'yes' if from_official else 'NO (old chefroger fork)'}")
 
-    # Case 2: installed but wrong source
-    if not from_fork:
-        print_fail("hermes-agent is installed from NousResearch (wrong source).")
-        print_warn("Trade requires hermes-agent from: https://github.com/chefroger/hermes-agent")
+    # Case 2: installed but wrong source (old chefroger fork)
+    if not from_official:
+        print_fail("hermes-agent is installed from the old chefroger/hermes-agent fork (deprecated).")
+        print_warn("Trade now uses the upstream: https://github.com/NousResearch/hermes-agent")
         print()
         print_info("Please uninstall the current version first:")
         print_info("  pip uninstall hermes-agent")
@@ -277,11 +277,11 @@ def run_check() -> int:
         _print_install_instructions()
         return 2
 
-    # Case 3: installed from fork, check version compatibility
+    # Case 3: installed from official source, check version compatibility
     cmp = _compare_versions(installed_version, MIN_COMPATIBLE_VERSION)
     if cmp < 0:
         print_fail(f"hermes-agent version {installed_version} is too old.")
-        print_warn(f"Trade requires version >= {MIN_COMPATIBLE_VERSION} from chefroger fork.")
+        print_warn(f"Trade requires version >= {MIN_COMPATIBLE_VERSION} from NousResearch/hermes-agent.")
         print()
         print_info("Please upgrade:")
         print_info("  pip install --upgrade hermes-agent")
@@ -290,25 +290,25 @@ def run_check() -> int:
         _print_install_instructions_compat()
         return 2
 
-    print_ok(f"hermes-agent {installed_version} from chefroger fork — compatible.")
+    print_ok(f"hermes-agent {installed_version} from NousResearch/hermes-agent — compatible.")
     print()
     return 0
 
 
 def _print_install_instructions():
-    """Print installation instructions for chefroger/hermes-agent."""
+    """Print installation instructions for NousResearch/hermes-agent."""
     print("=" * 60)
-    print("  Install Hermes Agent (chefroger fork)")
+    print("  Install Hermes Agent")
     print("=" * 60)
     print()
     print("  Option A — One-liner (recommended):")
     print("    curl -fsSL \\")
-    print("      https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.sh \\")
+    print("      https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \\")
     print("      | bash")
     print()
     print("  Option B — Manual install:")
     print("    git clone --branch main \\")
-    print("      https://github.com/chefroger/hermes-agent.git \\")
+    print("      https://github.com/NousResearch/hermes-agent.git \\")
     print("      ~/.hermes/hermes-agent")
     print("    cd ~/.hermes/hermes-agent")
     print("    uv pip install -e .   # or: pip install -e .")
@@ -330,7 +330,7 @@ def _print_install_instructions_compat():
     print()
     print("  Or re-run the official installer:")
     print("    curl -fsSL \\")
-    print("      https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.sh \\")
+    print("      https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \\")
     print("      | bash")
     print()
     print("  Then verify:")

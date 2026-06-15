@@ -4,9 +4,11 @@
 
 ## 兼容性矩阵
 
+> **当前声明范围**：`0.13.0 <= version < 0.17.0`（定义在 `trade/bootstrap.py` 的 `_MIN_HERMES_VERSION` / `_MAX_HERMES_VERSION`）
+
 | Hermes 版本 | 兼容状态 | 测试日期 | 测试人 | 备注 |
 |------------|---------|---------|--------|------|
-| 0.12.0 | ✅ 兼容 | 2026-05-11 | — | 锁定版本。当前 Trade 基于此版本开发 |
+| 0.12.0 | ⚠️ 不再支持 | 2026-05-11 | — | 低于最低兼容版本 0.13.0，启动时拒绝 |
 | 0.13.0 | ✅ 兼容 | 2026-05-11 | AI | API 检查通过：AIAgent/MemoryProvider/load_config 均无 breaking change |
 | 0.14.0 | ✅ 兼容 | 2026-05-18 | AI | config.model 从嵌套 dict 变为扁平字符串；name_to_models 移除。已适配。 |
 | 0.15.0 | ✅ 兼容 | 2026-05-29 | AI | run_agent.py 拆分到 agent/ 但 AIAgent re-export 正常；config.model / _PROVIDER_MODELS 未变。 |

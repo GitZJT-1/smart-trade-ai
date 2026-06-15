@@ -1,7 +1,7 @@
 """
 Trade AI Assistant — Skill 注册表（纯数据模块）。
 
-包含所有 15 个 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
+包含所有 b2b-* skill 的定义：触发词、别名、输入/输出格式、注入 prompt。
 此文件仅包含数据，不包含业务逻辑。
 新增 skill 时只需在此文件追加 _SKILLS 列表即可。
 
@@ -247,6 +247,7 @@ STOP RULE（防止无效搜索）:
             "找客户", "开发客户", "客户开发", "找潜在客户", "开发信",
             "询盘", "客户跟进", "客户分析", "报价", "谈判", "成交",
             "报价单", "报价模板", "价格谈判", "报价技巧",
+            "付款方式", "付款条件", "交期", "催单", "催款",
             # 邮件主题 + 多语言
             "邮件主题", "主题行优化", "邮件标题", "邮件标题优化",
             "多语言开发信", "多语言邮件", "阿拉伯语开发信", "西班牙语开发信",
@@ -261,6 +262,8 @@ STOP RULE（防止无效搜索）:
             "lead gen", "leadgen",
             "follow up", "follow-up", "quotation", "quote", "negotiation",
             "closing", "rfq", "inquiry",
+            "payment terms", "delivery time", "lead time negotiation",
+            "price negotiation", "target price",
             # 邮件主题 + 多语言 (English)
             "subject line", "subject line optimization",
             "multi-language email", "multilingual email",
@@ -273,30 +276,33 @@ STOP RULE（防止无效搜索）:
             "有新客户吗", "怎么找客户", "客户资源", "客户名单",
             "帮我写开发信", "写一封邮件", "客户案例", "买家",
             "buyer", "purchasing manager", "procurement",
+            "帮我回复", "怎么回这封", "怎么报价", "报多少",
+            "能便宜点吗", "目标价", "怎么谈",
         ],
         "aliases": ["b2b-customer-mgmt"],
         "input_fmt": "产品/服务描述 + 目标市场/地区（可选）",
         "output_fmt": (
-            "客户分类框架（A/B/C级）+ 优先排序列表 + "
-            "个性化开发信模板（含多主题行变体）+ "
-            "多语言邮件版本（目标市场非英语时）+ "
-            "跟进时间线 + 报价策略建议"
+            "按场景输出：开发信（含3-5主题行变体）/ 询盘回复 / "
+            "报价函（含完整要素）/ 谈判话术（价格/付款/交期）/ "
+            "跟进邮件（含时间线）/ 多语言版本（非英语市场时）"
         ),
-        "augment_prompt": """你是 b2b-lead-generation 技能。当用户需要开发客户、写开发信、做客户分析、处理询盘、报价、谈判或成交时，请执行以下步骤：
+        "augment_prompt": """你是 b2b-lead-generation 技能。覆盖外贸销售从「找客户」到「成交」的完整链路，包括以下子场景：
 
-1. 加载 skill: b2b-lead-generation
-2. 根据用户需求执行对应子任务：
-   - 找客户：使用 b2b-platform/LinkedIn/海关数据等来源
-   - 写开发信：先加载 b2b-email-intel 查邮箱背景，再撰写个性化邮件
-   - 客户分析：提取客户名称/公司/地区，从对话或文档中获取信息
-   - 报价/谈判：参考 b2b-customer-mgmt 的报价单管理流程
-3. 按以下格式返回：
-   - 客户分类：高价值（A）/ 中等（B）/ 潜力（C）
-   - 具体行动建议：第一步做什么、第二步做什么
-   - 开发信/邮件模板（个性化，非通用）
-   - 跟进时间表：Day1 / Day3 / Day7 / Day14
+**开发阶段**：找客户、写开发信（邮件/LinkedIn）、客户分析
+**询盘阶段**：询盘回复（先确认规格/数量/认证再报价）、报价函生成
+**谈判阶段**：价格谈判（先问目标价）、付款方式谈判（30%定金+70%尾款）、交期谈判（提醒加急成本）
+**跟进阶段**：跟进邮件（提供额外价值非催单）、样品寄送跟进
+**成交阶段**：合同确认、PI 生成
 
-如果用户没有明确说明产品或市场，请先询问这两个关键信息。""",
+**核心规则**：
+1. 每次生成邮件/报价前，对照 SKILL.md 文末的「Quality Gate Checklist」逐项自检，不得跳过
+2. 开发信标题不超过 8 词，必须提客户的一个具体细节
+3. 报价必须含：有效期、贸易术语（Incoterms 2020）、包装方式、MOQ、付款条件
+4. 谈判时永远先问对方目标价/期望条件，再给出方案
+5. 跟进邮件必须提供新价值（市场信息/案例），不能只是 "just following up"
+6. 不确定客户语言时默认用英语；中东客户用 English + Arabic 双语
+
+如果没有明确目标产品或市场，先询问。""",
     },
     {
         "name": "b2b-document",
@@ -716,6 +722,121 @@ STOP RULE（防止无效搜索）:
         "input_fmt": "描述你需要什么功能（例如：'帮我做一个海关数据分析的skill'）",
         "output_fmt": "自动生成符合规范的 SKILL.md + 注册到 skill_registry.py + 重启服务生效",
         "augment_prompt": "",
+    },
+    {
+        "name": "b2b-trade-ops",
+        "triggers": [
+            # Chinese — 催款/催付
+            "催款", "催货款", "催尾款", "付款逾期", "催一下付款",
+            "要货款", "客户还没付款", "催账", "讨债",
+            # Chinese — 索赔
+            "索赔", "投诉", "质量投诉", "货有问题", "客户投诉",
+            "退货", "退款", "理赔", "赔偿",
+            # Chinese — 展会
+            "展会邀请", "邀请函", "广交会", "展会邀约", "参展",
+            "邀请客户来展会",
+            # Chinese — 验厂
+            "验厂", "客户要来工厂", "验厂邀请", "工厂审核", "audit",
+            "来厂考察",
+            # Chinese — 节日
+            "节日问候", "节日祝福", "发个祝福", "过节",
+            # Chinese — 样品
+            "寄样", "样品寄送", "样品跟进", "寄样品", "样品到了吗",
+            # Chinese — 物流
+            "物流", "货运", "船期", "延迟", "航线变更", "tracking",
+            "货到哪了", "查一下货",
+            # Chinese — 售后/满意度/年度
+            "售后", "收货跟进", "满意度调查", "客户反馈",
+            "年度总结", "年终", "合作回顾", "年度合作",
+            # English
+            "payment reminder", "overdue", "chase payment",
+            "claim", "complaint", "refund", "compensation",
+            "exhibition", "trade fair", "invitation",
+            "factory audit", "factory visit", "plant tour",
+            "holiday greeting", "season's greetings",
+            "sample shipping", "sample tracking",
+            "logistics", "shipping delay", "shipment update",
+            "after-sales", "satisfaction survey", "annual review",
+        ],
+        "aliases": ["b2b-customer-mgmt"],
+        "input_fmt": "场景类型 + 客户名称 + 具体信息（发票号/订单号/展会名等）",
+        "output_fmt": (
+            "按场景输出专业化邮件/通知：催款（含折中方案）/ 索赔回复 / "
+            "展会邀请 / 验厂议程 / 节日问候 / 样品跟进 / 物流更新 / "
+            "售后回访 / 满意度调查 / 年度数据总结"
+        ),
+        "augment_prompt": """你是 b2b-trade-ops 技能。覆盖外贸「成交之后」的所有运营沟通：
+
+**11 个场景**：
+1. 催款邮件 — 先问「是否有问题」再提付款
+2. 索赔处理 — 先道歉安抚再谈责任，必要时建议第三方检测
+3. 展会邀请 — 展位号+时间+客户能带走什么
+4. 验厂邀请 — 工厂地址+接待人+议程
+5. 节日问候 — 先确认客户真的过那个节，避开文化禁忌
+6. 样品寄送 — 追踪号+ETA+使用说明
+7. 二次催付 — 提供折中方案（分笔/延期/部分发货）
+8. 物流异常 — 主动提供查询链接+代理电话
+9. 售后维护 — 第7天主动问安装使用情况
+10. 满意度调查 — ≤5个选择题，承诺改进
+11. 年度合作总结 — 用数据说话（订单数/金额/准点率）
+
+**核心规则**：
+- 输出前对照 SKILL.md 文末 Quality Gate Checklist 逐项自检
+- 永远用客户的语言回复，默认英语
+- 永远专业、有温度、不卑不亢""",
+    },
+    {
+        "name": "b2b-trade-compliance",
+        "triggers": [
+            # Chinese — 文化禁忌
+            "文化禁忌", "忌讳", "这个客户那里忌讳什么", "颜色禁忌",
+            "数字禁忌", "手势禁忌", "送礼禁忌", "送礼注意",
+            # Chinese — 缩写
+            "缩写", "全称", "ETA", "ETD", "LC", "BL", "DP", "DA",
+            "外贸术语", "贸易术语缩写",
+            # Chinese — Incoterms
+            "Incoterms", "ICC", "贸易术语", "FOB", "CIF", "EXW",
+            "DDP", "DAP", "FCA", "CFR", "CPT", "CIP",
+            "贸易术语检查",
+            # Chinese — 翻译
+            "翻译二审", "母语审阅", "翻译检查", "翻译对不对",
+            "这个翻译对吗", "阿拉伯语翻译", "西班牙语翻译",
+            # Chinese — 投标
+            "投标", "招标", "标书", "bid",
+            # Chinese — 电商上架
+            "Amazon上架", "违禁词", "亚马逊合规", "跨境电商上架",
+            "上架检查", "listing检查",
+            # English
+            "cultural taboo", "cultural check", "color taboo",
+            "number taboo", "gesture taboo",
+            "incoterms", "trade terms", "FOB CIF EXW",
+            "abbreviation", "full form", "acronym",
+            "translation review", "native speaker review",
+            "tender", "bidding", "RFP",
+            "Amazon listing", "prohibited word", "compliance check",
+        ],
+        "aliases": [],
+        "input_fmt": "检查内容类型 + 目标市场/客户地区 + 需要检查的文本/文档",
+        "output_fmt": (
+            "逐条标注问题 + 修正建议：文化禁忌（颜色/数字/动物/手势/送礼）/ "
+            "缩写首次使用全称标注 / Incoterms 2020 格式检查 / "
+            "翻译二审提醒 / 投标逐条响应检查 / 电商违禁词+合规检查"
+        ),
+        "augment_prompt": """你是 b2b-trade-compliance 技能。用于**检查已有内容**的合规性和专业规范性：
+
+**6 大检查维度**：
+1. 文化禁忌 — 颜色/数字/动物/手势/送礼（按目标市场对照速查表）
+2. 缩写解释 — 所有外贸缩写（ETA/LC/BL/DP等）首次出现必须给全称
+3. ICC 术语校验 — 每个术语必须有 Incoterms 2020 + 具体地点
+4. 翻译二审 — 非英语/非母语内容建议找人审阅（提醒话术）
+5. 投标招标 — 逐条响应标书格式，不多不少，证书有效期检查
+6. 电商上架 — 目标市场违禁词、认证要求、属性筛选检查
+
+**执行方式**：
+- 接收要检查的内容 + 目标市场信息
+- 逐项检查，在发现问题的位置标注具体建议
+- 对照 SKILL.md 文末 Quality Gate Checklist 确保无遗漏
+- 不确定的项目标注「建议人工确认」而非强行判断""",
     },
 ]
 

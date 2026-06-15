@@ -8,11 +8,26 @@
 - **OSINT Phase 1 搜索决策树**：从固定 5 轮 STOP RULE 升级为状态驱动的 A/B/C/D 四分支决策，避免无效搜索浪费 token
 - **OSINT 输出格式增强**：公司概况表格新增「来源」列，新增「引用验证」章节（3 级可信度），新增「数据合规」声明
 - **b2b-doc-generation 引用来源清单**：开发信/提案生成时输出引用来源表和 4 级可信度标注
+- **list_all() 默认过滤软删除公司**：`is_active=1` 才会出现在公司选择器，已删除公司不再误显
+- **OrderCreate/Update 加 ge=0 约束**：quantity/unit_price/total_amount 不允许负数
+- **order.get_libraries 加 company_id 校验**：JOIN orders 表验证租户隔离，防跨公司读取
+- **/api/status 改用 run_in_executor**：urlopen 不再阻塞 uvicorn 事件循环（最长 5s）
+- **post_install.py 全部加 timeout**：git pull 120s / pip install 600s / schtasks/launchctl/systemctl 30s，防与 _capture_lock 联动死锁
+- **Hermes 兼容版本范围扩大**：`0.13.0 <= version < 0.17.0`（v0.16.0 已验证无 breaking change）
+- **系统升级流程重构**：`_perform_restart()` 统一重启逻辑（含 Gateway 协同 + 三层 PID 安全校验）；`/system/update` 通过 BackgroundTasks 调度重启，响应先送达前端
+- **前端重启等待机制**：`_waitForRestartAndReload()` 先等服务 DOWN 再等 UP；`_clearRuntimeCaches()` 清 viewCache + sessionStorage（保留 trade_cid）；重载带 cache-bust 参数
 
 ### Added
 - **Token 成本优化**：非首轮对话自动使用 `TRADE_SYSTEM_PROMPT_MINIMAL` 精简版 prompt（节约 ~2100 tokens/次）
 - **Skill 注入缓存**：连续使用同一 skill 时跳过完整 injection_prompt 注入（节约 ~1500 tokens/次）
 - **回滚标签**：`pre-token-optimization` 指向优化前版本，影响质量时可快速回退
+- **GitHub Pages 项目介绍页**：docs/index.md 面向零基础用户的安装指南，Windows 步骤放首位
+
+### Fixed
+- **trade-restore 在新机首次恢复时跳过 companies/ 目录**：`if companies_dst.exists()` 守卫导致空目标不复制，改为 `dirs_exist_ok=True`
+- **cron/today 空 task_time 永远判 missed**：`"" <= current_time` 恒为 True，改为 `bool(task_time) and task_time <= current_time`
+- **providers 端点 pconfig.display_name 不存在**：`ProviderConfig` 只有 `name` 属性，导致 `/models/providers` 静默失败返回空列表
+- **CI 测试兼容 fastapi 0.137**：`include_router` 改为 `_IncludedRouter` 包装，测试新增 `_flatten_routes()` 递归展开
 
 ## [0.6.1] — 2026-06-11
 

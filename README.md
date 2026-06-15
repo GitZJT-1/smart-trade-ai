@@ -106,7 +106,7 @@ Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，�
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 15 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 17 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
@@ -189,7 +189,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 15 项专业能力
+## 17 项专业能力
 
 | 场景 | 能力 | 
 |------|------|
@@ -197,7 +197,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | 社媒营销 | 生成 Facebook/Instagram/TikTok/YouTube 内容日历 |
 | LinkedIn 运营 | Profile 优化 + 内容策略 + InMail 模板 |
 | 海关数据 | 分析进出口数据，筛选高价值采购商 |
-| 客户开发 | 根据目标市场+产品生成开发信和跟进序列 |
+| 客户开发 | 根据目标市场+产品生成开发信和跟进序列，含价格/付款/交期谈判 |
 | 客户管理 | A/B/C 分级、详情面板、文档库关联 |
 | 文档分析 | 读取本地 PDF/Word/Excel/PPT，AI 自动解析 |
 | 商务文档生成 | 一键生成报价单、PI、合同（DOCX/XLSX/PPTX） |
@@ -206,6 +206,8 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | 每日简报 | 实时汇率+大宗商品+市场新闻+客户跟进提醒 |
 | 定时任务 | 工作日自动化：早报/开发信/社媒/每日总结 |
 | 对话记录 | 按公司隔离的聊天记忆，支持搜索/回溯 |
+| 履约运营 | 催款/索赔/展会/验厂/物流/售后/满意度/年度总结等 11 个场景 |
+| 贸易合规 | 文化禁忌检查/缩写规范/ICC术语/翻译二审/投标/电商上架 |
 | Skill 生成器 | 用自然语言描述需求，自动生成新 skill 并注册到系统 |
 
 ---
@@ -240,10 +242,10 @@ trade/                     B2B 业务层
 ├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
 ├── skill_router.py        Skill 自动匹配引擎
-├── skill_registry.py      15 个 skill 注册表（纯数据）
+├── skill_registry.py      17 个 skill 注册表（纯数据）
 ├── bootstrap.py            启动引导（Hermes 版本检查、env 加载、Skills 同步）
 ├── app.py                  FastAPI app factory
-└── ... + 15 个业务模块
+└── ... + 17 个业务模块
 
 skills/                    15 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
@@ -277,7 +279,11 @@ ruff check trade/ server.py  # 代码检查
 
 ### 系统升级按钮无反应
 
-如果点击「系统升级」按钮后没有反应（常见于从旧版本升级后），请按以下步骤手动操作：
+点击「系统升级」按钮后，系统会自动执行 `git pull` + `pip install` + skills 更新，完成后**自动重启服务并刷新页面**。整个过程中页面会短暂不可用（约 5-15 秒），之后自动恢复。
+
+如果升级后页面没有自动刷新，或出现异常，请手动按 `Ctrl+Shift+R`（Windows）/ `Cmd+Shift+R`（macOS）强制刷新浏览器。
+
+如果升级按钮完全无响应（常见于从极旧版本升级），请按以下步骤手动操作：
 
 **macOS：**
 

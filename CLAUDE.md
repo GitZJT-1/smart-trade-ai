@@ -23,7 +23,7 @@ python server.py --no-gateway       # skip auto-launching Hermes Gateway
 
 # Install (editable) + install B2B skills into Hermes
 pip install -e ".[dev]"
-install-trade-skills                # copy 15 skills from package to ~/.hermes/skills/
+install-trade-skills                # copy 17 skills from package to ~/.hermes/skills/
 
 # CLI entry points (from pyproject.toml console scripts)
 trade                               # shortcut for python server.py
@@ -146,7 +146,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 15 skill definitions (pure data — triggers, aliases, formats)
+        ├─ trade/skill_registry.py 17 skill definitions (pure data — triggers, aliases, formats)
         └─ trade/post_install.py Skill installation + CLI commands (update/backup)
 ```
 
@@ -181,9 +181,9 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 6. **Document libraries = filesystem directories**. Each library has a `root_path` pointing to a real directory. The AI agent uses `read_file` / `list_dir` tools to analyze files.
 
-7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 15 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
+7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 17 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
 
-   The 15 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`, `b2b-skill-generator`.
+   The 17 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`, `b2b-skill-generator`, `b2b-trade-ops`, `b2b-trade-compliance`.
 
 8. **Prompt resolution chain** (trade/prompts.py): Company identity file (~/.trade/companies/{slug}/agent_identity.md) → DB agent_identity_md field → global system.md → code fallback (TRADE_SYSTEM_PROMPT). Files are mtime-cached for performance.
 
@@ -238,7 +238,7 @@ Sync happens at three points:
 - `trade-skills-update` CLI — same GitHub fetch logic
 - UI "更新 Skills" button — calls `POST /api/trade/skills/update` (same update logic)
 
-`trade/skill_registry.py` is the **pure-data registry** of all 15 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`.
+`trade/skill_registry.py` is the **pure-data registry** of all 17 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`.
 
 ## Runtime Data Layout
 

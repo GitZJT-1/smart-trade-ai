@@ -14,7 +14,7 @@
 | contact_name | TEXT | 统一联系人 |
 | contact_email | TEXT | 统一邮箱 |
 | address | TEXT | 地址 |
-| is_active | INTEGER DEFAULT 1 | 1=激活, 0=停用 |
+| is_active | INTEGER DEFAULT 1 | 1=激活, 0=停用（软删除，`list_all()` 仅返回 `is_active=1`） |
 | created_at | TEXT | 创建时间 |
 | updated_at | TEXT | 更新时间 |
 | extra1 | TEXT (JSON) | {"industry":"", "country":"", ...} |
@@ -100,11 +100,11 @@
 | customer_id | INTEGER (FK→customers) | 关联客户 |
 | order_no | TEXT | 订单号（自定义） |
 | product_name | TEXT NOT NULL | 品名 |
-| quantity | REAL | 数量 |
+| quantity | REAL CHECK(quantity >= 0) | 数量（不允许负数） |
 | unit | TEXT | 单位（套/米/吨） |
-| unit_price | REAL | 单价 |
+| unit_price | REAL CHECK(unit_price >= 0) | 单价（不允许负数） |
 | currency | TEXT DEFAULT 'USD' | 币种 |
-| total_amount | REAL | 总金额 |
+| total_amount | REAL CHECK(total_amount >= 0) | 总金额（不允许负数） |
 | status | TEXT DEFAULT '报价中' | 报价中/已下单/已出货/已完成 |
 | delivery_date | TEXT | 交期 |
 | payment_terms | TEXT | 付款方式 |

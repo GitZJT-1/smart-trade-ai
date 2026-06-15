@@ -2,14 +2,14 @@
 # ==============================================================================
 # Hermes Agent 前置软件安装脚本 — Windows (PowerShell)
 # ==============================================================================
-# 安装 hermes-agent（chefroger fork）所需的全部前置软件。
+# 安装 hermes-agent（NousResearch/hermes-agent）所需的全部前置软件。
 # 仅安装必需的系统依赖，不包含 hermes-agent 自身。
 #
 # 使用方式（PowerShell 5.1+）：
 #   powershell -ExecutionPolicy Bypass -File install_prereqs.ps1
 #
 # 或者一键安装（curl | iex）：
-#   irm https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 #   （官方安装脚本已包含所有前置软件，以上仅作独立运行参考）
 # ==============================================================================
 
@@ -87,7 +87,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Info "  选项 C — 手动下载:"
     Write-Info "    https://git-scm.com/download/win"
     Write-Info "  选项 D — 使用 Hermes 安装器（自动下载 PortableGit）:"
-    Write-Info "    irm https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.ps1 | iex"
+    Write-Info "    irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ if (-not $pythonFound) {
     Write-Warn "Python $PythonVersion 未找到"
     Write-Info "Hermes 安装器会自动通过 uv 安装 Python，无需手动安装"
     Write-Info "（使用 Hermes 安装器安装时，会自动处理 Python）:"
-    Write-Info "  irm https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.ps1 | iex"
+    Write-Info "  irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -246,13 +246,13 @@ Write-Host "============================================================" -Foreg
 Write-Host "  前置软件检查完成" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  接下来安装 Hermes Agent（chefroger fork）:" -ForegroundColor White
+Write-Host "  接下来安装 Hermes Agent:" -ForegroundColor White
 Write-Host ""
 Write-Host "  PowerShell 一键安装（推荐）:" -ForegroundColor Cyan
-Write-Host "    irm https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.ps1 | iex" -ForegroundColor Gray
+Write-Host "    irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  或者下载安装脚本后运行:" -ForegroundColor Cyan
-Write-Host "    Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.ps1' -OutFile install.ps1" -ForegroundColor Gray
+Write-Host "    Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1' -OutFile install.ps1" -ForegroundColor Gray
 Write-Host "    .\install.ps1" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  安装完成后验证 Hermes:" -ForegroundColor White

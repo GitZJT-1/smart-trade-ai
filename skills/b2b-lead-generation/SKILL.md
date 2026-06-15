@@ -90,6 +90,9 @@ injection_prompt: |
      执行后会返回 {"created": N, "skipped": N}。请告知用户保存结果。
      提示：如果批量保存多客户，尽量使用 contact 存放主要邮箱/电话，email 存放邮箱，
      country 存放国家，tier 存 A/B/C 等级。source 填 "agent"。
+
+  ## 发送前强制自检
+  每次生成任何邮件、报价、回复后，在输出给用户之前，**必须对照文末「Quality Gate Checklist」逐项检查**。这是强制步骤，不得跳过。漏掉一项意味着可能丢失客户。
 ---
 
 Subject: [Personalization — company name or recent news] + [Value prop]
@@ -559,3 +562,57 @@ Mit freundlichen Grüßen,
 7. **No clear CTA**: Always tell the prospect what to do next
 8. **Price-only negotiation**: Never compete on price alone — compete on the unique value only you provide
 9. **Skipping sample phase**: Always insist on sample approval before bulk orders
+
+## Quality Gate Checklist — 发送前 60 秒自检
+
+> 每次生成邮件/报价/回复前，对照对应场景的检查点逐条过一遍。漏掉任何一项都可能导致客户流失。
+
+### 1. 开发信 (Cold Email)
+- [ ] 是否提了客户网站/动态的一个**具体细节**？（不能是泛泛的 "I saw your website"）
+- [ ] 标题是否**不超过 8 个词**？（移动端 5-7 词预览）
+- [ ] 是否 60% 讲客户痛点 + 25% 硬实力 + 15% CTA？
+- [ ] 是否提供了 3-5 个主题行变体（策略 A/B/C/D）？
+
+### 2. 询盘回复 (Inquiry Reply)
+- [ ] 是否**先确认客户需求**（规格、数量、认证）再报价？
+- [ ] 是否问了至少 2 个澄清问题？
+- [ ] 是否在 30 分钟内回复？（标注回复时效期望）
+- [ ] 是否附上了产品目录 / 报价单 / 规格书？
+
+### 3. 报价函 (Quotation)
+- [ ] 是否写明了**有效期**（Validity: X days）？
+- [ ] 是否写明了**贸易术语**（FOB/CIF/EXW）+ 具体地点？
+- [ ] 是否写明了**包装方式**（carton/pallet/wooden case）？
+- [ ] 是否写明了**最小起订量**（MOQ）？
+- [ ] 是否写明了**付款条件**（T/T 30/70, L/C at sight 等）？
+- [ ] 报价单号是否唯一可追溯？
+
+### 4. 跟进邮件 (Follow-Up)
+- [ ] 是否提供了**额外价值**（市场信息/类似案例/行业新闻）而非仅仅催单？
+- [ ] Day 3：是否只是轻提醒 ("making sure it didn't get buried")？
+- [ ] Day 7：是否换了角度切入（LinkedIn / 提问）？
+- [ ] Day 14：是否提供了新信息而非重复第一封？
+- [ ] Day 30：是否有明确的 "break-up" 收尾？
+
+### 5. 价格谈判 (Price Negotiation)
+- [ ] 是否**先问了"您的目标价是多少"**再降价？
+- [ ] 是否用差异化价值（认证/交期/售后）而非单纯降价比价？
+- [ ] 如果必须降价，是否同步**缩小了服务范围**（如 MOQ 提高 / 交期延长）？
+- [ ] 是否给出了 3 步谈判框架（Reframe → Value Breakdown → Win-Win）？
+
+### 6. 付款方式谈判 (Payment Terms)
+- [ ] 是否提出 **"30% 定金 + 70% 尾款见提单副本"** 作为折中方案？
+- [ ] 是否解释了为什么需要这个付款条件（备料成本/定制程度）？
+- [ ] 对于大单（>$50K），是否建议了 L/C at sight？
+- [ ] 对于老客户，是否给了更灵活的台阶（如 "这次破例，下次恢复标准"）？
+
+### 7. 交期谈判 (Delivery Time)
+- [ ] 是否提前告知了加急成本（**"加急需增加约 5% 空运费"**）？
+- [ ] 是否给了客户选择权（空运 X 天 vs 海运 Y 天 + 价差）？
+- [ ] 是否解释了交期的构成（备料 N 天 + 生产 M 天 + 检测 P 天）？
+
+### 8. 样品寄送 (Sample Shipping)
+- [ ] 是否告知了**追踪号**（Tracking Number）？
+- [ ] 是否告知了**预计到达日**（ETA）？
+- [ ] 是否附上了**样品使用说明**或检测要点？
+- [ ] 是否在预计到达日当天/次日跟进确认收货？

@@ -2,7 +2,7 @@
 # ==============================================================================
 # Hermes Agent 前置软件安装脚本 — macOS / Linux / Termux
 # ==============================================================================
-# 安装 hermes-agent（chefroger fork）所需的全部前置软件。
+# 安装 hermes-agent（NousResearch/hermes-agent）所需的全部前置软件。
 # 仅安装必需的系统依赖，不包含 hermes-agent 自身（由 hermes install.sh 处理）。
 #
 # 使用方式：
@@ -229,15 +229,15 @@ show_summary() {
     echo "  前置软件检查完成"
     echo "============================================================"
     echo ""
-    echo "  接下来安装 Hermes Agent（chefroger fork）："
+    echo "  接下来安装 Hermes Agent："
     echo ""
     echo "  curl -fsSL \\"
-    echo "    https://raw.githubusercontent.com/chefroger/hermes-agent/main/scripts/install.sh \\"
+    echo "    https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \\"
     echo "    | bash"
     echo ""
     echo "  或者手动克隆:"
     echo "    git clone --branch main \\"
-    echo "      https://github.com/chefroger/hermes-agent.git \\"
+    echo "      https://github.com/NousResearch/hermes-agent.git \\"
     echo "      ~/.hermes/hermes-agent"
     echo "    cd ~/.hermes/hermes-agent"
     echo "    uv pip install -e ."

@@ -48,196 +48,253 @@ layout: default
 
 ## <a id="windows-install"></a>Windows 电脑安装教程
 
-> 如果你是 Windows 电脑，看这一节就够了。整个过程大约 10 分钟，不需要任何电脑知识，跟着做就行。
+> 整个过程大约 10 分钟。你不需要懂任何电脑技术，只要会下载安装软件、会复制粘贴文字就行。
+
+---
 
 ### 第一步：安装 Python（只需做一次）
 
-这个工具是用 Python 语言写的，所以你的电脑需要能"读懂" Python。就像要看 PDF 需要装 Adobe Reader 一样，要运行这个工具需要装 Python。
+这个工具是用 Python 语言写的，你的电脑需要先装一个 Python 才能运行它。就像你要看 PDF 文件得先装一个 PDF 阅读器一样。
 
-**怎么装：**
+**操作步骤：**
 
-1. 打开浏览器，访问 [python.org](https://www.python.org/downloads/)
-2. 页面会自动识别你是 Windows，点击黄色的大按钮下载
-3. 下载完成后，双击打开安装文件
-4. **重要：第一个界面底部有一个勾选框「Add Python to PATH」，一定要打勾！**（不打勾的话后面没法用）
-5. 打勾后，点击「Install Now」按钮
-6. 等待进度条跑完，显示「Setup was successful」就装好了
+1. 打开浏览器（就是上网用的那个程序），在地址栏输入 **python.org/downloads** 然后回车
+2. 页面会自动识别你是 Windows 电脑，点击页面上那个 **黄色的大按钮** 开始下载
+3. 下载完后，**双击**打开刚才下载的那个文件（一般在浏览器左下角能点开）
+4. 安装窗口打开后，**先看窗口最下面**——有一个小方框写着「**Add Python to PATH**」，**一定要打勾！** 这一步最容易忘记，忘了后面整个装不了
+5. 打勾之后，点击上面的「**Install Now**」按钮
+6. 等进度条跑完，出现「Setup was successful」就装好了，关掉安装窗口
 
-> 如果已经装过 Python，可以跳过这一步。
+> 如果你以前已经装过 Python，这一步可以跳过。
+
+---
 
 ### 第二步：打开 PowerShell
 
-接下来的安装操作都在一个叫 **PowerShell** 的窗口里进行。它是 Windows 自带的，不用额外安装，就是一个输入文字然后电脑帮你干活的东西。你不用理解它，**只需要把命令复制进去，按回车就行**。
+接下来的安装步骤需要在 **PowerShell** 里操作。你可能在电视剧里见过黑客在黑屏幕上敲代码——PowerShell 就是那样的一个窗口。不过别紧张，你不需要自己写代码，只要**把我给你的命令复制进去、按回车就行**。
 
-**怎么打开：**
+**怎么找到 PowerShell：**
 
-1. 按键盘上的 **Win 键**（键盘左下角，四个方块那个图标），然后直接打字：`powershell`
-2. 搜索结果里会出现一个蓝色图标的「Windows PowerShell」，点它打开
-3. 你会看到一个**蓝底白字**（或黑底白字）的窗口，这就是 PowerShell
+1. 看你的键盘，**左下角有一个 Windows 图标的键**（四个方块组成的那个，叫 Win 键），按一下它
+2. 这时候屏幕上会弹出一个搜索框，**直接打字**输入：`powershell`
+3. 搜索结果里会出现一个图标是**蓝色**的、名字叫「**Windows PowerShell**」的程序，**点击它**
+4. 屏幕上会弹出一个**蓝色背景**（也可能是黑色背景）的窗口，里面有一些白色文字和一个闪烁的光标——这就是 PowerShell 了
 
-> 下文所有灰底绿字的内容，都是你需要**完整复制**到 PowerShell 窗口里、然后**按回车**执行的命令。在 PowerShell 里粘贴是**点右键**（不是 Ctrl+V）。
+> **两个小提示：**
+> - 在 PowerShell 里**粘贴文字的方法**和平时不一样：不是按 Ctrl+V，而是**在窗口里点一下鼠标右键**，刚才复制的内容就会粘上去
+> - 下面出现的所有 `灰底文字`，都是你需要复制到 PowerShell 里执行的命令
 
-### 第三步：开启长路径支持（只做一次，做过的跳过）
+---
 
-Windows 默认不允许文件路径太长，但这个工具的文件路径比较长，需要提前放开限制。
+### 第三步：开启长路径支持（只做一次，以前做过的跳过）
 
-1. 按 **Win 键**，输入 `powershell`
-2. 搜索结果里，**右键点击**「Windows PowerShell」，选择「**以管理员身份运行**」
-3. 在弹出的确认框点「是」
-4. 把下面这行命令**完整复制**，在 PowerShell 窗口里**右键粘贴**，按回车：
+Windows 系统有一个默认设置，不允许文件路径太长。但这个工具安装时会产生比较长的路径，如果不改这个设置，后面安装会报错。我们只需要改一次，改完就不用管了。
+
+**操作步骤：**
+
+1. 按键盘上的 **Win 键**，输入 `powershell`
+2. 这一次不要直接点开，而是**用鼠标右键点击**搜索结果里的「Windows PowerShell」
+3. 在弹出的菜单里点「**以管理员身份运行**」
+4. 弹出一个提示问"是否允许此应用对设备进行更改"，点「**是**」
+5. 这时打开的 PowerShell 窗口标题栏会写着「**管理员**」——说明你成功以管理员身份打开了
+6. 把下面这行命令**完整复制**（从 New 一直复制到 Force），在 PowerShell 窗口里**点右键粘贴**，然后**按回车**：
 
 ```
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 ```
 
-5. 看到执行完没有报错就 OK 了
-6. **重启电脑**让设置生效
+7. 没有出现红色报错就说明成功了，**关掉这个管理员窗口**
+8. **重启电脑**让设置生效
 
-> 这一步只需要做一次，以后永远不用再管。
+> 这一步一辈子只需要做一次。重启电脑后继续下一步。
 
-### 第四步：安装 Hermes Agent（底层 AI 引擎）
+---
 
-这个工具依赖一个叫 Hermes Agent 的基础程序。Hermes Agent 就像是汽车的发动机，我们的工具是车身——得先有发动机才行。
+### 第四步：安装 Hermes Agent
 
-把下面这行命令**完整复制**到 PowerShell 窗口，按回车：
+这个工具背后需要一个叫 Hermes Agent 的程序来驱动 AI 功能。你可以把它理解为"发动机"——我们的工具是车身，得先有发动机才能跑。
+
+1. 打开 PowerShell（这次用**普通方式**打开就行，不需要管理员）
+2. 把下面这行命令**完整复制**，在 PowerShell 里**点右键粘贴**，按回车：
 
 ```
 irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 ```
 
-> 安装过程中会下载一些文件，需要几分钟。看到「安装完成」或「Installation complete」就说明好了。
+3. 等待几分钟，它会自动下载和安装需要的文件
+4. 看到提示「安装完成」或「Installation complete」就说明好了
+
+> 如果等了很久都没反应或者报错了，多半是网络问题——参考页面底部的「常见问题」。
+
+---
 
 ### 第五步：安装 Smart Trade AI
 
-发动机有了，现在装车身。
+发动机装好了，现在装车身。
 
-把下面这 4 行命令**一行一行**地复制到 PowerShell、按回车。等每一行跑完（光标重新闪烁）再复制下一行：
+把下面 4 行命令**一行一行**地复制到 PowerShell 里执行。方法是：复制第一行 → 在 PowerShell 里右键粘贴 → 按回车 → 等它跑完 → 再复制第二行……以此类推。
 
 ```
 git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
+```
 
+```
 cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
+```
 
+```
 pip install -e "."
+```
 
+```
 install-trade-skills
 ```
 
-> 如果中间出现红色的报错文字，不要慌。大多数情况是网络不好没下载完整。把报错的那行重新复制执行一次就行。
+> 每一行都要等它跑完再执行下一行。如果中间某一行出现红色报错，不要慌，大多数是网络不好——重新复制那一行再执行一次。
+
+---
 
 ### 第六步：获取 API Key
 
-这个工具靠 AI 大模型来回答问题，你需要去模型厂商那里注册一个账号，获取一串 **API Key**（可以理解为一串密码，用来证明你有权限使用这个 AI）。
+这个工具需要连接 AI 大模型才能工作。AI 不是免费的，你需要去 AI 厂商那里注册一个账号、获取一个 **API Key**。
 
-**推荐用 DeepSeek，目前性价比最高：**
+API Key 是一串很长的字母和数字，就像一个密码，用来证明你有权限使用这个 AI 服务。
 
-1. 打开浏览器，访问 [platform.deepseek.com](https://platform.deepseek.com)
-2. 用手机号注册账号
-3. 登录后点「充值」，充个 10 块钱就够用很久了
-4. 在左侧菜单找到「API Keys」，点「创建 API Key」
-5. 把生成的那串字符**复制保存好**（只显示一次，关了就看不到了）
+**推荐用 DeepSeek（国产，便宜好用）：**
 
-拿到了 API Key 之后，回到 PowerShell 窗口，输入：
+1. 打开浏览器，访问 **platform.deepseek.com**
+2. 用手机号注册一个账号
+3. 登录之后，点页面上的「**充值**」，充 10 块钱就够了（按用量扣费，10 块钱能用很久）
+4. 在页面左侧找到「**API Keys**」，点进去，再点「**创建 API Key**」
+5. 页面上会显示一串字符——这就是你的 API Key。**立刻把它复制保存下来**（比如粘贴到记事本里），因为它只显示这一次，关了就看不到了
+
+拿到 API Key 之后，回到 PowerShell 窗口，输入下面这个命令然后回车：
 
 ```
 hermes setup
 ```
 
-会出来一个选择界面，用键盘上下箭头选 DeepSeek，回车。把刚才复制的 API Key **右键粘贴**进去，回车。
+这时会出现一个交互界面，操作方法：
+1. 用键盘的 **上下方向键** 选择「**DeepSeek**」，选中后**按回车**
+2. 它会问你要 API Key——把刚才保存的那串字符**右键粘贴**进去，按回车
+3. 看到「配置成功」之类的提示就完成了
 
-> 还建议顺便注册 [Tavily](https://tavily.com)（免费，不用充值），用于搜索客户信息。同样在 `hermes setup` 里配置。
+> 还建议顺手注册一个 [Tavily](https://tavily.com)（免费的，不用充值），它能让工具搜索实时信息。注册后同样在 `hermes setup` 里配置，选 Tavily 那一项，粘贴 Key。
+
+---
 
 ### 第七步：启动！
 
-一切都准备好了。在PowerShell 窗口输入：
+全部装好了，现在来运行它。在 PowerShell 里输入：
 
 ```
 python server.py
 ```
 
-回车后看到「Uvicorn running on http://127.0.0.1:9119」就说明启动成功了。
+按回车。等待几秒，看到窗口里出现 **「Uvicorn running on http://127.0.0.1:9119」** 这行字，就说明启动成功了。
 
-打开浏览器，在地址栏输入 **http://127.0.0.1:9119/trade**，回车，你就能看到界面了。
+然后打开浏览器，在地址栏输入：**http://127.0.0.1:9119/trade** ，按回车，你就能看到界面了。
 
-> 每次想用的时候，都要先打开 PowerShell，输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant`，回车；再输入 `python server.py`，回车。然后打开浏览器访问上面那个地址。关掉 PowerShell 窗口，程序就停了。
+> **以后每次要用的时侯：** 打开 PowerShell → 输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant` 回车 → 输入 `python server.py` 回车 → 打开浏览器访问上面的地址。**关掉 PowerShell 窗口，程序就会停止**，所以使用期间不要关那个窗口。
+
+---
 
 ### 让电脑每次开机自动启动（可选）
 
-如果你不想每次手动打开，可以在安装完成后，输入下面两行命令（一行一行执行）：
+如果你不想每次都手动打开 PowerShell 输入命令，可以生成一个 exe 程序，以后双击就能运行：
+
+在 PowerShell 里依次执行这两行（一行一行来）：
 
 ```
 pip install pyinstaller
-
-powershell -File scripts/build.ps1
 ```
 
-完成后会在 `dist` 文件夹里生成一个 `Smart Trade AI.exe`，双击就能运行，不需要打开 PowerShell。可以把它拖到桌面。
+```
+powershell -File scripts\build.ps1
+```
+
+等它跑完后，在安装目录下的 `dist` 文件夹里会出现一个 **Smart Trade AI.exe**。你可以把它**拖到桌面上**，以后双击这个图标就能启动，不需要再打开 PowerShell。
+
+---
 
 ### 安装中可能遇到的问题
 
-| 你看到的 | 是什么意思 | 怎么办 |
-|---------|-----------|--------|
-| "不是内部或外部命令" | 说明 Python 没装好，或者装的时候没勾那个勾 | 回到第一步重新装 Python，**一定要勾选 Add Python to PATH** |
-| 下载到一半卡住了 | 网络访问 GitHub 不稳定 | 你需要开 VPN（翻墙工具）的全局模式。如果不会用 VPN，可以找身边懂电脑的朋友帮忙。开了 VPN 后重试出错的命令 |
-| 红色报错一大堆 | 通常是网络问题导致没下载完整 | 把报错那行命令重新执行一次。如果反复失败，确保 VPN 开着 |
-| 打开网页显示「无法访问」 | 程序没启动成功 | 回到 PowerShell 窗口看看有没有报错。如果关了，重新打开 PowerShell，重新执行第七步 |
-| 页面显示乱掉或按钮点不动 | 浏览器缓存了旧文件 | 按键盘上的 **Ctrl + Shift + R** 三个键一起按，强制刷新页面 |
+| 你看到的现象 | 可能的原因 | 怎么解决 |
+|------------|-----------|---------|
+| 输入 python 后提示「不是内部或外部命令」 | 安装 Python 时忘记勾选「Add Python to PATH」 | 回到第一步重新安装 Python，**一定要勾选那个框**。装完后关闭 PowerShell 重新打开再试 |
+| 安装到一半卡住不动了 | 你的网络访问 GitHub 不稳定 | 你需要开 **VPN**（就是翻墙工具），开到**全局模式**。开好之后关掉 PowerShell 重新打开，重新执行卡住的那行命令 |
+| 出现一大堆红色文字 | 大多是网络不好，没下载完整 | 把报错的那行命令重新复制执行一次。反复报错就确认 VPN 是否开好了 |
+| 浏览器打开显示「无法访问此网站」 | 程序没有在运行 | 回到 PowerShell 看看是不是关掉了或者报错了。如果关了就重新打开 PowerShell，重新执行 `python server.py` |
+| 页面打开了但是显示不正常、按钮点不动 | 浏览器缓存了旧版本的文件 | 同时按下键盘的 **Ctrl + Shift + R** 三个键，页面会强制刷新 |
+| 提示「Filename too long」 | 第三步的长路径设置没生效 | 确认第三步已经做过，并且**重启过电脑**。如果还没重启，先重启再来 |
 
 ---
 
 ## 苹果电脑（Mac）安装教程
 
-### 第一步：打开"终端"
+### 打开终端
 
-Mac 上的命令行叫「终端」。
+Mac 上的操作窗口叫「**终端**」，和 Windows 的 PowerShell 类似。
 
-在桌面右上角点放大镜图标（Spotlight），输入 `终端`，回车打开。
+**怎么打开：** 在桌面右上角点**放大镜图标**（或者同时按 Command + 空格键），输入 `终端` 两个字，按回车，就打开了。
 
-### 第二步：一键安装
+### 一键安装
 
-把下面这行命令复制到终端窗口，按回车：
+在终端里复制粘贴下面这行命令，按回车：
 
 ```
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成所有安装。看到安装完成的提示后，执行：
+等它自动安装完，然后配置 AI：
 
 ```
 hermes setup
 ```
 
-按提示选择模型厂商、填入 API Key（和上面 Windows 第六步一样）。
+按提示选择 DeepSeek，粘贴 API Key（和上面 Windows 第六步的操作一样）。
 
-然后启动：
+最后启动：
 
 ```
 python server.py
 ```
 
-浏览器打开 http://127.0.0.1:9119/trade 。
+浏览器打开 **http://127.0.0.1:9119/trade** 。
 
-### 手动安装（如果一键脚本失败）
+### 手动安装（一键脚本失败时用）
 
-把下面每一行依次复制到终端执行：
+在终端里依次执行以下每一行：
 
 ```
 git clone --branch main https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
+```
 
+```
 cd ~/.hermes/hermes-agent && pip install -e "."
+```
 
+```
 hermes setup
+```
 
+```
 git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
+```
 
+```
 cd ~/.trade/foreign-trade-assistant && pip install -e "."
+```
 
+```
 install-trade-skills
+```
 
+```
 python server.py
 ```
 
-> Mac 用户如果遇到 `git clone` 超时，同样需要开 VPN 全局模式。
+> Mac 如果遇到下载超时，同样需要开 VPN 全局模式。
 
 ---
 

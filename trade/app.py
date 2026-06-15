@@ -154,7 +154,10 @@ def _kill_gateway() -> None:
 
 
 def _perform_restart() -> None:
-    """终止当前 Trade 进程并以独立子进程启动新实例（含三层 PID 安全校验）。
+    """终止当前 Trade 进程并以独立子进程启动新实例。
+
+    关键设计：先启动新进程，再杀旧进程——避免 SIGTERM 杀掉自己后 Popen 执行不到。
+    新进程启动后会自动重试绑定端口（uvicorn 的 SO_REUSEADDR），等旧进程退出后即可接管。
 
     供 /system/restart 直接调用，也供 /system/update 在响应返回后通过
     BackgroundTasks 触发——这样升级完成的响应能先送达前端。
@@ -174,14 +177,26 @@ def _perform_restart() -> None:
     # 在杀自己之前必须先记录启动命令，否则 kill 后访问不到
     _restart_cmd = [_sys.executable] + _sys.argv
 
-    # 先杀 Gateway（独立进程，新 Trade 启动时会重新拉起）
+    # 1. 先杀 Gateway（独立进程，新 Trade 启动时会重新拉起）
     _kill_gateway()
 
+    # 2. 先启动新进程（在杀旧进程之前！），新进程的 uvicorn 会重试绑定端口
+    _popen_kwargs = {
+        "stdout": _sp.DEVNULL,
+        "stderr": _sp.DEVNULL,
+    }
+    if os.name == "nt":
+        _popen_kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+    else:
+        _popen_kwargs["start_new_session"] = True
+    _sp.Popen(_restart_cmd, **_popen_kwargs)
+
+    # 3. 再杀旧进程（新进程已经启动，不怕这里被 SIGTERM 打断）
     if old_pid is not None:
         # 三层 PID 校验：psutil 优先，回退 /proc，防止 PID 重用误杀
         # 第三层：以上皆不可用（如 macOS 既无 psutil 也无 /proc），信任自己的 PID 文件
         is_trade = False
-        _verified = False  # 是否通过了校验（vs 盲信 PID 文件）
+        _verified = False
         try:
             import psutil
             proc = psutil.Process(old_pid)
@@ -218,36 +233,10 @@ def _perform_restart() -> None:
                 os.kill(old_pid, _signal.SIGTERM)
             except OSError:
                 pass  # 进程已不存在
-            # 等待旧进程释放端口，确保新进程能成功 bind
-            import time as _time
-            for _ in range(30):  # 最多等 3 秒
-                try:
-                    os.kill(old_pid, 0)
-                except OSError:
-                    break  # 进程已退出
-                _time.sleep(0.1)
-            else:
-                # 进程仍在运行，强制 kill
-                try:
-                    os.kill(old_pid, _signal.SIGKILL)
-                except OSError:
-                    pass
-                _time.sleep(0.5)  # 给 OS 一点时间回收端口
         try:
             pid_file.unlink(missing_ok=True)
         except Exception:
             pass
-
-    # 用独立会话启动新实例，等当前 uvicorn 释放端口后由它接管
-    _popen_kwargs = {
-        "stdout": _sp.DEVNULL,
-        "stderr": _sp.DEVNULL,
-    }
-    if os.name == "nt":
-        _popen_kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
-    else:
-        _popen_kwargs["start_new_session"] = True
-    _sp.Popen(_restart_cmd, **_popen_kwargs)
 
 
 # ── System endpoints (无需 session token) ────────────────────────────────────
@@ -273,9 +262,10 @@ def _create_system_router() -> APIRouter:
         result = _capture_output(_do_update)
         output = result.get("output", "")
 
-        # 检测 update_trade 输出中的失败标记
+        # 检测 update_trade 输出中的致命失败标记（⚠️ 不纳入——模板同步/自启动失败不影响升级）
         _failed = any(marker in output for marker in [
-            "❌", "update failed", "git pull failed",
+            "❌", "update failed", "git pull failed", "pip install failed",
+            "git stash 也失败", "Database check failed",
         ])
 
         if result.get("ok") and not _failed:
@@ -460,4 +450,17 @@ def main() -> None:
         import webbrowser
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    # 重启场景：旧进程可能仍在占用端口，uvicorn.run 会因 [Errno 48] 失败。
+    # 用重试循环等待旧进程退出后端口释放，最多等 10 秒。
+    import time as _time
+    for _attempt in range(20):
+        try:
+            uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+            break
+        except OSError as _e:
+            if "Address already in use" in str(_e) or _e.errno == 48:
+                if _attempt == 0:
+                    print("  ⏳ 等待旧进程释放端口...")
+                _time.sleep(0.5)
+                continue
+            raise

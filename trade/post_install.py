@@ -563,7 +563,7 @@ def _ensure_auto_start(trade_dir: Path) -> None:
         task_name = "SmartTradeAI"
         check = subprocess.run(
             ["schtasks", "/query", "/tn", task_name],
-            capture_output=True, text=True,
+            capture_output=True, text=True, timeout=30,
         )
         if check.returncode == 0:
             print("  ✓ 开机自启动任务已存在")
@@ -579,7 +579,7 @@ def _ensure_auto_start(trade_dir: Path) -> None:
                 "/rl", "limited",
                 "/f",
             ],
-            capture_output=True, text=True,
+            capture_output=True, text=True, timeout=30,
         )
         if result.returncode == 0:
             print("  ✓ 已设置开机自启动")
@@ -617,7 +617,7 @@ def _ensure_auto_start(trade_dir: Path) -> None:
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_file.write_text(plist_content, encoding="utf-8")
         subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist_file)],
-                       capture_output=True)
+                       capture_output=True, timeout=30)
         print("  ✓ 已设置开机自启动")
 
     elif sys.platform == "linux":
@@ -647,9 +647,9 @@ def _ensure_auto_start(trade_dir: Path) -> None:
         """)
         unit_dir.mkdir(parents=True, exist_ok=True)
         unit_file.write_text(unit_content, encoding="utf-8")
-        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
-        subprocess.run(["systemctl", "--user", "enable", "trade.service"], capture_output=True)
-        subprocess.run(["systemctl", "--user", "start", "trade.service"], capture_output=True)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True, timeout=30)
+        subprocess.run(["systemctl", "--user", "enable", "trade.service"], capture_output=True, timeout=30)
+        subprocess.run(["systemctl", "--user", "start", "trade.service"], capture_output=True, timeout=30)
         print("  ✓ 已设置开机自启动")
 
 
@@ -685,9 +685,10 @@ def update_trade() -> None:
 
     # 1. git pull — 拉取最新代码
     print("→ Step 1/7: git pull ...")
+    # timeout 防止网络挂起时整个 update 流程永久阻塞（与 _capture_lock 联动会卡住所有 system 接口）
     result = subprocess.run(
         ["git", "pull", "--ff-only", "origin", "main"],
-        cwd=str(trade_dir), capture_output=True, text=True,
+        cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
     )
     if result.returncode != 0:
         err_text = result.stderr.strip()
@@ -697,19 +698,19 @@ def update_trade() -> None:
             # 自动 stash + pull + pop，降低用户操作门槛
             _stash = subprocess.run(
                 ["git", "stash"],
-                cwd=str(trade_dir), capture_output=True, text=True,
+                cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
             )
             if _stash.returncode == 0:
                 _pull2 = subprocess.run(
                     ["git", "pull", "--ff-only", "origin", "main"],
-                    cwd=str(trade_dir), capture_output=True, text=True,
+                    cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
                 )
                 if _pull2.returncode == 0:
                     print(f"  ✓ git pull (after stash) — {_pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else 'OK'}")
                     # 尝试恢复用户本地修改
                     _pop = subprocess.run(
                         ["git", "stash", "pop"],
-                        cwd=str(trade_dir), capture_output=True, text=True,
+                        cwd=str(trade_dir), capture_output=True, text=True, timeout=30,
                     )
                     if _pop.returncode == 0:
                         print("  ✓ 本地修改已恢复")
@@ -746,7 +747,8 @@ def update_trade() -> None:
     # 4. pip install — 更新包及依赖（包含依赖以确保新版本需求被满足）
     print("→ Step 4/7: pip install ...")
     pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir)]
-    result = subprocess.run(pip_args, capture_output=True, text=True)
+    # timeout=600 给依赖解析+下载留充裕时间，但避免 PyPI 挂起永久阻塞
+    result = subprocess.run(pip_args, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
         print(f"  ⚠ pip install failed: {result.stderr.strip()}")
         ok = False
@@ -988,9 +990,11 @@ def restore_trade(backup_file: str = "") -> str:
     # 替换 companies 目录（如果备份中有）
     restored_companies = tmp_dir / "companies"
     if restored_companies.exists():
+        # 目标目录不存在时（新机首次 restore）也要创建并复制，
+        # 之前的 if companies_dst.exists() 守卫导致新机恢复永远跳过 companies 数据。
         companies_dst = trade_home / "companies"
-        if companies_dst.exists():
-            _shutil.copytree(str(restored_companies), str(companies_dst), dirs_exist_ok=True)
+        companies_dst.mkdir(parents=True, exist_ok=True)
+        _shutil.copytree(str(restored_companies), str(companies_dst), dirs_exist_ok=True)
 
     _shutil.rmtree(tmp_dir, ignore_errors=True)
 

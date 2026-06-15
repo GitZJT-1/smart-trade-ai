@@ -268,19 +268,25 @@ def create_app() -> FastAPI:
             pass
 
         # 从 GitHub 查最新版本（后端不受浏览器限流影响）
-        latest = ""
-        try:
+        # 用 run_in_executor 把阻塞 urlopen 丢到线程池，避免卡死 uvicorn 主 event loop。
+        # 否则在网络抖动时整个 SSE 事件投递、其他 async 端点都会被阻塞最长 5s。
+        import asyncio as _asyncio
+
+        def _fetch_latest_version() -> str:
             import urllib.request as _ur
-            _req = _ur.Request(
-                "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
-                headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
-            )
-            with _ur.urlopen(_req, timeout=5) as _resp:
-                import json as _json
-                _data = _json.loads(_resp.read().decode())
-                latest = _data.get("tag_name", "").lstrip("v")
-        except Exception:
-            pass
+            try:
+                _req = _ur.Request(
+                    "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
+                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
+                )
+                with _ur.urlopen(_req, timeout=5) as _resp:
+                    import json as _json
+                    _data = _json.loads(_resp.read().decode())
+                    return _data.get("tag_name", "").lstrip("v")
+            except Exception:
+                return ""
+
+        latest = await _asyncio.get_event_loop().run_in_executor(None, _fetch_latest_version)
 
         return {
             "status": "ok",

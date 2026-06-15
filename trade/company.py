@@ -136,18 +136,27 @@ def _rename_template_placeholders(base: Path, slug: str) -> None:
 # companies 表操作
 # ─────────────────────────────────────────────────────────────────────────────
 
-def list_all() -> list[dict]:
-    """返回所有公司列表（脱敏版），按名称排序。
+def list_all(include_inactive: bool = False) -> list[dict]:
+    """返回未软删除的公司列表（脱敏版），按名称排序。
 
     仅返回 id/name/slug/is_active，隐藏 contact_email/address 等 PII。
     详情端 get() 仍返回完整字段供公司内部使用。
+
+    Args:
+        include_inactive: True 时包含软删除（is_active=0）的公司，默认仅活跃公司。
     """
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT id, name, slug, is_active "
-            "FROM companies ORDER BY name"
-        ).fetchall()
+        # 默认仅返回活跃公司，避免软删除（delete() 设置 is_active=0）公司继续出现在选择器
+        if include_inactive:
+            sql = "SELECT id, name, slug, is_active FROM companies ORDER BY name"
+            rows = conn.execute(sql).fetchall()
+        else:
+            sql = (
+                "SELECT id, name, slug, is_active FROM companies "
+                "WHERE is_active = 1 ORDER BY name"
+            )
+            rows = conn.execute(sql).fetchall()
         return [{"id": r["id"], "name": r["name"], "slug": r["slug"],
                  "is_active": bool(r["is_active"])} for r in rows]
     finally:

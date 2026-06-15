@@ -213,13 +213,19 @@ def unlink_library(order_id: int, library_id: int, *, company_id: int | None = N
         conn.close()
 
 
-def get_libraries(order_id: int) -> list[dict]:
-    """获取订单关联的文档库列表。"""
+def get_libraries(order_id: int, company_id: int) -> list[dict]:
+    """获取订单关联的文档库列表（按公司隔离）。
+
+    通过 JOIN orders 校验 order 归属 company_id，防止跨租户拉取他公司订单的库列表。
+    """
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT l.* FROM libraries l JOIN order_libraries ol ON ol.library_id = l.id "
-            "WHERE ol.order_id = ?", (order_id,),
+            "SELECT l.* FROM libraries l "
+            "JOIN order_libraries ol ON ol.library_id = l.id "
+            "JOIN orders o ON o.id = ol.order_id "
+            "WHERE ol.order_id = ? AND o.company_id = ?",
+            (order_id, company_id),
         ).fetchall()
         return [dict(r) for r in rows]
     finally:

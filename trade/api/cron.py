@@ -63,7 +63,8 @@ def get_today_cron():
     for task in tasks:
         task_name = task["name"]
         task_time = task["time"].split("-")[0] if "-" in task["time"] else task["time"]
-        is_past = task_time <= current_time
+        # task_time 为空字符串时按"未到点"处理，避免 "" <= "14:30" 永远 True 导致空任务被永远标记 missed
+        is_past = bool(task_time) and task_time <= current_time
         output = _find_cron_output(task_name, today)
 
         if output:

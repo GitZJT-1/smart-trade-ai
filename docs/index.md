@@ -86,7 +86,29 @@ layout: default
 
 ---
 
-### 第三步：开启长路径支持（只做一次，以前做过的跳过）
+### 第三步（推荐）：一键安装
+
+Python 装好之后，最省事的方法是用**一键安装脚本**——把下面这一行命令复制到 PowerShell 里执行，它会自动帮你装好所有东西：
+
+```
+irm https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.ps1 | iex
+```
+
+这个脚本会自动完成：安装 AI 引擎 → 安装 Smart Trade AI → 安装 15 个专业功能 → 初始化数据库 → 设置开机自启动。
+
+等它跑完后，继续往下看**第六步**获取 API Key 就行。
+
+> **如果一键脚本跑失败了**，不要紧，跟着下面的第四步和第五步手动装就行，效果一样。
+
+---
+
+### 第四步：开启长路径支持（只做一次，以前做过的跳过）
+
+> 如果你已经通过一键脚本安装成功，可以跳过第四步和第五步，直接看第六步。
+
+Windows 系统有一个默认设置，不允许文件路径太长。但这个工具安装时会产生比较长的路径，如果不改这个设置，后面安装会报错。我们只需要改一次，改完就不用管了。
+
+**操作步骤：**
 
 Windows 系统有一个默认设置，不允许文件路径太长。但这个工具安装时会产生比较长的路径，如果不改这个设置，后面安装会报错。我们只需要改一次，改完就不用管了。
 
@@ -110,7 +132,7 @@ New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name
 
 ---
 
-### 第四步：安装 Hermes Agent
+### 第五步：安装 Hermes Agent
 
 这个工具背后需要一个叫 Hermes Agent 的程序来驱动 AI 功能。你可以把它理解为"发动机"——我们的工具是车身，得先有发动机才能跑。
 
@@ -128,7 +150,7 @@ irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/ins
 
 ---
 
-### 第五步：安装 Smart Trade AI
+### 第六步：安装 Smart Trade AI
 
 发动机装好了，现在装车身。
 
@@ -154,7 +176,7 @@ install-trade-skills
 
 ---
 
-### 第六步：获取 API Key
+### 第七步：获取 API Key
 
 这个工具需要连接 AI 大模型才能工作。AI 不是免费的，你需要去 AI 厂商那里注册一个账号、获取一个 **API Key**。
 
@@ -183,7 +205,7 @@ hermes setup
 
 ---
 
-### 第七步：启动！
+### 第八步：启动！
 
 全部装好了，现在来运行它。在 PowerShell 里输入：
 
@@ -226,7 +248,7 @@ powershell -File scripts\build.ps1
 | 出现一大堆红色文字 | 大多是网络不好，没下载完整 | 把报错的那行命令重新复制执行一次。反复报错就确认 VPN 是否开好了 |
 | 浏览器打开显示「无法访问此网站」 | 程序没有在运行 | 回到 PowerShell 看看是不是关掉了或者报错了。如果关了就重新打开 PowerShell，重新执行 `python server.py` |
 | 页面打开了但是显示不正常、按钮点不动 | 浏览器缓存了旧版本的文件 | 同时按下键盘的 **Ctrl + Shift + R** 三个键，页面会强制刷新 |
-| 提示「Filename too long」 | 第三步的长路径设置没生效 | 确认第三步已经做过，并且**重启过电脑**。如果还没重启，先重启再来 |
+| 提示「Filename too long」 | 第四步的长路径设置没生效 | 确认第四步已经做过，并且**重启过电脑**。如果还没重启，先重启再来 |
 
 ---
 
@@ -252,7 +274,7 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 hermes setup
 ```
 
-按提示选择 DeepSeek，粘贴 API Key（和上面 Windows 第六步的操作一样）。
+按提示选择 DeepSeek，粘贴 API Key（和上面 Windows 第七步的操作一样）。
 
 最后启动：
 

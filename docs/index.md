@@ -6,8 +6,8 @@ layout: default
   /* 全宽布局：覆盖 slate 主题的窄容器限制 */
   .container { max-width: 100% !important; padding: 0 2rem !important; }
   .container .content { max-width: 100% !important; }
-  pre, code { white-space: pre !important; overflow-x: auto !important; }
-  pre { padding: 1rem !important; }
+  pre, code { white-space: pre-wrap !important; word-break: break-all !important; }
+  pre { padding: 1rem !important; font-size: 0.9rem !important; }
 </style>
 
 <!-- Hero -->

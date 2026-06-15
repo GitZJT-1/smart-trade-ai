@@ -142,20 +142,37 @@ class TestDeps:
 class TestRouterAssembly:
     """测试路由组装和注册。"""
 
+    @staticmethod
+    def _flatten_routes(router):
+        """递归展开嵌套的子路由。
+
+        - fastapi <0.137: include_router 把子路由的每个 APIRoute 平铺到父 router.routes
+        - fastapi >=0.137: 包成 _IncludedRouter，原始子 router 保留在 .original_router
+        - Mount(子 app): 子 router 在 .routes 上
+        """
+        flat = []
+        for r in router.routes:
+            inner = getattr(r, "original_router", None) or (
+                getattr(r, "routes", None) and r
+            )
+            if inner is not None and inner is not r:
+                flat.extend(TestRouterAssembly._flatten_routes(inner))
+            elif getattr(r, "routes", None):
+                flat.extend(TestRouterAssembly._flatten_routes(r))
+            else:
+                flat.append(r)
+        return flat
+
     def test_router_imports_and_registers(self, setup_mocks):
         """router 对象可正常导入且注册了所有端点类型。"""
         from trade.api import router
         assert router is not None
 
-        # 收集路由路径前缀
-        paths = set()
-        for route in router.routes:
-            if hasattr(route, 'path'):
-                paths.add(route.path.split('/')[1] if route.path.startswith('/') else '')
+        all_routes = self._flatten_routes(router)
 
         # 应包含所有主要域
         key_routes = set()
-        for route in router.routes:
+        for route in all_routes:
             if hasattr(route, 'path'):
                 p = route.path
                 for keyword in ['companies', 'libraries', 'customers', 'conversations',
@@ -171,9 +188,9 @@ class TestRouterAssembly:
     def test_all_endpoints_registered(self, setup_mocks):
         """所有 endpoint 数量符合预期（至少 25 个）。"""
         from trade.api import router
-        # 收集所有 HTTP 路由路径
+        # 收集所有 HTTP 路由路径（递归展开嵌套子路由）
         endpoints = []
-        for route in router.routes:
+        for route in self._flatten_routes(router):
             if hasattr(route, 'path') and hasattr(route, 'methods'):
                 for method in route.methods:
                     if method in ('GET', 'POST', 'PUT', 'DELETE'):

@@ -754,8 +754,10 @@ async function _waitForRestartAndReload(onTimeout) {
             // 旧进程已退出（或新进程还没起来），切到 wait_up
             if (!isUp) phase = 'wait_up';
         } else if (phase === 'wait_up' && isUp) {
-            // 新进程已就绪，强制刷新（cache-bust）
+            // 新进程已就绪，先确认版本号是否已更新，再强制刷新
             _clearRuntimeCaches();
+            // 清除可能缓存的旧版本 banner 状态，让重载后的 checkVersion 重新拉取
+            try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
             location.href = '/trade?_=' + Date.now();
             return;
         }
@@ -1085,7 +1087,7 @@ let _versionPollTimer = null;
 
 async function checkVersion() {
     try {
-        const r = await fetch('/api/status');
+        const r = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
         if (!r.ok) { console.log('Version check: HTTP ' + r.status); return; }
         const data = await r.json();
         const latest = data.latest_version || '';
@@ -1135,7 +1137,9 @@ async function doUpdateSystem() {
         restartScheduled = true;
     }
     if (!restartScheduled) {
-        if (btn) btn.textContent = '⬆️ 升级';
+        // 升级未触发重启（可能已是最新版本或更新失败），立即重新检查版本状态
+        if (btn) { btn.remove(); }
+        checkVersion();
         return;
     }
     // 后端 BackgroundTasks 已调度重启——等待 DOWN→UP 后强制刷新（清 cache + cache-bust）

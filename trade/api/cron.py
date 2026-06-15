@@ -234,6 +234,9 @@ def _capture_output(func, *args, **kwargs) -> dict:
             if isinstance(result, str) and result:
                 resp["file"] = result
             return resp
+        except SystemExit as e:
+            # sys.exit() 被 _capture_output 拦截，视为失败（如 install_skills 找不到目录）
+            return {"ok": False, "error": f"Process exited with code {e.code}"}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 

@@ -726,7 +726,7 @@ def update_trade() -> None:
         else:
             # git pull 失败（非 stash 问题，如网络不通）→ 后续步骤无意义，立即中止
             print("  ❌ git pull 失败，无法更新。请检查网络后重试。")
-            raise SystemExit("git pull failed")
+            ok = False
     else:
         print(f"  ✓ {result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else 'Already up-to-date.'}")
 
@@ -813,11 +813,10 @@ def update_trade() -> None:
 
     if ok:
         print("\n✅ Trade update complete.")
-        # 延迟重启：给 HTTP 请求留出时间返回响应，避免 ERR_EMPTY_RESPONSE
-        import threading as _threading
-        _threading.Thread(target=lambda: (__import__("time").sleep(1.5), _restart_trade_service()), daemon=True).start()
+        print("  ℹ️  服务将在 HTTP 响应返回后自动重启。")
     else:
         print("\n⚠️  Trade update completed with warnings. Check the output above.")
+        print("  ℹ️  由于更新未完全成功，服务将不会自动重启。")
 
 
 def backup_trade(output_dir: str | None = None) -> str:

@@ -209,11 +209,15 @@ def _perform_restart() -> None:
             pass
 
     # 用独立会话启动新实例，等当前 uvicorn 释放端口后由它接管
-    _sp.Popen(
-        _restart_cmd,
-        stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
-        start_new_session=True,
-    )
+    _popen_kwargs = {
+        "stdout": _sp.DEVNULL,
+        "stderr": _sp.DEVNULL,
+    }
+    if os.name == "nt":
+        _popen_kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+    else:
+        _popen_kwargs["start_new_session"] = True
+    _sp.Popen(_restart_cmd, **_popen_kwargs)
 
 
 # ── System endpoints (无需 session token) ────────────────────────────────────
@@ -237,10 +241,22 @@ def _create_system_router() -> APIRouter:
         """
         from trade.post_install import update_trade as _do_update
         result = _capture_output(_do_update)
-        # 仅当升级成功才触发重启，失败时保留当前进程供用户排查
-        if result.get("ok"):
+        output = result.get("output", "")
+
+        # 检测 update_trade 输出中的失败标记
+        _failed = any(marker in output for marker in [
+            "❌", "update failed", "git pull failed",
+        ])
+
+        if result.get("ok") and not _failed:
+            # 升级成功后立即使 GitHub 版本缓存失效，下次 /api/status 强制重新拉取
+            _latest_version_cache["ts"] = 0.0
             background_tasks.add_task(_perform_restart)
             result["restart_scheduled"] = True
+        else:
+            result["ok"] = False
+            if _failed:
+                result["error"] = "更新失败，请查看 output 了解详情"
         return result
 
     @router.post("/system/backup")
@@ -297,6 +313,12 @@ def create_app() -> FastAPI:
     from trade.api import router as trade_router
     app.include_router(trade_router, prefix="/api/trade")
 
+    # ── GitHub latest-version 缓存（TTL 10 分钟）────────────────────────
+    # 避免 /api/status 每次请求都调 GitHub API，在 _waitForRestartAndReload
+    # 轮询期间（最多 90 次 × 2s = 3min）触发 API 限流（60 次/小时）。
+    _latest_version_cache: dict = {"value": None, "ts": 0.0}
+    _LATEST_VERSION_TTL = 600  # 10 分钟
+
     # Health check
     @app.get("/api/status", include_in_schema=False)
     async def status():
@@ -313,26 +335,34 @@ def create_app() -> FastAPI:
         except Exception:
             pass
 
-        # 从 GitHub 查最新版本（后端不受浏览器限流影响）
-        # 用 run_in_executor 把阻塞 urlopen 丢到线程池，避免卡死 uvicorn 主 event loop。
-        # 否则在网络抖动时整个 SSE 事件投递、其他 async 端点都会被阻塞最长 5s。
-        import asyncio as _asyncio
+        # 用缓存降低 GitHub API 调用频率，防止限流导致版本检测失效
+        import time as _time
+        _now = _time.monotonic()
+        if (_latest_version_cache["value"] is not None
+                and _now - _latest_version_cache["ts"] < _LATEST_VERSION_TTL):
+            latest = _latest_version_cache["value"]
+        else:
+            import asyncio as _asyncio
 
-        def _fetch_latest_version() -> str:
-            import urllib.request as _ur
-            try:
-                _req = _ur.Request(
-                    "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
-                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
-                )
-                with _ur.urlopen(_req, timeout=5) as _resp:
-                    import json as _json
-                    _data = _json.loads(_resp.read().decode())
-                    return _data.get("tag_name", "").lstrip("v")
-            except Exception:
-                return ""
+            def _fetch_latest_version() -> str:
+                import urllib.request as _ur
+                try:
+                    _req = _ur.Request(
+                        "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
+                        headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
+                    )
+                    with _ur.urlopen(_req, timeout=5) as _resp:
+                        import json as _json
+                        _data = _json.loads(_resp.read().decode())
+                        return _data.get("tag_name", "").lstrip("v")
+                except Exception:
+                    return ""
 
-        latest = await _asyncio.get_event_loop().run_in_executor(None, _fetch_latest_version)
+            latest = await _asyncio.get_event_loop().run_in_executor(None, _fetch_latest_version)
+            # 仅在 GitHub API 调用成功时更新缓存（失败时 keep 旧值，宁可短暂不一致）
+            if latest:
+                _latest_version_cache["value"] = latest
+                _latest_version_cache["ts"] = _time.monotonic()
 
         return {
             "status": "ok",

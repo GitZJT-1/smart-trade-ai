@@ -450,6 +450,34 @@ def _restart_trade_service() -> None:
         print("     或手动运行: trade")
 
 
+def _force_sync_from_source(src_dir: Path, dst_dir: Path) -> None:
+    """将源码目录的代码强制同步到运行目录（覆盖已有文件，保留 .git 和用户数据）。
+
+    用于 git pull 在运行目录失败（本地修改/冲突）时的强制同步策略。
+    只覆盖项目代码文件，不删除运行目录特有的内容（如 .git/、venv/ 等）。
+    """
+    import shutil as _shutil
+
+    # 排除列表：这些目录/文件不覆盖（.git 由运行目录自己管理，venv 是运行时环境）
+    _skip = {".git", "__pycache__", ".pytest_cache", ".DS_Store", "venv", ".venv",
+             "node_modules", ".codegraph", ".cursor", ".idea", ".vscode",
+             "foreign_trade_assistant.egg-info", "smart_trade_ai.egg-info"}
+    _synced = 0
+    for _src_item in src_dir.iterdir():
+        _name = _src_item.name
+        if _name in _skip or _name.startswith(".") or _name.startswith("~"):
+            continue
+        _dst = dst_dir / _name
+        if _src_item.is_dir():
+            _sync_dir_rsync(_src_item, _dst)
+            _synced += 1
+        else:
+            _dst.parent.mkdir(parents=True, exist_ok=True)
+            _shutil.copy2(_src_item, _dst)
+            _synced += 1
+    print(f"  ✓ Force synced {_synced} items from source to runtime dir")
+
+
 def _sync_dir_rsync(src: Path, dst: Path) -> None:
     """递归同步目录 src → dst，覆盖旧文件，删除目标多余文件。
 
@@ -755,30 +783,44 @@ def update_trade() -> None:
     else:
         print("  ✓ Package updated")
 
-    # 4.5. 如果运行目录是独立副本（非 git 管理的 ~/.trade/foreign-trade-assistant/），
-    # 将 git pull 后的代码同步过去，确保重启时加载的是最新代码
+    # 4.5. 确保运行目录的代码与源码目录同步
+    # 关键：即使运行目录有 .git（是独立 git clone），也需要同步，
+    # 因为 git pull 可能因本地修改失败导致运行目录代码滞后。
     _runtime_dir = _get_trade_home() / "foreign-trade-assistant"
-    if not (_runtime_dir / ".git").is_dir() and _runtime_dir.is_dir():
-        print("→ Step 4.5/6: sync to runtime dir ...")
+    _need_sync = _runtime_dir.is_dir() and _runtime_dir.resolve() != trade_dir.resolve()
+    if _need_sync:
+        # 运行目录是独立副本（git clone 或纯拷贝），与源码目录不同
+        # 先尝试在运行目录也执行 git pull（可能因本地修改失败）
+        if (_runtime_dir / ".git").is_dir():
+            print("→ Step 4.5a: git pull in runtime dir ...")
+            _rt_pull = subprocess.run(
+                ["git", "pull", "--ff-only", "origin", "main"],
+                cwd=str(_runtime_dir), capture_output=True, text=True, timeout=120,
+            )
+            if _rt_pull.returncode == 0:
+                print(f"  ✓ Runtime dir: {_rt_pull.stdout.strip().split(chr(10))[-1] if _rt_pull.stdout.strip() else 'OK'}")
+            else:
+                # git pull 失败（本地修改/冲突），强制用源码目录覆盖运行目录
+                print("  ⚠ Runtime dir git pull failed, forcing file sync from source ...")
+                _force_sync_from_source(trade_dir, _runtime_dir)
+        else:
+            # 非/git 管理的运行目录，直接同步
+            print("→ Step 4.5: sync to runtime dir ...")
+            _force_sync_from_source(trade_dir, _runtime_dir)
+
+        # 验证同步结果：检查运行目录的版本号是否已更新
         try:
-            import shutil as _shutil
-            _exclude = {".git", "__pycache__", ".pytest_cache", "*.pyc", ".DS_Store", "venv", ".venv", "node_modules"}
-            for _src_item in trade_dir.iterdir():
-                _name = _src_item.name
-                if _name in _exclude or _name.startswith(".") or _name.startswith("~"):
-                    continue
-                _dst = _runtime_dir / _name
-                if _src_item.is_dir():
-                    if _name == "skills":
-                        # 同步 skills 目录（排除被 .gitignore 的，如 __pycache__）
-                        _sync_dir_rsync(_src_item, _dst)
-                    else:
-                        _sync_dir_rsync(_src_item, _dst)
+            import re as _re
+            _rt_pyproject = (_runtime_dir / "pyproject.toml").read_text()
+            _rt_ver_match = _re.search(r'version\s*=\s*"([^"]+)"', _rt_pyproject)
+            _src_ver_match = _re.search(r'version\s*=\s*"([^"]+)"', (trade_dir / "pyproject.toml").read_text())
+            if _rt_ver_match and _src_ver_match:
+                if _rt_ver_match.group(1) == _src_ver_match.group(1):
+                    print(f"  ✓ Runtime dir version confirmed: {_rt_ver_match.group(1)}")
                 else:
-                    _shutil.copy2(_src_item, _dst)
-            print("  ✓ Code synced to runtime dir")
-        except Exception as e:
-            print(f"  ⚠ Code sync failed: {e}")
+                    print(f"  ⚠ Version mismatch! source={_src_ver_match.group(1)} runtime={_rt_ver_match.group(1)}")
+        except Exception:
+            pass
 
     # 5. 同步 .trade-template/ 新增模板文件
     print("→ Step 5/7: template sync ...")

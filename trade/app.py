@@ -179,7 +179,9 @@ def _perform_restart() -> None:
 
     if old_pid is not None:
         # 三层 PID 校验：psutil 优先，回退 /proc，防止 PID 重用误杀
+        # 第三层：以上皆不可用（如 macOS 既无 psutil 也无 /proc），信任自己的 PID 文件
         is_trade = False
+        _verified = False  # 是否通过了校验（vs 盲信 PID 文件）
         try:
             import psutil
             proc = psutil.Process(old_pid)
@@ -196,19 +198,41 @@ def _perform_restart() -> None:
                         is_trade = False
                 except Exception:
                     pass
+            _verified = True
         except ImportError:
             try:
                 proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
+                is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
+                _verified = True
             except Exception:
-                proc_cmd = ""
-            is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
+                pass
         except Exception:
             pass
+
+        # 如果两个校验手段都不可用（如 macOS），信任自己的 PID 文件直接杀
+        if not _verified:
+            is_trade = True
+
         if is_trade:
             try:
                 os.kill(old_pid, _signal.SIGTERM)
             except OSError:
-                pass
+                pass  # 进程已不存在
+            # 等待旧进程释放端口，确保新进程能成功 bind
+            import time as _time
+            for _ in range(30):  # 最多等 3 秒
+                try:
+                    os.kill(old_pid, 0)
+                except OSError:
+                    break  # 进程已退出
+                _time.sleep(0.1)
+            else:
+                # 进程仍在运行，强制 kill
+                try:
+                    os.kill(old_pid, _signal.SIGKILL)
+                except OSError:
+                    pass
+                _time.sleep(0.5)  # 给 OS 一点时间回收端口
         try:
             pid_file.unlink(missing_ok=True)
         except Exception:

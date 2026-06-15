@@ -96,7 +96,7 @@ def list_providers():
 
             providers.append({
                 "id": pid,
-                "name": pconfig.display_name or pid,
+                "name": pconfig.name or pid,
                 "has_key": has_key,
                 "models": models[:10],
                 "is_active": pid == active_provider,

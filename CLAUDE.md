@@ -157,7 +157,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
 3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
-4. **Hermes version check** — `0.13.0 <= version < 0.16.0` (see COMPATIBILITY.md)
+4. **Hermes version check** — `0.13.0 <= version < 0.17.0` (see COMPATIBILITY.md)
 5. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
 6. **Database init** — creates tables, migrates schema, spare columns
 7. **License check** — validates license, warns if expired

@@ -59,7 +59,11 @@ def _load_private_key():
         return serialization.load_pem_private_key(priv_pem.encode(), password=None)
     return None
 
-_TRIAL_DAYS = 30
+# 试用期天数：默认 30 天，可通过环境变量 TRADE_TRIAL_DAYS 覆盖
+try:
+    _TRIAL_DAYS = int(os.environ.get("TRADE_TRIAL_DAYS", "30"))
+except (ValueError, TypeError):
+    _TRIAL_DAYS = 30
 
 
 def _machine_id() -> str:

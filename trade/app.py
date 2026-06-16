@@ -178,9 +178,11 @@ def _perform_restart() -> None:
 
     # 在杀自己之前必须先记录启动命令，否则 kill 后访问不到
     _restart_cmd = [_sys.executable] + _sys.argv
+    print(f"  🔄 重启命令: {' '.join(_restart_cmd)}")
 
     # 1. 先杀 Gateway（独立进程，新 Trade 启动时会重新拉起）
     _kill_gateway()
+    print("  ✓ Gateway 已终止")
 
     # 2. 先启动新进程（在杀旧进程之前！），新进程的 uvicorn 会重试绑定端口
     _popen_kwargs = {
@@ -192,6 +194,7 @@ def _perform_restart() -> None:
     else:
         _popen_kwargs["start_new_session"] = True
     _sp.Popen(_restart_cmd, **_popen_kwargs)
+    print(f"  ✓ 新进程已启动 (PID={old_pid}, 等待端口释放...)")
 
     # 3. 再杀旧进程（新进程已经启动，不怕这里被 SIGTERM 打断）
     if old_pid is not None:
@@ -231,10 +234,12 @@ def _perform_restart() -> None:
             is_trade = True
 
         if is_trade:
+            print(f"  ⏳ 发送 SIGTERM → PID {old_pid} ...")
             try:
                 os.kill(old_pid, _signal.SIGTERM)
+                print("  ✓ SIGTERM 已发送")
             except OSError:
-                pass  # 进程已不存在
+                print(f"  ⚠ PID {old_pid} 已不存在")
         try:
             pid_file.unlink(missing_ok=True)
         except Exception:
@@ -507,6 +512,8 @@ def main() -> None:
             if _is_port_conflict:
                 if _attempt == 0:
                     print("  ⏳ 等待旧进程释放端口...")
+                elif _attempt % 4 == 0:
+                    print(f"     (已等待 {_attempt * 0.5:.0f}s)")
                 _time.sleep(0.5)
                 continue
             raise

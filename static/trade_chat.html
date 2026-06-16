@@ -742,7 +742,8 @@ function _clearRuntimeCaches() {
 async function _waitForRestartAndReload(onTimeout) {
     let phase = 'wait_down';   // 第一阶段：等待旧进程下线
     let attempts = 0;
-    const maxAttempts = 90;    // 90 × 2s = 3 分钟兜底
+    const maxAttempts = 120;   // 120 × 1s = 2 分钟兜底
+    console.log('[重启] 开始轮询 /api/status ...');
     const tick = async () => {
         attempts++;
         let isUp = false;
@@ -751,24 +752,27 @@ async function _waitForRestartAndReload(onTimeout) {
             isUp = r.ok;
         } catch(_) { isUp = false; }
         if (phase === 'wait_down') {
-            // 旧进程已退出（或新进程还没起来），切到 wait_up
-            if (!isUp) phase = 'wait_up';
+            if (!isUp) {
+                console.log('[重启] 第 ' + attempts + ' 次 — 旧进程已下线，等待新进程 ...');
+                phase = 'wait_up';
+            }
         } else if (phase === 'wait_up' && isUp) {
             // 新进程已就绪，先确认版本号是否已更新，再强制刷新
+            console.log('[重启] 第 ' + attempts + ' 次 — 新进程已就绪，刷新页面');
             _clearRuntimeCaches();
-            // 清除可能缓存的旧版本 banner 状态，让重载后的 checkVersion 重新拉取
             try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
             location.href = '/trade?_=' + Date.now();
             return;
         }
         if (attempts >= maxAttempts) {
+            console.error('[重启] 超时 (' + maxAttempts + ' 次轮询)，请手动刷新');
             toast('⚠️ 服务重启超时，请手动刷新页面');
             if (typeof onTimeout === 'function') onTimeout();
             return;
         }
-        setTimeout(tick, 2000);
+        setTimeout(tick, 1000);
     };
-    setTimeout(tick, 1500); // 给后端 BackgroundTasks 一点起跑时间
+    setTimeout(tick, 500); // 缩短起跑延迟（1.5s → 0.5s）
 }
 
 // ── 系统更新 ──

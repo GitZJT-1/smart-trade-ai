@@ -62,7 +62,7 @@ class TestRequestCode:
         from trade.license import _make_request_code
         code = _make_request_code()
         assert code.startswith("TRADE-REQ-")
-        assert len(code) in (18, 19)  # TRADE-REQ-XXXX-XXXX(8) = 18, 但旧格式可能不同
+        assert len(code) == 29  # TRADE-REQ-XXXX-XXXX-XXXX-XXXX
 
     def test_deterministic(self):
         from trade.license import _make_request_code
@@ -102,7 +102,7 @@ class TestEncodeDecode:
 
         decoded = _decode_activation_code(code)
         assert decoded["expires_at"] == "2027-06-01"
-        assert len(decoded["machine_hash"]) == 8
+        assert len(decoded["machine_hash"]) == 16  # 64 bit (new format)
 
     def test_decode_rejects_tampered_code(self, monkeypatch):
         _setup_temp_ed25519_key(monkeypatch)

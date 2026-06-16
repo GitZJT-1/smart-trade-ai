@@ -8,6 +8,8 @@ import os
 import secrets
 import subprocess as _sp
 import sys
+import threading
+import time
 from pathlib import Path
 
 import uvicorn
@@ -242,9 +244,32 @@ def _perform_restart() -> None:
 # ── System endpoints (无需 session token) ────────────────────────────────────
 
 
+# ── 系统端点限流（5 req/min per token） ──────────────────────────────────
+# 防止脚本循环触发 git pull + pip install 耗尽 GitHub API / pip 配额
+
+_system_rate_lock = threading.Lock()
+_system_rate_map: dict[str, list[float]] = {}
+_SYS_WINDOW = 60  # 1 分钟窗口
+_SYS_MAX = 5      # 最多 5 次
+
+
+def _check_system_rate_limit(key: str) -> bool:
+    """系统端点限流：同一 key 每分钟最多 _SYS_MAX 次。返回 True 表示放行。"""
+    now = time.time()
+    with _system_rate_lock:
+        stamps = _system_rate_map.get(key, [])
+        stamps = [t for t in stamps if now - t < _SYS_WINDOW]
+        if len(stamps) >= _SYS_MAX:
+            _system_rate_map[key] = stamps
+            return False
+        stamps.append(now)
+        _system_rate_map[key] = stamps
+        return True
+
+
 def _create_system_router() -> APIRouter:
     """创建系统管理路由（更新/备份/重启），需要 session token 认证。"""
-    from fastapi import BackgroundTasks
+    from fastapi import BackgroundTasks, Request
 
     from trade.api.cron import _capture_output
     from trade.api.deps import require_session
@@ -252,12 +277,18 @@ def _create_system_router() -> APIRouter:
     router = APIRouter(tags=["system"], dependencies=[Depends(require_session)])
 
     @router.post("/system/update")
-    def api_update_trade(background_tasks: BackgroundTasks):
+    def api_update_trade(background_tasks: BackgroundTasks, request: Request):
         """一键更新 Trade 系统。
 
         升级成功后通过 BackgroundTasks 调度全量重启——这样响应能先送达前端，
         前端拿到 restart_scheduled=True 后开始轮询服务状态，等待重启完成。
         """
+        # 系统端点限流（用 session token hash 作为分桶 key）
+        _tk = request.headers.get("X-Hermes-Session-Token", "")
+        if _tk and not _check_system_rate_limit(hash(_tk)):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
+
         from trade.post_install import update_trade as _do_update
         result = _capture_output(_do_update)
         output = result.get("output", "")
@@ -280,17 +311,27 @@ def _create_system_router() -> APIRouter:
         return result
 
     @router.post("/system/backup")
-    def api_backup_trade():
+    def api_backup_trade(request: Request):
         """备份 Trade 数据为 tar.gz。"""
+        _tk = request.headers.get("X-Hermes-Session-Token", "")
+        if _tk and not _check_system_rate_limit(hash(_tk)):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
+
         from trade.post_install import backup_trade as _do_backup
         return _capture_output(_do_backup)
 
     @router.post("/system/restart")
-    def api_restart_trade():
+    def api_restart_trade(request: Request):
         """重启 Trade 服务（跨平台）。
 
         委托给 _perform_restart()——含三层 PID 安全校验和 Gateway 协同重启。
         """
+        _tk = request.headers.get("X-Hermes-Session-Token", "")
+        if _tk and not _check_system_rate_limit(hash(_tk)):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
+
         _perform_restart()
         return {"ok": True, "message": "重启指令已发送"}
 

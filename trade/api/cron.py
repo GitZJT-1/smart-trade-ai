@@ -10,10 +10,11 @@ import json
 import os
 import sys
 import threading
+import time
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(tags=["cron"])
 
@@ -241,9 +242,35 @@ def _capture_output(func, *args, **kwargs) -> dict:
             return {"ok": False, "error": str(e)}
 
 
+# ── Skills update 限流（5 req/min per token） ────────────────────────────
+
+_skills_rate_lock = threading.Lock()
+_skills_rate_map: dict[str, list[float]] = {}
+_SKILLS_RATE_WINDOW = 60
+_SKILLS_RATE_MAX = 5
+
+
+def _check_skills_rate_limit(key: str) -> bool:
+    """Skills 更新限流。"""
+    now = time.time()
+    with _skills_rate_lock:
+        stamps = _skills_rate_map.get(key, [])
+        stamps = [t for t in stamps if now - t < _SKILLS_RATE_WINDOW]
+        if len(stamps) >= _SKILLS_RATE_MAX:
+            _skills_rate_map[key] = stamps
+            return False
+        stamps.append(now)
+        _skills_rate_map[key] = stamps
+        return True
+
+
 @router.post("/skills/update")
-def api_update_skills():
+def api_update_skills(request: Request):
     """从 GitHub 拉取最新 B2B skill 定义。"""
+    _tk = request.headers.get("X-Hermes-Session-Token", "")
+    if _tk and not _check_skills_rate_limit(str(hash(_tk))):
+        raise HTTPException(status_code=429, detail="Skills 更新请求过于频繁，请稍后重试。")
+
     from trade.post_install import update_skills as _do_update
     return _capture_output(_do_update)
 

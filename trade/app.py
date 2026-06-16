@@ -159,92 +159,56 @@ def _kill_gateway() -> None:
 def _perform_restart() -> None:
     """终止当前 Trade 进程并以独立子进程启动新实例。
 
-    关键设计：先启动新进程，再杀旧进程——避免 SIGTERM 杀掉自己后 Popen 执行不到。
-    新进程启动后会自动重试绑定端口（uvicorn 的 SO_REUSEADDR），等旧进程退出后即可接管。
+    核心策略：不杀自己（不可靠——uvicorn graceful shutdown 可能卡住）。
+    而是通过独立 shell 子进程去等待、杀旧、启新。
 
-    供 /system/restart 直接调用，也供 /system/update 在响应返回后通过
-    BackgroundTasks 触发——这样升级完成的响应能先送达前端。
+    供 /system/restart 和 /system/update (via BackgroundTasks) 调用。
     """
-    import signal as _signal
     import sys as _sys
 
     trade_data = _get_trade_data_dir()
     pid_file = trade_data / "trade.pid"
-    old_pid = None
-    if pid_file.is_file():
-        try:
-            old_pid = int(pid_file.read_text().strip())
-        except (ValueError, OSError):
-            pass
+    old_pid = os.getpid()  # 直接用自己的 PID，不从文件读（更可靠）
 
-    # 在杀自己之前必须先记录启动命令，否则 kill 后访问不到
+    # 记录启动命令，交给 shell 子进程执行
     _restart_cmd = [_sys.executable] + _sys.argv
-    print(f"  🔄 重启命令: {' '.join(_restart_cmd)}")
+    _cmd_str = " ".join(repr(a) for a in _restart_cmd)
 
-    # 1. 先杀 Gateway（独立进程，新 Trade 启动时会重新拉起）
+    # 杀 Gateway
     _kill_gateway()
-    print("  ✓ Gateway 已终止")
 
-    # 2. 先启动新进程（在杀旧进程之前！），新进程的 uvicorn 会重试绑定端口
-    _popen_kwargs = {
-        "stdout": _sp.DEVNULL,
-        "stderr": _sp.DEVNULL,
-    }
+    # 构建独立 shell 脚本：sleep 等响应发完 → kill 旧进程 → 启动新进程
     if os.name == "nt":
-        _popen_kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+        _script = f'@echo off\r\ntimeout /t 3 /nobreak >nul\r\ntaskkill /PID {old_pid} /F\r\n{_cmd_str}'
+        _sp.Popen(
+            ["cmd", "/c", _script],
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            creationflags=0x00000200,
+        )
     else:
-        _popen_kwargs["start_new_session"] = True
-    _sp.Popen(_restart_cmd, **_popen_kwargs)
-    print(f"  ✓ 新进程已启动 (PID={old_pid}, 等待端口释放...)")
+        _script = (
+            f"sleep 2; "
+            f"pkill -TERM -f 'hermes.*gateway' 2>/dev/null; "
+            f"kill -TERM {old_pid} 2>/dev/null; "
+            f"sleep 1; "
+            f"kill -KILL {old_pid} 2>/dev/null; "
+            f"sleep 0.5; "
+            f"cd {repr(str(Path.cwd()))}; "
+            f"exec {_cmd_str}"
+        )
+        _sp.Popen(
+            ["/bin/sh", "-c", _script],
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            start_new_session=True,
+        )
 
-    # 3. 再杀旧进程（新进程已经启动，不怕这里被 SIGTERM 打断）
-    if old_pid is not None:
-        # 三层 PID 校验：psutil 优先，回退 /proc，防止 PID 重用误杀
-        # 第三层：以上皆不可用（如 macOS 既无 psutil 也无 /proc），信任自己的 PID 文件
-        is_trade = False
-        _verified = False
-        try:
-            import psutil
-            proc = psutil.Process(old_pid)
-            cmdline = " ".join(proc.cmdline())
-            is_trade = (
-                ("server.py" in cmdline and "trade" in cmdline)
-                or "trade" in cmdline
-            )
-            if is_trade:
-                try:
-                    my_exe = Path(_sys.executable).resolve()
-                    proc_exe = Path(proc.exe()).resolve()
-                    if my_exe != proc_exe:
-                        is_trade = False
-                except Exception:
-                    pass
-            _verified = True
-        except ImportError:
-            try:
-                proc_cmd = Path(f"/proc/{old_pid}/cmdline").read_text() if os.name != "nt" else ""
-                is_trade = "trade" in proc_cmd.lower() or "server.py" in proc_cmd.lower()
-                _verified = True
-            except Exception:
-                pass
-        except Exception:
-            pass
+    print(f"  🔄 重启子进程已调度 (old PID={old_pid})")
 
-        # 如果两个校验手段都不可用（如 macOS），信任自己的 PID 文件直接杀
-        if not _verified:
-            is_trade = True
-
-        if is_trade:
-            print(f"  ⏳ 发送 SIGTERM → PID {old_pid} ...")
-            try:
-                os.kill(old_pid, _signal.SIGTERM)
-                print("  ✓ SIGTERM 已发送")
-            except OSError:
-                print(f"  ⚠ PID {old_pid} 已不存在")
-        try:
-            pid_file.unlink(missing_ok=True)
-        except Exception:
-            pass
+    # 主动删除 PID 文件，避免新进程读到旧 PID
+    try:
+        pid_file.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 # ── System endpoints (无需 session token) ────────────────────────────────────

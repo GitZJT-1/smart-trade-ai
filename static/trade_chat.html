@@ -737,33 +737,37 @@ function _clearRuntimeCaches() {
     } catch(_) { /* sessionStorage 在隐私模式下可能抛错，忽略 */ }
 }
 
-// 等待服务先 DOWN 再 UP，然后 hard-reload（带 cache-bust 参数绕过浏览器缓存）
-// onTimeout: 超时回调，让按钮恢复可点击状态
+// 通过 /api/status 的 started_at 时间戳检测进程是否已重启，然后 hard-reload
+// sessionStorage 存储重启前的 started_at，轮询到变化后强制刷新
 async function _waitForRestartAndReload(onTimeout) {
-    let phase = 'wait_down';   // 第一阶段：等待旧进程下线
     let attempts = 0;
     const maxAttempts = 120;   // 120 × 1s = 2 分钟兜底
-    console.log('[重启] 开始轮询 /api/status ...');
+    // 保存当前 started_at，重启后新进程的时间戳会不同
+    let oldStartedAt = null;
+    try {
+        const r0 = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
+        if (r0.ok) {
+            const d0 = await r0.json();
+            oldStartedAt = d0.started_at || 0;
+        }
+    } catch(_) {}
+
+    console.log('[重启] 开始轮询 /api/status (old started_at=' + oldStartedAt + ') ...');
     const tick = async () => {
         attempts++;
-        let isUp = false;
         try {
             const r = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
-            isUp = r.ok;
-        } catch(_) { isUp = false; }
-        if (phase === 'wait_down') {
-            if (!isUp) {
-                console.log('[重启] 第 ' + attempts + ' 次 — 旧进程已下线，等待新进程 ...');
-                phase = 'wait_up';
+            if (r.ok) {
+                const d = await r.json();
+                if (d.started_at && oldStartedAt && d.started_at !== oldStartedAt) {
+                    console.log('[重启] 第 ' + attempts + ' 次 — 检测到新进程 (started_at=' + d.started_at + ')，刷新页面');
+                    _clearRuntimeCaches();
+                    try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
+                    location.href = '/trade?_=' + Date.now();
+                    return;
+                }
             }
-        } else if (phase === 'wait_up' && isUp) {
-            // 新进程已就绪，先确认版本号是否已更新，再强制刷新
-            console.log('[重启] 第 ' + attempts + ' 次 — 新进程已就绪，刷新页面');
-            _clearRuntimeCaches();
-            try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
-            location.href = '/trade?_=' + Date.now();
-            return;
-        }
+        } catch(_) { /* 旧进程已下线但新进程未就绪，继续等 */ }
         if (attempts >= maxAttempts) {
             console.error('[重启] 超时 (' + maxAttempts + ' 次轮询)，请手动刷新');
             toast('⚠️ 服务重启超时，请手动刷新页面');
@@ -772,7 +776,7 @@ async function _waitForRestartAndReload(onTimeout) {
         }
         setTimeout(tick, 1000);
     };
-    setTimeout(tick, 500); // 缩短起跑延迟（1.5s → 0.5s）
+    setTimeout(tick, 500);
 }
 
 // ── 系统更新 ──

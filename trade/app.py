@@ -35,6 +35,7 @@ def _check_license():
 # ── Session token ────────────────────────────────────────────────────────────
 
 _SESSION_TOKEN = secrets.token_urlsafe(32)
+_STARTED_AT = time.time()  # 进程启动时间戳，供前端重启检测
 
 # ── GitHub latest-version 缓存（TTL 10 分钟）──────────────────────────────
 # 避免 /api/status 每次请求都调 GitHub API，在 _waitForRestartAndReload
@@ -429,6 +430,7 @@ def create_app() -> FastAPI:
             "app": "Foreign Trade Assistant",
             "version": version,
             "latest_version": latest or None,
+            "started_at": _STARTED_AT,
         }
 
     return app

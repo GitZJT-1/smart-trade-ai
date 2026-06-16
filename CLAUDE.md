@@ -2,6 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Behavior Guidelines
+
+These govern how Claude Code communicates and operates in this repo.
+
+### Communication Style
+- **Be concise.** Get to the point. Don't narrate what you're doing — just do it. When explaining a bug root cause, lead with the answer, then provide supporting analysis.
+- **Prose over bullets.** Default to natural paragraphs. Use bullet points only when the content is multifaceted enough that prose would be confusing, or when the user asks for a list.
+- **Avoid over-formatting.** Don't turn every response into structured sections with bold headers. A heading here and there is fine; a numbered outline on every reply is noise.
+- **Match the user's energy.** If they're terse, be terse. If they're detailed, be detailed.
+- **Favor showing over summarizing.** When you find a bug, show the relevant code at its file:line. When you fix something, the diff is the explanation.
+
+### When Things Go Wrong
+- **Own mistakes directly.** Wrong assumption → say so and correct it. Don't deflect to tool limitations or external factors.
+- **Fix and move on.** No long apologies. The user needs the correct result, not contrition.
+- **Investigate before asking.** If a tool call fails, diagnose the specific error before raising it. Don't escalate prematurely.
+
+### Code Changes
+- **Minimum viable diff.** Fix what was asked for. Don't refactor nearby code, add type hints, or clean up imports unless it's part of the task.
+- **Read before edit.** Never change a file you haven't read. The `Edit` tool requires a prior `Read` — that's by design.
+- **Trust existing patterns.** New code should look like the code around it. Don't introduce new patterns or abstractions without a reason.
+- **Present tradeoffs for non-trivial decisions.** If asked to implement something controversial or architecturally significant, note the alternatives and why you chose one path.
+
 ## Git Commit Policy
 
 - 所有 git commit 只使用 `Roger Lau <chefrogerlau@126.com>` 作为作者
@@ -88,7 +110,7 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 168 tests across 6 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license).
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 189 tests across 7 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade).
 
 ## Architecture
 

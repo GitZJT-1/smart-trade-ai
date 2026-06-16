@@ -373,9 +373,13 @@ def email_background_check(email: str) -> dict:
         # 在子进程中运行 holehe，彻底隔离 trio/asyncio event loop
         # holehe 使用 trio，与 asyncio 的 event loop 不兼容
         try:
+            # start_new_session=True 确保 parent 被 kill 时 OS 会清理子进程组
+            _sp_kwargs = {"capture_output": True, "text": True, "timeout": 120}
+            if sys.platform != "win32":
+                _sp_kwargs["start_new_session"] = True
             result = subprocess.run(
                 [sys.executable, "-c", _HOLEHE_WORKER_SCRIPT, email],
-                capture_output=True, text=True, timeout=120,
+                **_sp_kwargs,
             )
             # 子进程返回码非零，说明 holehe 执行出错
             if result.returncode != 0:

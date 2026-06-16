@@ -58,6 +58,10 @@ def detect_tech_stack(url: str) -> dict:
             result["error"] = f"Blocked: {hostname} resolves to a private/reserved IP"
             return result
 
+        # 防御性 socket 超时（urlopen timeout=15 已覆盖大部分场景）
+        import socket
+        socket.setdefaulttimeout(15)
+
         req = urllib.request.Request(
             url,
             headers={"User-Agent": "Mozilla/5.0 (compatible; Trade-AI/1.0)"},

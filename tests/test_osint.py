@@ -421,3 +421,77 @@ class TestTargetDetection:
         """纯公司名应识别为 company。"""
         from trade.osint.orchestrator import _detect_target_type
         assert _detect_target_type("Microsoft Corp") == "company"
+
+
+# ── SSRF 防护测试 ───────────────────────────────────────────────────────
+
+
+class TestSSRFProtection:
+    """测试 _is_private_host 和 http_get 的 SSRF 防护。"""
+
+    def test_private_ip_blocked(self):
+        """127.0.0.1 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("127.0.0.1") is True
+
+    def test_private_ip_192(self):
+        """192.168.x.x 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("192.168.1.1") is True
+
+    def test_private_ip_10(self):
+        """10.x.x.x 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("10.0.0.1") is True
+
+    def test_private_ip_172(self):
+        """172.16.x.x 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("172.16.0.1") is True
+
+    def test_link_local_blocked(self):
+        """169.254.x.x 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("169.254.1.1") is True
+
+    def test_multicast_blocked(self):
+        """224.x.x.x 应被拦截。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("224.0.0.1") is True
+
+    def test_public_ip_allowed(self):
+        """8.8.8.8 公网 IP 应放行。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("8.8.8.8") is False
+
+    def test_public_domain_allowed(self):
+        """example.com 公网域名应放行。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("example.com") is False
+
+    def test_ofac_url_allowed(self):
+        """制裁名单 URL（ofac.treasury.gov）应放行。"""
+        from trade.osint.constants import _is_private_host
+        assert _is_private_host("ofac.treasury.gov") is False
+
+    def test_http_get_blocks_private(self):
+        """http_get 访问内网地址应返回 None。"""
+        from trade.osint.constants import http_get
+        result = http_get("http://127.0.0.1/", timeout=3)
+        assert result is None
+
+    def test_http_get_blocks_localhost(self):
+        """http_get 访问 localhost 应返回 None。"""
+        from trade.osint.constants import http_get
+        result = http_get("http://localhost/", timeout=3)
+        assert result is None
+
+    def test_tech_stack_reuses_shared_ssrf(self):
+        """tech_stack 模块应复用 constants._is_private_host 而非重复实现。"""
+        import trade.osint.tech_stack as ts
+        # 不应有自己的 _BLOCKED_RANGES（说明复用了 constants 的共享实现）
+        assert not hasattr(ts, "_BLOCKED_RANGES"), \
+            "tech_stack should use _is_private_host from constants, not its own _BLOCKED_RANGES"
+        # 应有 _is_private_host（从 constants 导入的共享函数）
+        assert hasattr(ts, "_is_private_host"), \
+            "tech_stack should import _is_private_host from constants"

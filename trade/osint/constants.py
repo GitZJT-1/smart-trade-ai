@@ -82,11 +82,44 @@ def get_sanctions_cache_dir() -> str | None:
 # HTTP 工具函数（共享给 sanctions / tech_stack / linkedin）
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _is_private_host(hostname: str) -> bool:
+    """检查主机名是否解析到内网/保留 IP 地址（防 SSRF）。
+
+    供 http_get() 和 tech_stack 等直接使用 urlopen 的模块共享。
+    """
+    import ipaddress
+    import socket
+
+    _BLOCKED_NETS = [
+        ipaddress.ip_network(n) for n in (
+            "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16",
+            "172.16.0.0/12", "192.168.0.0/16", "0.0.0.0/8",
+            "224.0.0.0/4", "240.0.0.0/4",
+        )
+    ]
+    try:
+        try:
+            addr = ipaddress.ip_address(hostname)
+        except ValueError:
+            addr = ipaddress.ip_address(socket.gethostbyname(hostname))
+    except (ValueError, socket.gaierror, OSError):
+        return False  # 无法解析时放行（让 urlopen 自己报错）
+    return any(addr in net for net in _BLOCKED_NETS)
+
+
 def http_get(url: str, timeout: int = 30) -> str | None:
     """通过 urllib 发送 HTTP GET 请求，返回响应正文。
 
     所有子模块统一使用此函数，失败时返回 None 而非抛异常。
+    内置 SSRF 防护：通过 _is_private_host() 拒绝内网/保留 IP。
     """
+    from urllib.parse import urlparse
+
+    _host = urlparse(url).hostname or ""
+    if _is_private_host(_host):
+        logger.warning("SSRF blocked: %s", url)
+        return None
+
     try:
         req = urllib.request.Request(
             url,

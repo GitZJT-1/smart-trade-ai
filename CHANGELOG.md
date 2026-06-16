@@ -15,6 +15,14 @@
 - **post_install.py 全部加 timeout**：git pull 120s / pip install 600s / schtasks/launchctl/systemctl 30s，防与 _capture_lock 联动死锁
 - **Hermes 兼容版本范围扩大**：`0.13.0 <= version < 0.17.0`（v0.16.0 已验证无 breaking change）
 - **系统升级流程重构**：`_perform_restart()` 统一重启逻辑（含 Gateway 协同 + 三层 PID 安全校验）；`/system/update` 通过 BackgroundTasks 调度重启，响应先送达前端
+- **升级重启顺序修复**：`_perform_restart()` 先启动新进程再杀旧进程（之前先杀自己导致新进程启动代码无法执行）
+- **升级端口重试**：新进程 uvicorn.run 增加重试循环（最多 10 秒），等旧进程释放端口
+- **升级只使用运行目录**：删除 `_guess_running_project_dir()` 和 `_force_sync_from_source()`，`update_trade()` 始终以 `~/.trade/foreign-trade-assistant/` 为唯一工作目录
+- **GitHub API 缓存**：`_latest_version_cache`（TTL 600s）防止版本轮询触发 API 限流
+- **`_capture_output` 捕获 SystemExit**：`sys.exit()` 不再穿透导致 FastAPI 500
+- **升级失败标记补全**：新增 `pip install failed`、`git stash 也失败`、`Database check failed` 标记
+- **Windows 重启兼容**：`_perform_restart` 使用 `creationflags=0x00000200` 避免子进程继承控制台
+- **前端版本检查缓存禁用**：`checkVersion()` 加 `cache: 'no-store'` + cache-bust 参数，避免浏览器缓存返回旧版本
 - **前端重启等待机制**：`_waitForRestartAndReload()` 先等服务 DOWN 再等 UP；`_clearRuntimeCaches()` 清 viewCache + sessionStorage（保留 trade_cid）；重载带 cache-bust 参数
 - **Skill 总数 15→17**：全仓库 .md 文档同步更新（README/CLAUDE/AGENTS/docs/业务概览/使用说明书），能力表格新增 trade-ops 和 trade-compliance
 - **Hermes 安装源全局修正**：所有文档和脚本中 `chefroger/hermes-agent` → `NousResearch/hermes-agent`（与 pyproject.toml 一致）；pre_install_check 源检查逻辑反转

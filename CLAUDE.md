@@ -214,6 +214,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
     - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive use of the same skill sends a brief hint (`"继续使用 {name} 技能，规则同上一次。"`) instead of the full injection_prompt (~1500 tokens). Process restart clears cache (safe degradation).
     - Rollback tag: `pre-token-optimization` points to the commit before these changes.
 
+21. **Upgrade pipeline** (`trade/post_install.py`): `update_trade()` operates exclusively in `~/.trade/foreign-trade-assistant/` (the runtime directory) — no source-directory guessing or sync. `_perform_restart()` starts the new process first, then kills the old one (avoids the old "suicide before spawn" deadlock). The new process retries `uvicorn.run` for up to 10 seconds waiting for the old process to release the port. Windows uses `creationflags=0x00000200` (CREATE_NEW_PROCESS_GROUP) for clean subprocess detachment. `_latest_version_cache` (TTL 600s) prevents GitHub API rate-limiting on repeated version checks. `_capture_output` catches `SystemExit` so `sys.exit()` no longer causes FastAPI 500 errors. Failure markers cover `pip install failed`, `git stash failed`, and `Database check failed`.
+
 ## Hermes Coupling Points
 
 Trade depends on these Hermes internals (watch on Hermes upgrades):

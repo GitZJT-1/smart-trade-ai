@@ -491,15 +491,20 @@ def main() -> None:
         import webbrowser
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
-    # 重启场景：旧进程可能仍在占用端口，uvicorn.run 会因 [Errno 48] 失败。
-    # 用重试循环等待旧进程退出后端口释放，最多等 10 秒。
+    # 重启场景：旧进程可能仍在占用端口，uvicorn 内部将端口冲突转成 sys.exit(1)
+    # 而非抛出 OSError，因此还需捕获 SystemExit。最多等 10 秒。
     import time as _time
     for _attempt in range(20):
         try:
             uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
             break
-        except OSError as _e:
-            if "Address already in use" in str(_e) or _e.errno == 48:
+        except (OSError, SystemExit) as _e:
+            # 端口冲突：OSError errno 48 或 SystemExit（uvicorn 内部 sys.exit(1)）
+            _is_port_conflict = (
+                (isinstance(_e, OSError) and ("Address already in use" in str(_e) or getattr(_e, 'errno', None) == 48))
+                or isinstance(_e, SystemExit)
+            )
+            if _is_port_conflict:
                 if _attempt == 0:
                     print("  ⏳ 等待旧进程释放端口...")
                 _time.sleep(0.5)

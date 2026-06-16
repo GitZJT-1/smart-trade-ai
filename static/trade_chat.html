@@ -738,17 +738,18 @@ function _clearRuntimeCaches() {
 }
 
 // 通过 /api/status 的 started_at 时间戳检测进程是否已重启，然后 hard-reload
-// sessionStorage 存储重启前的 started_at，轮询到变化后强制刷新
+// 不依赖 DOWN→UP 序列：新进程启动快时 DOWN 瞬间无法捕捉
 async function _waitForRestartAndReload(onTimeout) {
     let attempts = 0;
     const maxAttempts = 120;   // 120 × 1s = 2 分钟兜底
     // 保存当前 started_at，重启后新进程的时间戳会不同
-    let oldStartedAt = null;
+    let oldStartedAt = -1;  // -1 = 无法获取（旧服务无此字段 / 请求失败）
     try {
         const r0 = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
         if (r0.ok) {
             const d0 = await r0.json();
-            oldStartedAt = d0.started_at || 0;
+            // 旧服务可能无此字段 → 存 -1，只要能获取到新值就视为重启成功
+            oldStartedAt = (typeof d0.started_at === 'number') ? d0.started_at : -1;
         }
     } catch(_) {}
 
@@ -759,8 +760,10 @@ async function _waitForRestartAndReload(onTimeout) {
             const r = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
             if (r.ok) {
                 const d = await r.json();
-                if (d.started_at && oldStartedAt && d.started_at !== oldStartedAt) {
-                    console.log('[重启] 第 ' + attempts + ' 次 — 检测到新进程 (started_at=' + d.started_at + ')，刷新页面');
+                const cur = (typeof d.started_at === 'number') ? d.started_at : -1;
+                // 检测到重启：started_at 从旧值变为新值（-1→数值也算）
+                if (cur > 0 && cur !== oldStartedAt) {
+                    console.log('[重启] 第 ' + attempts + ' 次 — 检测到新进程 (started_at=' + cur + ')，刷新页面');
                     _clearRuntimeCaches();
                     try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
                     location.href = '/trade?_=' + Date.now();

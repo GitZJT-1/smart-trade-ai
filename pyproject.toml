@@ -25,7 +25,8 @@ dependencies = [
   # These are OPTIONAL — install with `pip install -e ".[docs]"` if you need document parsing
   "beautifulsoup4>=4.12.0,<5.0",
   # Process management — PID verification in _perform_restart
-  "psutil>=5.9.0,<7.0",
+  # hermes-agent requires psutil==7.2.2, so upper bound must accommodate that
+  "psutil>=5.9.0,<8.0",
 ]
 
 [project.optional-dependencies]

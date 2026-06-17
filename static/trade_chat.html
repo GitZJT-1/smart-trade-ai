@@ -638,13 +638,20 @@ async function loadLicenseStatus() {
             bar.style.background = '#F0FDF4';
             bar.style.color = '#166534';
             bar.innerHTML = `✅ 已激活${data.expires_at ? ' · 有效期至 ' + data.expires_at.substring(0,10) : ''}`;
-        } else if (data.status === 'trial' && data.days_remaining <= 7) {
+        } else if (data.status === 'trial') {
             bar.style.display = 'block';
-            bar.style.background = '#FFFBEB';
-            bar.style.color = '#92400E';
-            var trialHtml = `⏳ 试用剩余 ${data.days_remaining} 天 · <a href="#" onclick="showActivateModal()" style="color:#D97706;text-decoration:underline;">输入激活码</a>`;
+            if (data.days_remaining <= 7) {
+                // 快到期：橙色警告
+                bar.style.background = '#FFFBEB';
+                bar.style.color = '#92400E';
+            } else {
+                // 正常试用：蓝色信息
+                bar.style.background = '#EFF6FF';
+                bar.style.color = '#1E40AF';
+            }
+            var trialHtml = `⏳ 试用剩余 ${data.days_remaining} 天 · <a href="#" onclick="showActivateModal()" style="color:${data.days_remaining <= 7 ? '#D97706' : '#2563EB'};text-decoration:underline;">输入激活码</a>`;
             if (data.request_code) {
-                trialHtml += ' · 申请码: <code style="background:#FEF3C7;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + data.request_code + '</code>';
+                trialHtml += ' · 申请码: <code style="background:' + (data.days_remaining <= 7 ? '#FEF3C7' : '#DBEAFE') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + data.request_code + '</code>';
             }
             bar.innerHTML = trialHtml;
         }

@@ -1,0 +1,49 @@
+# TradeWin — Windows 独立版
+
+Foreign Trade Assistant 的 Windows 原生桌面应用。
+
+## 系统要求
+
+- Windows 10 (1903+) / Windows 11
+- 4 GB RAM 以上
+- 无需安装 Python — 单一 .exe 文件，双击运行
+
+## 快速开始
+
+1. 下载 `TradeWin.exe`
+2. 双击运行
+3. 首次启动自动进入 30 天试用期
+4. 在设置 → 许可证中输入激活码
+
+## 功能
+
+- 💬 AI 聊天 — 外贸销售助手，支持文档分析、报价生成、客户背调
+- 👥 客户管理 — 多公司隔离，客户 CRUD
+- 📁 文档库 — 报价单、合同、产品规格等文件分析
+- 📋 任务面板 — Cron 定时任务自动化
+- 🔑 许可证管理 — 试用/激活
+- ⬆️ 一键更新 — git pull + pip install 自动更新
+
+## 开发者构建
+
+在 Windows 上：
+
+```cmd
+cd windows-standalone
+build.bat
+```
+
+构建产物在 `dist/TradeWin.exe`（约 80-120 MB）。
+
+## 技术栈
+
+- **GUI:** PySide6 (Qt6)
+- **后端:** FastAPI + uvicorn (daemon thread)
+- **AI:** Hermes Agent (NousResearch)
+- **打包:** PyInstaller --onefile --windowed
+
+## 已知限制
+
+1. **Markdown 渲染**: QTextBrowser 仅支持 HTML 子集，复杂表格/代码块显示有限
+2. **文件大小**: PyInstaller --onefile 打包后约 100MB+（含 Qt6 + Python 标准库）
+3. **杀毒误报**: 无数字签名的 PyInstaller exe 可能被 Windows Defender 误报

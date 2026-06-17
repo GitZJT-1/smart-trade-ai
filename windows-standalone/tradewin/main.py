@@ -13,6 +13,9 @@ if str(_parent) not in sys.path:
 
 from PySide6.QtWidgets import QApplication
 
+from tradewin.app import MainWindow
+from tradewin.themes import apply_theme
+
 
 def _start_backend() -> None:
     """在 daemon 线程中启动 FastAPI 服务（localhost:9119）。"""
@@ -26,7 +29,7 @@ def _start_backend() -> None:
 
 
 def main() -> None:
-    """主入口：启动后端 → 启动 Qt GUI。"""
+    """主入口：启动后端 → 初始化 Qt → 显示主窗口 → 进入事件循环。"""
     # 1) 后台线程启动 FastAPI
     _thread = threading.Thread(target=_start_backend, daemon=True)
     _thread.start()
@@ -35,9 +38,13 @@ def main() -> None:
     _qt_app = QApplication(sys.argv)
     _qt_app.setApplicationName("TradeWin")
     _qt_app.setOrganizationName("SmartTradeAI")
+    apply_theme(_qt_app)
 
-    # 3) 进入 Qt 事件循环（后续 Task 会添加主窗口）
-    print("TradeWin started. Backend running on http://127.0.0.1:9119")
+    # 3) 创建并显示主窗口
+    _window = MainWindow()
+    _window.show()
+
+    # 4) 进入 Qt 事件循环
     sys.exit(_qt_app.exec())
 
 

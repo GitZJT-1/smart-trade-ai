@@ -16,6 +16,7 @@ from PySide6.QtGui import QAction
 
 from tradewin.themes import PRIMARY_DARK
 from tradewin.api import list_companies, set_company, init_session, get_status
+from tradewin.chat import ChatView
 
 
 class MainWindow(QMainWindow):
@@ -40,8 +41,7 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._stack)
 
         # 占位视图（后续 Task 替换为实际组件）
-        self._chat_view = QLabel("💬 聊天视图 — 待 Task 5 实现")
-        self._chat_view.setAlignment(Qt.AlignCenter)
+        self._chat_view = ChatView()
         self._customers_view = QLabel("👥 客户管理 — 待实现")
         self._customers_view.setAlignment(Qt.AlignCenter)
         self._libraries_view = QLabel("📁 文档库 — 待实现")

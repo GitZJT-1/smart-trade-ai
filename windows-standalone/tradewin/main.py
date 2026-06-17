@@ -44,7 +44,16 @@ def main() -> None:
     _window = MainWindow()
     _window.show()
 
-    # 4) 进入 Qt 事件循环
+    # 4) 系统托盘（最小化到托盘）
+    from tradewin.tray import TrayManager
+    _tray = TrayManager(_qt_app, _window)
+    def _close_to_tray(event):
+        event.ignore()
+        _window.hide()
+        _tray.show_notification("TradeWin", "已最小化到系统托盘")
+    _window.closeEvent = _close_to_tray
+
+    # 5) 进入 Qt 事件循环
     sys.exit(_qt_app.exec())
 
 

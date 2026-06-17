@@ -269,7 +269,7 @@ class TestUpdateTradeDir:
 
     def test_trade_dir_is_runtime_dir(self):
         """update_trade 应使用 ~/.trade/foreign-trade-assistant/ 而非推断目录。"""
-        from trade.post_install import _get_trade_home
+        from trade.post_install.skills import _get_trade_home
 
         trade_home = _get_trade_home()
         expected_dir = trade_home / "foreign-trade-assistant"

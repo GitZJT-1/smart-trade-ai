@@ -27,6 +27,8 @@ dependencies = [
   # Process management — PID verification in _perform_restart
   # hermes-agent requires psutil==7.2.2, so upper bound must accommodate that
   "psutil>=5.9.0,<8.0",
+  # DNS resolution — MX record queries in OSINT email verification
+  "dnspython>=2.6.0,<3.0",
 ]
 
 [project.optional-dependencies]

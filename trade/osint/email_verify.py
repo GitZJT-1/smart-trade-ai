@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import logging
 import re
-import socket
-import struct
 
 from trade.osint.constants import PERSONAL_EMAIL_DOMAINS
 
@@ -127,188 +125,23 @@ def _extract_domain(url_or_domain: str) -> str | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DNS MX 查询（sockets-only，不依赖 dnspython）
+# DNS MX 查询（dnspython，替代手动 RFC 1035 socket 实现）
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _query_mx_records(domain: str) -> tuple[list[str], bool]:
-    """通过 socket DNS 查询 MX 记录（RFC 1035 协议实现）。
+    """通过 dnspython 查询 MX 记录，自动处理 TCP fallback / EDNS / 截断重试。
 
-    使用多 DNS 服务器 fallback 列表，transaction_id 随机生成防 DNS 欺骗。
+    如果 dnspython 不可用则返回空结果。
     """
-    import secrets as _secrets
-
-    dns_servers = ["8.8.8.8", "1.1.1.1", "114.114.114.114"]
-    dns_port = 53
-    timeout = 5
-    last_err = None
-
-    for dns_server in dns_servers:
-        try:
-            # 随机 transaction_id，防 DNS 欺骗
-            txid = _secrets.token_bytes(2)
-            flags = struct.pack("!H", 0x0100)         # 标准查询
-            qdcount = struct.pack("!H", 1)
-            zeros = struct.pack("!HHH", 0, 0, 0)      # ancount/nscount/arcount
-
-            question = _build_dns_question(domain, qtype=15)
-            packet = txid + flags + qdcount + zeros + question
-
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.settimeout(timeout)
-                s.sendto(packet, (dns_server, dns_port))
-                data, _ = s.recvfrom(512)
-
-            # 校验响应 transaction_id 必须与请求一致
-            if len(data) < 12 or data[:2] != txid:
-                # transaction_id 不匹配，可能为 DNS 欺骗或乱序响应，跳过该服务器
-                logger.debug("DNS txid mismatch: %s", dns_server)
-                continue
-
-            # 检查 TC（Truncation）标志：bit 9 of flags，响应超过 512 字节被截断
-            if len(data) >= 4 and (data[2] & 0x02):
-                logger.debug("DNS response truncated for %s (TC flag set)", domain)
-                # 截断的 MX 响应可能不完整，结果仅供参考
-
-            mx_servers = _parse_dns_mx_response(data)
-            # 解析到至少一条 MX 记录即为成功
-            return mx_servers, len(mx_servers) > 0
-
-        except (TimeoutError, OSError) as e:
-            # 当前 DNS 服务器超时或网络错误，尝试下一台服务器
-            last_err = e
-            continue
-
-    # 所有 DNS 服务器均失败，返回空结果
-    logger.debug("MX 查询全部失败 [%s]: %s", domain, last_err)
-    return [], False
-
-
-def _build_dns_question(domain: str, qtype: int = 1) -> bytes:
-    """构建 DNS 查询问题部分（RFC 1035 格式）。
-
-    Args:
-        domain: 域名（如 "example.com"）
-        qtype: 查询类型（1=A, 15=MX, 16=TXT）
-    """
-    parts = domain.split(".")
-    encoded = b""
-    for part in parts:
-        encoded += struct.pack("!B", len(part)) + part.encode("ascii")
-    encoded += b"\x00"  # 根标签结束
-
-    # QTYPE (2 bytes) + QCLASS (2 bytes, IN = 1)
-    qtype_bytes = struct.pack("!H", qtype)
-    qclass_bytes = struct.pack("!H", 1)  # IN
-
-    return encoded + qtype_bytes + qclass_bytes
-
-
-def _parse_dns_mx_response(data: bytes) -> list[str]:
-    """解析 DNS MX 响应包，提取 MX 服务器列表。
-
-    处理 DNS 压缩指针格式（RFC 1035）。
-    """
-    mx_servers: list[str] = []
     try:
-        if len(data) < 12:
-            # 数据过短，不包含合法 DNS 头部
-            return []
-
-        # DNS 头部 = 12 字节，从 body 开始解析
-        pos = 12
-
-        # 跳过问题部分（域名 + QTYPE + QCLASS）
-        while pos < len(data) and data[pos] != 0:
-            label_len = data[pos]
-            if label_len >= 0xC0:  # 压缩指针
-                pos += 2
-                break
-            pos += label_len + 1
-        pos += 5  # 跳过 QTYPE(2) + QCLASS(2) 的结尾 \x00(1)
-
-        # 解析 answer 部分
-        while pos < len(data):
-            # 解析资源记录名称（可能是压缩指针）
-            if data[pos] >= 0xC0:
-                # 压缩指针格式，跳过 2 字节
-                pos += 2
-            else:
-                # 逐标签跳过域名（普通标签格式）
-                while pos < len(data) and data[pos] != 0:
-                    label_len = data[pos]
-                    if label_len >= 0xC0:
-                        # 遇到压缩指针，跳转
-                        pos += 2
-                        break
-                    pos += label_len + 1
-                pos += 1  # 结束标签 \x00
-
-            if pos + 10 > len(data):
-                # 剩余数据不足以解析记录头部，退出
-                break
-
-            rtype = struct.unpack("!H", data[pos:pos + 2])[0]
-            pos += 8  # CLASS(2) + TTL(4) + RDLENGTH(2)
-            rdlength = struct.unpack("!H", data[pos - 2:pos])[0]
-            pos += 2
-
-            if rtype == 15:  # MX 记录
-                preference = struct.unpack("!H", data[pos:pos + 2])[0]  # noqa: F841
-                mx_name, _ = _parse_dns_name(data, pos + 2)
-                mx_servers.append(mx_name)
-                pos += rdlength
-            else:
-                # 非 MX 记录，跳过即可
-                pos += rdlength
-
+        import dns.resolver
+        answers = dns.resolver.resolve(domain, "MX", lifetime=5)
+        mx_servers = [str(r.exchange).rstrip(".") for r in answers]
+        return mx_servers, len(mx_servers) > 0
+    except ImportError:
+        logger.debug("dnspython not installed, skipping MX query for %s", domain)
+        return [], False
     except Exception as e:
-        # 解析异常时记录日志，返回已解析到的部分结果
-        logger.debug("MX 解析失败: %s", e)
+        logger.debug("MX query failed for %s: %s", domain, e)
+        return [], False
 
-    return mx_servers
-
-
-def _parse_dns_name(data: bytes, offset: int) -> tuple[str, int]:
-    """解析 DNS 压缩格式的域名（RFC 1035 标签格式 + 指针压缩）。
-
-    Returns:
-        (解析后的域名字符串, 结束偏移量)
-    """
-    labels: list[str] = []
-    pos = offset
-    jumped = False
-    jumps = 0
-    max_jumps = 10  # 防止指针循环
-
-    while jumps < max_jumps:
-        if pos >= len(data):
-            # 超出数据边界，终止解析
-            break
-
-        length = data[pos]
-
-        if length == 0:
-            # 标签序列结束
-            if not jumped:
-                # 未跳转过，返回当前位置之后的偏移量
-                return (".".join(labels), pos + 1)
-            # 已跳转过，返回第一次跳转前的偏移量
-            return (".".join(labels), offset)
-
-        if length >= 0xC0:
-            # 压缩指针：跳转到指针位置继续解析
-            if not jumped:
-                # 第一次遇到压缩指针，记录返回位置
-                offset = pos + 2
-            new_pos = ((length & 0x3F) << 8) | data[pos + 1]
-            pos = new_pos
-            jumped = True
-            jumps += 1
-            continue
-
-        # 普通标签：读取标签内容
-        labels.append(data[pos + 1:pos + 1 + length].decode("ascii", errors="replace"))
-        pos += length + 1
-
-    # 超过最大跳转次数，返回当前已解析结果
-    return (".".join(labels), offset)

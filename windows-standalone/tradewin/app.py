@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from tradewin.api import get_status, init_session, list_companies, set_company
+from tradewin.api import get_status, init_session, list_companies, set_company, switch_company
 from tradewin.chat import ChatView
 from tradewin.themes import PRIMARY_DARK
 
@@ -142,9 +142,12 @@ class MainWindow(QMainWindow):
             self._stack.setCurrentIndex(idx)
 
     def _on_company_changed(self, index: int) -> None:
-        """公司选择变更：通知 API 客户端。"""
+        """公司选择变更：先通知后端切换 session 绑定，再更新本地 header。"""
         cid = self._company_combo.itemData(index)
         if cid:
+            # 先切换后端 session 级绑定（避免后续 API 调用 403）
+            switch_company(int(cid))
+            # 再更新本地 header（后续请求自动携带）
             set_company(str(cid))
 
     def _load_companies(self) -> None:

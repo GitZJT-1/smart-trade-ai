@@ -22,6 +22,15 @@ def set_company(cid: str) -> None:
     _company_id = cid
 
 
+def switch_company(cid: int) -> dict | None:
+    """通知后端切换 session 级活跃公司绑定。
+
+    调用 POST /api/trade/companies/{cid}/switch，更新 _ACTIVE_COMPANY 映射。
+    建议在 UI 公司切换时先调此接口，再调 set_company() 更新本地 header。
+    """
+    return _post(f"/api/trade/companies/{cid}/switch")
+
+
 def _get(path: str) -> dict | None:
     """GET 请求，返回 JSON dict 或 None（网络错误时）。"""
     url = f"{_BASE}{path}"

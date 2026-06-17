@@ -8,8 +8,8 @@ TradeWin — 本地 FastAPI HTTP 客户端。
 from __future__ import annotations
 
 import json
-import urllib.request
 import urllib.error
+import urllib.request
 
 _BASE = "http://127.0.0.1:9119"
 _session_token: str = ""  # 首次 /api/status 时自动获取

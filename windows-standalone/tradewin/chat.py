@@ -5,12 +5,17 @@ QTextBrowser Markdown 消息列表 + QLineEdit 输入框 + QThread SSE 流式接
 """
 
 import json
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTextBrowser,
-    QLineEdit, QPushButton, QScrollBar,
-)
+
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QTextBrowser,
+    QVBoxLayout,
+    QWidget,
+)
 
 from tradewin.api import stream_chat
 

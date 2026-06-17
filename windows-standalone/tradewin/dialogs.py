@@ -3,17 +3,29 @@ TradeWin — 模态对话框集合：公司管理、许可证激活、系统设�
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QListWidget, QListWidgetItem, QFormLayout,
-    QMessageBox, QTabWidget, QWidget,
-)
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
+    QDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from tradewin.api import (
-    list_companies, create_company,
-    get_license_status, activate_license,
-    system_update, system_restart,
+    activate_license,
+    create_company,
+    get_license_status,
+    list_companies,
+    system_restart,
+    system_update,
 )
 
 

@@ -5,8 +5,9 @@ TradeWin — 系统托盘图标。
 """
 
 from pathlib import Path
-from PySide6.QtGui import QIcon, QAction
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
+
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 
 class TrayManager:

@@ -10,10 +10,13 @@ Foreign Trade Assistant 的 Windows 原生桌面应用。
 
 ## 快速开始
 
-1. 下载 `TradeWin.exe`
+1. 下载 `TradeWin.exe` 到任意目录
 2. 双击运行
-3. 首次启动自动进入 30 天试用期
-4. 在设置 → 许可证中输入激活码
+3. 首次启动自动弹出配置向导：
+   - 选择 LLM 提供商（OpenAI / Claude / MiniMax / DeepSeek / Moonshot）
+   - 输入 API Key（自动写入 `~/.hermes/.env`）
+   - 自动安装 Trade Skills + 初始化数据库
+4. 配置完成后即可使用，无需任何手动设置
 
 ## 功能
 

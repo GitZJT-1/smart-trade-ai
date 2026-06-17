@@ -8,15 +8,22 @@ TradeWin — 主窗口。
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QMainWindow, QSplitter, QTreeWidget, QTreeWidgetItem,
-    QStackedWidget, QComboBox, QWidget, QVBoxLayout, QLabel,
-    QStatusBar, QPushButton, QHBoxLayout, QMessageBox,
+    QComboBox,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QSplitter,
+    QStackedWidget,
+    QStatusBar,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtGui import QAction
 
-from tradewin.themes import PRIMARY_DARK
-from tradewin.api import list_companies, set_company, init_session, get_status
+from tradewin.api import get_status, init_session, list_companies, set_company
 from tradewin.chat import ChatView
+from tradewin.themes import PRIMARY_DARK
 
 
 class MainWindow(QMainWindow):

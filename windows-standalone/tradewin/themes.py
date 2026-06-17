@@ -5,7 +5,7 @@ TradeWin — Qt 主题系统。
 颜色常量与现有 trade_chat.html CSS 变量对齐。
 """
 
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 

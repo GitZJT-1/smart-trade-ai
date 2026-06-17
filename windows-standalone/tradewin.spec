@@ -19,7 +19,13 @@ a = Analysis(
         (str(_PROJECT_ROOT / 'trade'), 'trade'),
     ],
     hiddenimports=[
+        # Qt 完整导入（含 QWizard / QSystemTrayIcon 等较少使用的组件）
         'PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets',
+        # TradeWin GUI 模块
+        'tradewin', 'tradewin.api', 'tradewin.app', 'tradewin.chat',
+        'tradewin.dialogs', 'tradewin.main', 'tradewin.setup',
+        'tradewin.themes', 'tradewin.tray', 'tradewin.wizard',
+        # uvicorn
         'uvicorn.loops.auto', 'uvicorn.protocols.http.auto',
         'trade', 'trade.api', 'trade.api.chat', 'trade.api.cron',
         'trade.api.companies', 'trade.api.customers', 'trade.api.libraries',

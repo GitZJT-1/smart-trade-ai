@@ -2894,7 +2894,7 @@ async function deleteCompany(id) {
     else toast(r?.detail||'删除失败');
 }
 
-function onCompanyChange(cid) {
+async function onCompanyChange(cid) {
     // 清空视图缓存
     for (const key in viewCache) {
         viewCache[key].element.remove();
@@ -2903,7 +2903,11 @@ function onCompanyChange(cid) {
     // 清空 cron 输出记录，防止跨公司污染
     _shownCronOutputs = new Set();
     if (cid) {
-        currentCompanyId = parseInt(cid);
+        const newCid = parseInt(cid);
+        // 先更新前端状态（让后续 API 调用带上正确的 X-Company-ID header）
+        currentCompanyId = newCid;
+        // 通知后端切换 session 绑定（旧 cid 会触发 403，因此 _enforce_company_binding 需放行 /switch 端点）
+        try { await api('POST', '/api/trade/companies/' + newCid + '/switch'); } catch(_) {}
         saveState();
         navToView('chat', 'daily', '今日简报');
     } else {

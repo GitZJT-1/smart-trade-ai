@@ -46,6 +46,10 @@ def _enforce_company_binding(
     except ValueError:
         return  # 无效 ID 由 require_company 处理
 
+    # switch 端点允许携带不同于当前绑定的 company_id（因为它的语义就是切换）
+    if "/switch" in request.url.path:
+        return
+
     with _company_bind_lock:
         bound = _ACTIVE_COMPANY.get(token)
         if bound is not None and cid != bound:

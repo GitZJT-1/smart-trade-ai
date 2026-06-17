@@ -1,0 +1,12 @@
+# Windows batch files MUST use CRLF — Unix LF causes cmd.exe parse failures
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Python uses LF universally
+*.py text eol=lf
+
+# Binary files
+*.ico binary
+*.png binary
+*.jpg binary

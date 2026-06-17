@@ -1,0 +1,26 @@
+/* TradeWin QSS Stylesheet — 微调 Qt Fusion 外观 */
+QMainWindow { background: #F1F5F9; }
+QStatusBar { background: #FFFFFF; border-top: 1px solid #E2E8F0; color: #64748B; font-size: 12px; }
+QScrollBar:vertical { width: 8px; background: transparent; }
+QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 4px; min-height: 30px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QSplitter::handle { background: #E2E8F0; width: 1px; }
+QTextBrowser { border: none; background: transparent; }
+QLineEdit { border: 1px solid #E2E8F0; border-radius: 4px; padding: 6px 10px; background: #FFFFFF; }
+QLineEdit:focus { border-color: #3B82F6; }
+QPushButton { border: 1px solid #E2E8F0; border-radius: 4px; padding: 6px 12px; background: #FFFFFF; color: #1E293B; }
+QPushButton:hover { background: #F8FAFC; border-color: #CBD5E1; }
+QPushButton:pressed { background: #F1F5F9; }
+QPushButton#primary { background: #3B82F6; color: #FFFFFF; border: none; font-weight: bold; }
+QPushButton#primary:hover { background: #2563EB; }
+QPushButton#danger { background: #EF4444; color: #FFFFFF; border: none; }
+QPushButton#danger:hover { background: #DC2626; }
+QComboBox { border: 1px solid #E2E8F0; border-radius: 4px; padding: 6px 10px; background: #FFFFFF; }
+QComboBox:focus { border-color: #3B82F6; }
+QComboBox::drop-down { border: none; }
+QTreeWidget { border: 1px solid #E2E8F0; border-radius: 4px; background: #FFFFFF; alternate-background-color: #F8FAFC; }
+QTreeWidget::item { padding: 4px 8px; }
+QTreeWidget::item:selected { background: #EFF6FF; color: #1E293B; }
+QTabWidget::pane { border: 1px solid #E2E8F0; border-radius: 4px; }
+QTabBar::tab { padding: 8px 16px; border: 1px solid transparent; }
+QTabBar::tab:selected { background: #FFFFFF; border-bottom: 2px solid #3B82F6; }

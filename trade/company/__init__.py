@@ -14,6 +14,7 @@ from trade.company.crud import (
     _db_get_one,
     _row_to_company,
     _row_to_tc,
+    _write_audit_log,
     create,
     delete,
     get,

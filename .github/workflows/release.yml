@@ -21,7 +21,7 @@ jobs:
               pip install -r windows-standalone/requirements.txt
               pip install -e .
             spec-path: windows-standalone/tradewin.spec
-            artifact-glob: windows-standalone/dist/TradeWin*.exe
+            artifact-glob: dist/TradeWin*.exe
             asset-suffix: ".exe"
 
           # ── macOS (pywebview → .app.zip) ──

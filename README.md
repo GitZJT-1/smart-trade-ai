@@ -150,13 +150,14 @@ python server.py
 
 ### Windows
 
-**安装前只需手动安装 Python：**
+**安装前需手动安装 Python 和 Git：**
 
-从 [python.org](https://www.python.org/downloads/) 下载 **Python 3.11 ~ 3.13 Windows installer (64-bit)**，安装时勾选「Add Python to PATH」。
+1. **Python** — 从 [python.org](https://www.python.org/downloads/) 下载 **Python 3.11 ~ 3.13 Windows installer (64-bit)**，安装时勾选「Add Python to PATH」。
+2. **Git** — 从 [git-scm.com](https://git-scm.com/download/win) 下载 Windows installer，默认选项一路下一步即可。或在 PowerShell 中执行 `winget install --id Git.Git -e --silent`。
 
-> Node.js 和 Git 无需手动安装 — Hermes 的一键安装脚本会自动处理。
+> Node.js 无需手动安装 — Hermes 的一键安装脚本会自动处理。
 
-安装 Python 后，**重新打开 PowerShell**，执行：
+安装好 Python 和 Git 后，**重新打开 PowerShell**（让 PATH 生效），执行：
 
 ```powershell
 # 0. 启用 Windows 长路径支持（以管理员身份运行 PowerShell，仅需一次）

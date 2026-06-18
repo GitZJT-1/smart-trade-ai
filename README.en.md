@@ -150,13 +150,14 @@ python server.py
 
 ### Windows
 
-**Only Python needs manual install:**
+**Both Python and Git need manual install:**
 
-Download **Python 3.11 ~ 3.13 Windows installer (64-bit)** from [python.org](https://www.python.org/downloads/). Check "Add Python to PATH" during install.
+1. **Python** — Download **Python 3.11 ~ 3.13 Windows installer (64-bit)** from [python.org](https://www.python.org/downloads/). Check "Add Python to PATH" during install.
+2. **Git** — Download from [git-scm.com](https://git-scm.com/download/win) and install with default options. Or run `winget install --id Git.Git -e --silent` in PowerShell.
 
-> Node.js and Git are handled automatically by Hermes' one-liner installer — no manual setup needed.
+> Node.js is handled automatically by Hermes' one-liner installer — no manual setup needed.
 
-After installing Python, **open PowerShell** and run:
+After installing Python and Git, **reopen PowerShell** (to refresh PATH) and run:
 
 ```powershell
 # 0. Enable Windows long path support (run PowerShell as Administrator, one-time only)

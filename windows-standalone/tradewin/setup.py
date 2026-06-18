@@ -190,12 +190,12 @@ def write_hermes_config(provider: str, model: str = "") -> bool:
     _HERMES_HOME.mkdir(parents=True, exist_ok=True)
     config_file = _HERMES_HOME / "config.yaml"
 
-    # 各提供商的默认模型
+    # 各提供商的默认模型（保守选择，避免使用可能下线的模型名）
     default_models = {
         "openai": "gpt-4o",
-        "anthropic": "claude-sonnet-4-6",
-        "minimax": "minimax-m3",
-        "deepseek": "deepseek-v4-pro",
+        "anthropic": "claude-3-5-sonnet-latest",
+        "minimax": "MiniMax-M3",
+        "deepseek": "deepseek-chat",
         "moonshot": "moonshot-v1-auto",
     }
 
@@ -235,10 +235,10 @@ def get_available_providers() -> list[dict]:
         {
             "id": "anthropic",
             "name": "Anthropic Claude",
-            "description": "Claude Sonnet 4.6 — 长文本分析最强",
+            "description": "Claude — 长文本分析最强",
             "key_name": "ANTHROPIC_API_KEY",
             "key_url": "https://console.anthropic.com/keys",
-            "models": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5"],
+            "models": ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"],
         },
         {
             "id": "minimax",
@@ -246,15 +246,15 @@ def get_available_providers() -> list[dict]:
             "description": "M3 — 中文外贸场景性价比最高",
             "key_name": "MINIMAX_API_KEY",
             "key_url": "https://platform.minimaxi.com/user-center/basic-information/interface-key",
-            "models": ["minimax-m3", "minimax-m2"],
+            "models": ["MiniMax-M3", "MiniMax-M2"],
         },
         {
             "id": "deepseek",
             "name": "DeepSeek",
-            "description": "V4 Pro — 代码 + 推理能力强",
+            "description": "Chat — 代码 + 推理能力强，价格便宜",
             "key_name": "DEEPSEEK_API_KEY",
             "key_url": "https://platform.deepseek.com/api_keys",
-            "models": ["deepseek-v4-pro", "deepseek-chat"],
+            "models": ["deepseek-chat", "deepseek-reasoner"],
         },
         {
             "id": "moonshot",

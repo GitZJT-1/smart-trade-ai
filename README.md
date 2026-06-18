@@ -100,7 +100,67 @@ Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，�
 
 ## 3 分钟上手
 
-### 最省事：一键脚本
+提供四种安装方式，按你的场景挑一种即可：
+
+| # | 方式 | 适合场景 | 需要手动安装 |
+|---|------|---------|-------------|
+| 1 | **TradeWin.exe 桌面版**（仅 Windows） | 干净 Windows 电脑，不想装 Python/Git，只想双击运行 | 无 |
+| 2 | **Hermes 代装** | 已装好 Hermes 并配置好 LLM，让 AI 帮你装 Trade | Python · Git · Hermes |
+| 3 | **一键脚本** | macOS/Linux，或 Windows 想用命令行 | Python · Git |
+| 4 | **手动一步步装** | 想完全控制每一步 | Python · Git |
+
+---
+
+### 方式 1：TradeWin.exe 桌面版（仅 Windows，零配置）
+
+适合干净的 Windows 10/11 电脑，**不需要装 Python、不需要装 Git**，下载一个 `.exe` 双击就能用。
+
+1. 前往 [Releases](https://github.com/chefroger/smart-trade-ai/releases) 页面，下载最新的 `TradeWin.exe`（约 80-120 MB）
+2. 双击运行
+3. 首次启动自动弹出 4 步配置向导：
+   - 选择 LLM 提供商（OpenAI / Claude / MiniMax / DeepSeek / Moonshot）
+   - 填入 API Key（自动写入 `~/.hermes/.env`）
+   - （可选）填入 Tavily Search API Key 启用联网搜索
+   - 点击「完成」→ 程序自动安装 Hermes + Trade Skills + 初始化数据库
+4. 配置完成后即可使用，无需任何手动设置
+
+> 详见 [windows-standalone/README.md](windows-standalone/README.md)。
+>
+> 已知限制：QTextBrowser 对复杂 Markdown 表格/代码块渲染有限；无数字签名的 exe 可能被 Windows Defender 误报。
+
+---
+
+### 方式 2：让 Hermes 帮你装 Trade（推荐给 AI 用户）
+
+如果你已经装好 Hermes Agent 并配置好 LLM + Tavily 搜索，最省心的方式是让 AI 自己装 Trade——它能根据你的环境动态调整命令，成功率比固定脚本更高。
+
+**前置条件**：已通过 `hermes setup` 配置好 LLM provider 和 API Key，**强烈建议同时配置 [Tavily](https://tavily.com) 搜索**（免费），否则 AI 无法访问 GitHub 仓库信息。
+
+**操作步骤：**
+
+1. 启动 Hermes：
+
+```bash
+hermes
+```
+
+2. 在 Hermes 对话框中直接粘贴下面这句话（中文即可）：
+
+> 请分析 https://github.com/chefroger/smart-trade-ai 这个 GitHub 仓库，并帮我安装
+
+3. Hermes 会自动：访问仓库 README → 识别安装步骤 → `git clone` → `pip install` → `install-trade-skills` → 初始化数据库
+4. 安装完成后，AI 会告诉你启动命令：
+
+```bash
+python server.py
+# → 浏览器打开 http://127.0.0.1:9119/trade
+```
+
+> AI 会根据你当前的环境（Python 版本、操作系统、已有依赖）动态调整命令，遇到报错也能自行排查重试，比固定脚本更鲁棒。
+
+---
+
+### 方式 3：一键脚本（macOS / Linux）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -126,7 +186,7 @@ install-trade-skills
 python server.py
 ```
 
-### 或者一步步手动装
+### 方式 4：手动一步步装
 
 **前置条件**：Python >= 3.11 · Git · LLM API Key（OpenAI / Anthropic / DeepSeek / MiniMax 等）
 
@@ -372,32 +432,6 @@ python server.py
 ### 升级后页面样式异常
 
 浏览器缓存了旧版 CSS/JS，按 `Cmd+Shift+R` (macOS) 或 `Ctrl+Shift+R` (Windows) 强制刷新即可。
-
----
-
-## TradeWin — Windows 原生桌面版
-
-除了默认的浏览器访问方式，项目还提供一个独立的 Windows 桌面版 `TradeWin.exe`，基于 PySide6 (Qt6) 构建，双击即用，无需安装 Python 或浏览器。
-
-**特性：**
-
-- 单一 `.exe` 文件（约 80-120 MB），干净 Windows 10/11 机器双击即用
-- 首次启动自动检测并安装 Hermes Agent（通过 4 步 QWizard 引导用户选择 LLM + 填入 API Key）
-- 原生 Qt 界面：左侧导航树 + 右侧多视图切换（聊天/客户/文档库/任务/设置）
-- SSE 流式聊天，每条 AI 回复附「📋 复制」按钮
-- 多公司切换、客户管理、文档库浏览、许可证激活、一键更新全部内置
-- 最小化到系统托盘，开机自启动
-
-**构建方式**（需 Windows + Python 3.11+）：
-
-```cmd
-cd windows-standalone
-build.bat
-```
-
-构建产物在 `windows-standalone/dist/TradeWin.exe`。详见 [windows-standalone/README.md](windows-standalone/README.md)。
-
-> TradeWin 与 Web 版功能对等，所有后端 API 共用同一套 `trade/` 包。前端实现独立（PySide6 vs vanilla JS），遵循「跨平台一致性」原则——任何 Trade 功能修改必须同步两个前端。
 
 ---
 

@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 
 _block_cipher = None
-_PROJECT_ROOT = Path(SPECPATH).parent.parent
+# SPECPATH = windows-standalone/ 目录，其 parent 即为项目根目录
+_PROJECT_ROOT = Path(SPECPATH).parent
 _TRADEWIN_ROOT = Path(SPECPATH)
 
 a = Analysis(
@@ -17,6 +18,10 @@ a = Analysis(
         (str(_PROJECT_ROOT / 'skills'), 'skills'),
         (str(_PROJECT_ROOT / '.trade-template'), '.trade-template'),
         (str(_PROJECT_ROOT / 'trade'), 'trade'),
+        # static/ 包含 trade_chat.html SPA，serve_trade_chat() 运行时读取
+        (str(_PROJECT_ROOT / 'static'), 'static'),
+        # pyproject.toml 用于 /api/status 读取版本号
+        (str(_PROJECT_ROOT / 'pyproject.toml'), '.'),
     ],
     hiddenimports=[
         # Qt 完整导入（含 QWizard / QSystemTrayIcon 等较少使用的组件）

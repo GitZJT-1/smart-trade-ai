@@ -149,12 +149,19 @@ hermes
 > 请分析 https://github.com/chefroger/smart-trade-ai 这个 GitHub 仓库，并帮我安装
 
 3. Hermes 会自动：访问仓库 README → 识别安装步骤 → `git clone` → `pip install` → `install-trade-skills` → 初始化数据库
-4. 安装完成后，AI 会告诉你启动命令：
+4. 安装完成后，**新开一个 PowerShell**（让 PATH 生效），启动 Trade：
 
-```bash
-python server.py
-# → 浏览器打开 http://127.0.0.1:9119/trade
+```powershell
+trade
+# → 浏览器自动打开 http://127.0.0.1:9119/trade
 ```
+
+> 如果 `trade` 命令找不到，说明 PATH 没生效，可以改用：
+> ```powershell
+> cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
+> python server.py
+> ```
+> 然后浏览器手动打开 http://127.0.0.1:9119/trade
 
 > AI 会根据你当前的环境（Python 版本、操作系统、已有依赖）动态调整命令，遇到报错也能自行排查重试，比固定脚本更鲁棒。
 

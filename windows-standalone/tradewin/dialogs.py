@@ -1,8 +1,8 @@
 """
-TradeWin — 模态对话框集合：公司管理、许可证激活、系统设置。
+TradeWin — 模态对话框集合：公司管理、客户管理、许可证激活、系统设置。
 """
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
@@ -15,8 +15,20 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
+)
+
+from tradewin.api import (
+    create_company,
+    get_license_status,
+    activate_license,
+    list_companies,
+    list_customers,
+    system_update,
+    system_restart,
 )
 
 from tradewin.api import (
@@ -31,6 +43,8 @@ from tradewin.api import (
 
 class CompanyDialog(QDialog):
     """公司选择 + 创建对话框。"""
+
+    company_created = Signal()  # 创建公司后发出，供主窗口刷新列表
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -69,10 +83,48 @@ class CompanyDialog(QDialog):
         if result:
             self._name_input.clear()
             self._refresh_list()
+            self.company_created.emit()  # 通知主窗口刷新
             QMessageBox.information(self, "成功", f"公司 '{name}' 已创建")
             self.accept()
         else:
             QMessageBox.warning(self, "失败", "创建公司失败，请检查网络连接。")
+
+
+class CustomerDialog(QDialog):
+    """客户管理对话框。"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("客户管理")
+        self.resize(600, 450)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("客户列表:"))
+        self._tree = QTreeWidget()
+        self._tree.setHeaderLabels(["客户名称", "等级", "国家", "最近跟进"])
+        self._tree.setAlternatingRowColors(True)
+        self._refresh_list()
+        layout.addWidget(self._tree)
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+
+    def _refresh_list(self) -> None:
+        self._tree.clear()
+        customers = list_customers()
+        for c in customers:
+            item = QTreeWidgetItem([
+                c.get("name", ""),
+                c.get("tier", ""),
+                c.get("country", ""),
+                (c.get("updated_at", "") or "")[:10],
+            ])
+            item.setData(0, Qt.UserRole, c.get("id"))
+            self._tree.addTopLevelItem(item)
+        if not customers:
+            self._tree.setHeaderLabels(["暂无客户数据"])
+        else:
+            for i in range(4):
+                self._tree.resizeColumnToContents(i)
 
 
 class LicenseDialog(QDialog):

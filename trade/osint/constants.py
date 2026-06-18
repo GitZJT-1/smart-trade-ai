@@ -63,21 +63,6 @@ SANCTIONS_SOURCES: list[dict] = [
     },
 ]
 
-# 制裁名单本地缓存目录路径（由外部 setter 设置）
-_sanctions_cache_dir: str | None = None
-
-
-def set_sanctions_cache_dir(cache_dir: str) -> None:
-    """设置制裁名单缓存目录（通常 ~/.trade/cache/sanctions/）。"""
-    global _sanctions_cache_dir
-    _sanctions_cache_dir = cache_dir
-
-
-def get_sanctions_cache_dir() -> str | None:
-    """获取当前制裁名单缓存目录。"""
-    return _sanctions_cache_dir
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # HTTP 工具函数（共享给 sanctions / tech_stack / linkedin）
 # ─────────────────────────────────────────────────────────────────────────────

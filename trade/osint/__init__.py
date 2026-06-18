@@ -40,9 +40,7 @@ from trade.osint.constants import (
     FREE_PLATFORMS,
     PERSONAL_EMAIL_DOMAINS,
     SANCTIONS_SOURCES,
-    get_sanctions_cache_dir,
     http_get,
-    set_sanctions_cache_dir,
 )
 from trade.osint.email_verify import verify_corporate_email
 from trade.osint.linkedin_verify import linkedin_company_verify
@@ -67,7 +65,5 @@ __all__ = [
     "PERSONAL_EMAIL_DOMAINS",
     "FREE_PLATFORMS",
     "SANCTIONS_SOURCES",
-    "set_sanctions_cache_dir",
-    "get_sanctions_cache_dir",
     "http_get",
 ]

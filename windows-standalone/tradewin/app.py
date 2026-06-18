@@ -136,10 +136,31 @@ class MainWindow(QMainWindow):
         return container
 
     def _on_nav_clicked(self, item: QTreeWidgetItem, _col: int) -> None:
-        """导航树点击：切换到对应的 stacked widget 页面。"""
+        """导航树点击：切换到视图或弹出对话框。"""
         idx = item.data(0, Qt.UserRole)
-        if idx is not None:
-            self._stack.setCurrentIndex(idx)
+        if idx is None:
+            return
+        # 索引 1 = 客户管理（弹出对话框）
+        if idx == 1:
+            from tradewin.dialogs import CustomerDialog
+            dlg = CustomerDialog(self)
+            dlg.exec()
+            return
+        # 索引 2 = 文档库（弹出对话框）
+        if idx == 2:
+            from tradewin.dialogs import CompanyDialog
+            dlg = CompanyDialog(self)
+            dlg.company_created.connect(self.refresh_companies)
+            dlg.exec()
+            return
+        # 索引 4 = 设置（弹出设置对话框）
+        if idx == 4:
+            from tradewin.dialogs import SettingsDialog
+            dlg = SettingsDialog(self)
+            dlg.exec()
+            return
+        # 索引 0 = 聊天（默认视图）, 索引 3 = 任务面板
+        self._stack.setCurrentIndex(idx)
 
     def _on_company_changed(self, index: int) -> None:
         """公司选择变更：先通知后端切换 session 绑定，再更新本地 header。"""

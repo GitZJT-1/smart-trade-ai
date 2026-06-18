@@ -200,3 +200,92 @@ def system_update() -> dict | None:
 def system_restart() -> dict | None:
     """POST /api/trade/system/restart — 重启 Trade 服务。"""
     return _post("/api/trade/system/restart")
+
+
+def get_customer_detail(cid: int) -> dict | None:
+    """GET /api/trade/customers/{cid} — 客户详情。"""
+    return _get(f"/api/trade/customers/{cid}")
+
+
+def update_customer(cid: int, data: dict) -> dict | None:
+    """PUT /api/trade/customers/{cid} — 编辑客户。"""
+    return _put(f"/api/trade/customers/{cid}", data)
+
+
+def delete_customer(cid: int) -> dict | None:
+    """DELETE /api/trade/customers/{cid} — 删除客户。"""
+    return _delete(f"/api/trade/customers/{cid}")
+
+
+def get_library_files(lid: int, subpath: str = "") -> dict | None:
+    """GET /api/trade/libraries/{lid}/files — 浏览文档库文件列表。"""
+    path = f"/api/trade/libraries/{lid}/files"
+    if subpath:
+        path += f"?path={subpath}"
+    return _get(path)
+
+
+def list_conversations(limit: int = 50) -> list[dict]:
+    """GET /api/trade/conversations — 对话历史列表。"""
+    r = _get(f"/api/trade/conversations?limit={limit}")
+    if r and isinstance(r, list):
+        return r
+    return []
+
+
+def get_conversation_detail(cid: int) -> dict | None:
+    """GET /api/trade/conversations/{cid} — 对话详情。"""
+    return _get(f"/api/trade/conversations/{cid}")
+
+
+def get_cron_today() -> dict | None:
+    """GET /api/trade/cron/today — 今日 cron 任务 + 最近执行历史。"""
+    return _get("/api/trade/cron/today")
+
+
+def get_cron_jobs() -> list[dict]:
+    """GET /api/trade/cron/jobs — 所有 cron 任务定义。"""
+    r = _get("/api/trade/cron/jobs")
+    if r and isinstance(r, list):
+        return r
+    return []
+
+
+def get_models_providers() -> list[dict]:
+    """GET /api/trade/models/providers — 可用 LLM 提供商列表。"""
+    r = _get("/api/trade/models/providers")
+    if r and isinstance(r, list):
+        return r
+    return []
+
+
+def _put(path: str, body: dict) -> dict | None:
+    """PUT 请求。"""
+    url = f"{_BASE}{path}"
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(url, data=data, method="PUT")
+    req.add_header("Content-Type", "application/json")
+    if _session_token:
+        req.add_header("X-Hermes-Session-Token", _session_token)
+    if _company_id:
+        req.add_header("X-Company-ID", _company_id)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+
+def _delete(path: str) -> dict | None:
+    """DELETE 请求。"""
+    url = f"{_BASE}{path}"
+    req = urllib.request.Request(url, method="DELETE")
+    if _session_token:
+        req.add_header("X-Hermes-Session-Token", _session_token)
+    if _company_id:
+        req.add_header("X-Company-ID", _company_id)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None

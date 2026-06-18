@@ -14,11 +14,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
-    QTabWidget,
-    QTreeWidget,
-    QTreeWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from tradewin.api import (
@@ -26,10 +22,6 @@ from tradewin.api import (
     create_company,
     get_license_status,
     list_companies,
-    list_customers,
-    list_libraries,
-    system_restart,
-    system_update,
 )
 
 
@@ -80,89 +72,6 @@ class CompanyDialog(QDialog):
             self.accept()
         else:
             QMessageBox.warning(self, "失败", "创建公司失败，请检查网络连接。")
-
-
-class CustomerDialog(QDialog):
-    """客户管理对话框。"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("客户管理")
-        self.resize(600, 450)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("客户列表:"))
-        self._tree = QTreeWidget()
-        # 固定 4 列表头，避免空列表时被改写成单列
-        self._tree.setHeaderLabels(["客户名称", "等级", "国家", "最近跟进"])
-        self._tree.setAlternatingRowColors(True)
-        self._refresh_list()
-        layout.addWidget(self._tree)
-        close_btn = QPushButton("关闭")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-
-    def _refresh_list(self) -> None:
-        self._tree.clear()
-        customers = list_customers()
-        if not customers:
-            # 用占位行而不是改写表头，保持 4 列结构
-            placeholder = QTreeWidgetItem(["（暂无客户数据）", "", "", ""])
-            placeholder.setFlags(Qt.NoItemFlags)  # 不可选中
-            self._tree.addTopLevelItem(placeholder)
-            return
-        for c in customers:
-            item = QTreeWidgetItem([
-                c.get("name", ""),
-                c.get("tier", ""),
-                c.get("country", ""),
-                (c.get("updated_at", "") or "")[:10],
-            ])
-            item.setData(0, Qt.UserRole, c.get("id"))
-            self._tree.addTopLevelItem(item)
-        for i in range(4):
-            self._tree.resizeColumnToContents(i)
-
-
-class LibraryDialog(QDialog):
-    """文档库管理对话框。
-
-    展示当前公司下的所有文档库（名称 + root_path）。
-    TradeWin 暂不提供创建/删除入口（由 AI 在聊天中通过工具完成）。
-    """
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("文档库")
-        self.resize(600, 400)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("文档库列表:"))
-        self._tree = QTreeWidget()
-        self._tree.setHeaderLabels(["库名称", "根目录", "说明"])
-        self._tree.setAlternatingRowColors(True)
-        self._refresh_list()
-        layout.addWidget(self._tree)
-        close_btn = QPushButton("关闭")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-
-    def _refresh_list(self) -> None:
-        self._tree.clear()
-        libs = list_libraries()
-        if not libs:
-            placeholder = QTreeWidgetItem(["（暂无文档库）", "", ""])
-            placeholder.setFlags(Qt.NoItemFlags)
-            self._tree.addTopLevelItem(placeholder)
-            return
-        for lib in libs:
-            item = QTreeWidgetItem([
-                lib.get("name", ""),
-                lib.get("root_path", ""),
-                lib.get("description", "") or "",
-            ])
-            item.setData(0, Qt.UserRole, lib.get("id"))
-            self._tree.addTopLevelItem(item)
-        for i in range(3):
-            self._tree.resizeColumnToContents(i)
 
 
 class LicenseDialog(QDialog):
@@ -222,55 +131,3 @@ class LicenseDialog(QDialog):
         else:
             msg = result.get("error") if result else "网络错误"
             QMessageBox.warning(self, "激活失败", msg)
-
-
-class SettingsDialog(QDialog):
-    """系统设置对话框。"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("系统设置")
-        self.resize(400, 300)
-        layout = QVBoxLayout(self)
-        tabs = QTabWidget()
-
-        sys_tab = QWidget()
-        sys_layout = QVBoxLayout(sys_tab)
-        update_btn = QPushButton("⬆️ 系统更新")
-        update_btn.clicked.connect(self._do_update)
-        sys_layout.addWidget(update_btn)
-        restart_btn = QPushButton("🔄 重启服务")
-        restart_btn.clicked.connect(self._do_restart)
-        sys_layout.addWidget(restart_btn)
-        sys_layout.addStretch()
-        tabs.addTab(sys_tab, "系统")
-
-        lic_tab = QWidget()
-        lic_layout = QVBoxLayout(lic_tab)
-        lic_btn = QPushButton("🔑 许可证管理")
-        lic_btn.clicked.connect(lambda: LicenseDialog(self).exec())
-        lic_layout.addWidget(lic_btn)
-        lic_layout.addStretch()
-        tabs.addTab(lic_tab, "许可证")
-
-        layout.addWidget(tabs)
-        close_btn = QPushButton("关闭")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-
-    def _do_update(self) -> None:
-        reply = QMessageBox.question(self, "确认更新", "将下载最新代码并重启服务，是否继续？")
-        if reply == QMessageBox.Yes:
-            result = system_update()
-            if result and result.get("restart_scheduled"):
-                QMessageBox.information(self, "更新中", "更新完成，服务正在重启...\n请等待几秒后刷新。")
-            elif result and result.get("ok"):
-                QMessageBox.information(self, "完成", "更新完成。")
-            else:
-                QMessageBox.warning(self, "失败", result.get("error") if result else "网络错误")
-
-    def _do_restart(self) -> None:
-        reply = QMessageBox.question(self, "确认重启", "确定要重启 Trade 服务吗？")
-        if reply == QMessageBox.Yes:
-            system_restart()
-            QMessageBox.information(self, "重启中", "服务正在重启，请等待几秒。")

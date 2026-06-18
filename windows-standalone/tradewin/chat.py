@@ -12,6 +12,7 @@ from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPushButton,
     QTextBrowser,
@@ -45,9 +46,19 @@ class ChatView(QWidget):
         super().__init__()
         self._response_buffer = ""  # 当前 SSE 流累积的纯文本回复
         self._msg_counter = 0       # 消息序号，用于为每条 AI 回复生成唯一 anchor
+        self._chat_context = ""     # 当前聊天上下文（daily/lead/platform/social/customs/osint）
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+
+        # ── 上下文指示条 ─────────────────────────────────────────────────
+        self._context_label = QLabel("")
+        self._context_label.setStyleSheet(
+            "background: #EFF6FF; color: #1E40AF; padding: 4px 12px; "
+            "font-size: 12px; border-bottom: 1px solid #BFDBFE;"
+        )
+        self._context_label.setVisible(False)
+        layout.addWidget(self._context_label)
 
         # ── 消息显示区 ──────────────────────────────────────────────────
         self._msg_browser = QTextBrowser()
@@ -113,6 +124,39 @@ class ChatView(QWidget):
         self._worker.start()
 
     # ── SSE 事件处理 ──────────────────────────────────────────────────────
+
+    # ── 聊天上下文 ──────────────────────────────────────────────────────────
+
+    def set_chat_context(self, ctx: str) -> None:
+        """设置聊天上下文（从侧边栏子导航调用）。
+
+        不同上下文在输入框显示不同的 placeholder 提示。
+        """
+        hints = {
+            "daily": "输入'今日简报'或具体问题...",
+            "lead": "描述产品和目标市场，我帮你找客户 / 写开发信...",
+            "platform": "粘贴阿里国际站链接，或描述平台诊断需求...",
+            "social": "告诉我平台和目标受众，我帮你制定社媒计划...",
+            "customs": "输入产品 HS 编码或产品名 + 目标市场...",
+            "osint": "输入公司名 / 域名 / 邮箱，我帮你做背景调查...",
+        }
+        self._chat_context = ctx
+        hint = hints.get(ctx, "")
+        self._input_field.setPlaceholderText(hint)
+        labels = {
+            "daily": "📰 每日简报",
+            "lead": "🎯 客户开发",
+            "platform": "🏪 平台诊断",
+            "social": "📱 社媒营销",
+            "customs": "📊 海关数据",
+            "osint": "🔍 客户背调",
+        }
+        label = labels.get(ctx, "")
+        if label:
+            self._context_label.setText(f"当前模式: {label}")
+            self._context_label.setVisible(True)
+        else:
+            self._context_label.setVisible(False)
 
     def _on_sse_event(self, etype: str, data_str: str) -> None:
         """处理 SSE 事件（在主线程中执行）。"""

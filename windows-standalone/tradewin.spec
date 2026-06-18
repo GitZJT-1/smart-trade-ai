@@ -28,7 +28,7 @@ a = Analysis(
         # TradeWin GUI 模块
         'tradewin', 'tradewin.api', 'tradewin.app', 'tradewin.chat',
         'tradewin.dialogs', 'tradewin.main', 'tradewin.setup',
-        'tradewin.themes', 'tradewin.tray', 'tradewin.wizard',
+        'tradewin.themes', 'tradewin.tray', 'tradewin.views', 'tradewin.wizard',
         # uvicorn
         'uvicorn.loops.auto', 'uvicorn.protocols.http.auto',
         'trade', 'trade.api', 'trade.api.chat', 'trade.api.cron',

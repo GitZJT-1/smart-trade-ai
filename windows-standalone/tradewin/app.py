@@ -3,7 +3,7 @@ TradeWin — 主窗口。
 
 布局: QSplitter
   ├── 左侧 QTreeWidget（侧边栏导航 + 公司选择器）
-  └── 右侧 QStackedWidget（chat/customers/libraries/tasks/settings 视图）
+  └── 右侧 QStackedWidget（chat/customers/libraries/tasks/history/settings 视图）
 """
 
 from PySide6.QtCore import Qt
@@ -24,6 +24,17 @@ from PySide6.QtWidgets import (
 from tradewin.api import get_status, init_session, list_companies, set_company, switch_company
 from tradewin.chat import ChatView
 from tradewin.themes import PRIMARY_DARK
+from tradewin.views import CustomerView, HistoryView, LibraryView, SettingsView, TasksView
+
+# 聊天子导航：选中后设置 ChatView 的上下文
+_CHAT_CONTEXTS = [
+    ("每日简报", "daily"),
+    ("客户开发", "lead"),
+    ("平台诊断", "platform"),
+    ("社媒营销", "social"),
+    ("海关数据", "customs"),
+    ("客户背调", "osint"),
+]
 
 
 class MainWindow(QMainWindow):
@@ -42,27 +53,25 @@ class MainWindow(QMainWindow):
 
         self._sidebar = self._build_sidebar()
         self._splitter.addWidget(self._sidebar)
-        self._splitter.setSizes([250, 950])
+        self._splitter.setSizes([260, 940])
 
         self._stack = QStackedWidget()
         self._splitter.addWidget(self._stack)
 
-        # 占位视图（后续 Task 替换为实际组件）
+        # 实际视图（替换原来的 QLabel 占位）
         self._chat_view = ChatView()
-        self._customers_view = QLabel("👥 客户管理 — 待实现")
-        self._customers_view.setAlignment(Qt.AlignCenter)
-        self._libraries_view = QLabel("📁 文档库 — 待实现")
-        self._libraries_view.setAlignment(Qt.AlignCenter)
-        self._tasks_view = QLabel("📋 任务面板 — 待实现")
-        self._tasks_view.setAlignment(Qt.AlignCenter)
-        self._settings_view = QLabel("⚙️ 设置 — 待 Task 7 实现")
-        self._settings_view.setAlignment(Qt.AlignCenter)
+        self._customers_view = CustomerView()
+        self._libraries_view = LibraryView()
+        self._tasks_view = TasksView()
+        self._history_view = HistoryView()
+        self._settings_view = SettingsView()
 
         self._stack.addWidget(self._chat_view)       # index 0
         self._stack.addWidget(self._customers_view)   # index 1
         self._stack.addWidget(self._libraries_view)   # index 2
         self._stack.addWidget(self._tasks_view)       # index 3
-        self._stack.addWidget(self._settings_view)    # index 4
+        self._stack.addWidget(self._history_view)     # index 4
+        self._stack.addWidget(self._settings_view)    # index 5
 
         self._stack.setCurrentIndex(0)
 
@@ -84,7 +93,7 @@ class MainWindow(QMainWindow):
             )
 
     def _build_sidebar(self) -> QWidget:
-        """构建左侧侧边栏（公司选择器 + 导航树）。"""
+        """构建左侧侧边栏（公司选择器 + 导航树，含聊天子导航）。"""
         container = QWidget()
         container.setStyleSheet(f"background: {PRIMARY_DARK.name()}; border: none;")
         layout = QVBoxLayout(container)
@@ -109,65 +118,58 @@ class MainWindow(QMainWindow):
             "QTreeWidget::item:selected { background: rgba(59,130,246,0.2); color: #FFFFFF; }"
         )
 
-        chat_item = QTreeWidgetItem(["💬 聊天"])
-        chat_item.setData(0, Qt.UserRole, 0)
-        self._nav_tree.addTopLevelItem(chat_item)
+        # ── 聊天（含子导航）──
+        chat_parent = QTreeWidgetItem(["💬 聊天"])
+        chat_parent.setData(0, Qt.UserRole, 0)
+        chat_parent.setFlags(chat_parent.flags() & ~Qt.ItemIsSelectable)
+        self._nav_tree.addTopLevelItem(chat_parent)
 
-        customers_item = QTreeWidgetItem(["👥 客户管理"])
-        customers_item.setData(0, Qt.UserRole, 1)
-        self._nav_tree.addTopLevelItem(customers_item)
+        for label, ctx in _CHAT_CONTEXTS:
+            child = QTreeWidgetItem([f"  {label}"])
+            child.setData(0, Qt.UserRole, (0, ctx))
+            chat_parent.addChild(child)
 
-        lib_item = QTreeWidgetItem(["📁 文档库"])
-        lib_item.setData(0, Qt.UserRole, 2)
-        self._nav_tree.addTopLevelItem(lib_item)
+        # ── 功能视图 ──
+        nav_items = [
+            ("👥 客户管理", 1),
+            ("📁 文档库", 2),
+            ("📋 任务面板", 3),
+            ("📜 对话历史", 4),
+            ("⚙️ 设置", 5),
+        ]
+        for label, idx in nav_items:
+            item = QTreeWidgetItem([label])
+            item.setData(0, Qt.UserRole, idx)
+            self._nav_tree.addTopLevelItem(item)
 
-        tasks_item = QTreeWidgetItem(["📋 任务面板"])
-        tasks_item.setData(0, Qt.UserRole, 3)
-        self._nav_tree.addTopLevelItem(tasks_item)
-
-        settings_item = QTreeWidgetItem(["⚙️ 设置"])
-        settings_item.setData(0, Qt.UserRole, 4)
-        self._nav_tree.addTopLevelItem(settings_item)
-
+        self._nav_tree.expandAll()
         self._nav_tree.itemClicked.connect(self._on_nav_clicked)
-        self._nav_tree.setCurrentItem(chat_item)
         layout.addWidget(self._nav_tree)
 
         return container
 
     def _on_nav_clicked(self, item: QTreeWidgetItem, _col: int) -> None:
-        """导航树点击：切换到视图或弹出对话框。"""
-        idx = item.data(0, Qt.UserRole)
-        if idx is None:
+        """导航树点击：切换到对应视图，或设置聊天上下文。"""
+        data = item.data(0, Qt.UserRole)
+        if data is None:
             return
-        # 索引 1 = 客户管理（弹出对话框）
-        if idx == 1:
-            from tradewin.dialogs import CustomerDialog
-            dlg = CustomerDialog(self)
-            dlg.exec()
+
+        # 聊天子导航: (0, context_str)
+        if isinstance(data, tuple) and data[0] == 0:
+            ctx = data[1]
+            self._stack.setCurrentIndex(0)
+            self._chat_view.set_chat_context(ctx)
             return
-        # 索引 2 = 文档库（弹出 LibraryDialog）
-        if idx == 2:
-            from tradewin.dialogs import LibraryDialog
-            dlg = LibraryDialog(self)
-            dlg.exec()
-            return
-        # 索引 4 = 设置（弹出设置对话框）
-        if idx == 4:
-            from tradewin.dialogs import SettingsDialog
-            dlg = SettingsDialog(self)
-            dlg.exec()
-            return
-        # 索引 0 = 聊天（默认视图）, 索引 3 = 任务面板
+
+        # 普通视图: int index
+        idx = int(data)
         self._stack.setCurrentIndex(idx)
 
     def _on_company_changed(self, index: int) -> None:
         """公司选择变更：先通知后端切换 session 绑定，再更新本地 header。"""
         cid = self._company_combo.itemData(index)
         if cid:
-            # 先切换后端 session 级绑定（避免后续 API 调用 403）
             switch_company(int(cid))
-            # 再更新本地 header（后续请求自动携带）
             set_company(str(cid))
 
     def _load_companies(self) -> None:

@@ -158,8 +158,13 @@ def sync_b2b_skills():
     except Exception as e:
         print(f"  GitHub skills update failed ({e}), falling back to local sync")
 
-        _project_root = Path(__file__).resolve().parent.parent
-        _project_skills = _project_root / "skills"
+        # PyInstaller _MEIPASS 优先（one-file 打包模式）
+        _meipass = getattr(sys, "_MEIPASS", None)
+        if _meipass:
+            _project_skills = Path(_meipass) / "skills"
+        else:
+            _project_root = Path(__file__).resolve().parent.parent
+            _project_skills = _project_root / "skills"
         if not _project_skills.is_dir():
             return
 
@@ -168,7 +173,9 @@ def sync_b2b_skills():
 
         synced = 0
         for skill_dir in sorted(_project_skills.iterdir()):
-            if not skill_dir.is_dir() or not skill_dir.name.startswith("b2b-"):
+            if not skill_dir.is_dir() or not (
+                skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")
+            ):
                 continue
             src = skill_dir / "SKILL.md"
             if not src.is_file():

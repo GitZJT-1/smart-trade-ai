@@ -105,7 +105,7 @@ def install_trade_skills(progress_callback=None) -> bool:
 
     try:
         from trade.post_install.skills import install_skills as _do_install
-        _do_install()
+        _do_install(progress_callback=progress_callback)
         return True
     except SystemExit as e:
         if progress_callback:

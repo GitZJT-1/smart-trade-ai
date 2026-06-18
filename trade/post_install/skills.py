@@ -55,12 +55,21 @@ def _get_package_skills_dir() -> Path | None:
     """查找已安装 pip 包中的 skills 目录。
 
     搜索策略（按优先级）：
-      1. sys.path 中的 trade 包目录（pip install . 场景）
-      2. 当前脚本所在目录的父级（pip install -e . 开发模式）
+      1. sys._MEIPASS — PyInstaller 打包模式的临时解压目录
+      2. sys.path 中的 trade 包目录（pip install . 场景）
+      3. 当前脚本所在目录的父级（pip install -e . 开发模式）
 
     Returns:
         skills 目录的 Path，找不到时返回 None
     """
+    # 策略 0: PyInstaller one-file 模式 — sys._MEIPASS 是临时解压目录
+    # tradewin.spec 已将 skills/ 打包为 datas，解压后位于 _MEIPASS/skills/
+    _meipass = getattr(sys, "_MEIPASS", None)
+    if _meipass:
+        meipass_skills = Path(_meipass) / "skills"
+        if meipass_skills.is_dir():
+            return meipass_skills
+
     # 策略 1: 遍历 sys.path，检查每个路径下是否有 trade/__init__.py
     for prefix in list(sys.path):
         p = Path(prefix)
@@ -68,7 +77,6 @@ def _get_package_skills_dir() -> Path | None:
             continue
         candidate = p / "trade" / "__init__.py"
         if candidate.exists():
-            # 找到 trade 包目录 → skills 就在其旁边
             skills_dir = candidate.parent.parent / "skills"
             if skills_dir.is_dir():
                 return skills_dir
@@ -83,27 +91,28 @@ def _get_package_skills_dir() -> Path | None:
 
 
 def _copy_skills(src: Path, dst_base: Path) -> list[str]:
-    """将 src 下的 b2b-* 目录复制到 dst_base 对应的 skill 目录。
+    """将 src 下的所有 skill 目录复制到 dst_base 对应的 skill 目录。
 
-    每个 skill 在目标创建 dst_base/b2b-{name}/SKILL.md。
-    仅处理 b2b- 前缀的目录，忽略其他文件和目录。
+    每个 skill 在目标创建 dst_base/{name}/SKILL.md。
+    处理 b2b-* 和 auto-* 前缀的目录，忽略其他文件和目录。
 
     Returns:
-        已安装的 skill 目录名列表（如 ["b2b-document", "b2b-osint", ...]）
+        已安装的 skill 目录名列表（如 ["b2b-document", "auto-smtp-email", ...]）
     """
     installed = []
     for skill_dir in sorted(src.iterdir()):
         if not skill_dir.is_dir():
-            continue  # 跳过非目录条目
-        if not skill_dir.name.startswith("b2b-"):
-            continue  # 只处理 b2b- 前缀的 skill 目录
+            continue
+        # 处理 b2b-* 和 auto-* 前缀的 skill 目录
+        if not (skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")):
+            continue
         skill_file = skill_dir / "SKILL.md"
         if not skill_file.is_file():
-            continue  # 跳过没有 SKILL.md 的目录
+            continue
 
         dest = dst_base / skill_dir.name / "SKILL.md"
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(skill_file, dest)  # copy2 保留原始修改时间
+        shutil.copy2(skill_file, dest)
         installed.append(skill_dir.name)
 
     return installed
@@ -139,17 +148,23 @@ def _copy_trade_template(src: Path, dst: Path) -> None:
 
 # ── 公开 API ──────────────────────────────────────────────────────────────
 
-def install_skills() -> None:
+def install_skills(progress_callback=None) -> None:
     """主入口：将 Trade B2B skills 安装到 Hermes skills 目录。
 
     调用方式：
       - pip install -e . 或 pip install .（setuptools post-install hook）
       - 手动执行: install-trade-skills（pyproject.toml console_scripts）
 
+    Args:
+        progress_callback: 可选回调函数 f(msg: str)，用于 PyInstaller wizard 进度报告
+
     处理流程：
-      1. 查找包的 skills 源目录
-      2. 复制 b2b-* 到 ~/.hermes/skills/
+      1. 查找包的 skills 源目录（含 PyInstaller _MEIPASS 支持）
+      2. 复制所有 skill 到 ~/.hermes/skills/
       3. 复制 .trade-template/ 到 ~/.trade/
+
+    Raises:
+        SystemExit(1): 找不到 skills 目录或安装失败时
     """
     hermes_home = _get_hermes_home()
     trade_home = _get_trade_home()
@@ -158,48 +173,74 @@ def install_skills() -> None:
     # 查找本地包中的 skills 源目录
     package_skills = _get_package_skills_dir()
     if package_skills is None:
-        print(
-            "[post_install] ERROR: Could not find skills directory.",
-            file=sys.stderr,
+        msg = (
+            "[post_install] ERROR: Could not find skills directory.\n"
+            f"  _MEIPASS: {getattr(sys, '_MEIPASS', 'N/A')}\n"
+            f"  sys.path: {sys.path[:5]}...\n"
+            "  Expected: <package-root>/skills/*/SKILL.md"
         )
-        print(
-            "[post_install] Expected: <package-root>/skills/b2b-*/SKILL.md",
-            file=sys.stderr,
-        )
+        if progress_callback:
+            progress_callback(msg)
+        else:
+            print(msg, file=sys.stderr)
         sys.exit(1)
 
-    print(f"[post_install] Hermes home:   {hermes_home}")
-    print(f"[post_install] Package skills: {package_skills}")
-    print(f"[post_install] Hermes skills: {hermes_skills_dir}")
+    info = (
+        f"[post_install] Hermes home:   {hermes_home}\n"
+        f"[post_install] Package skills: {package_skills}\n"
+        f"[post_install] Hermes skills: {hermes_skills_dir}"
+    )
+    if progress_callback:
+        progress_callback(info)
+    else:
+        print(info)
 
     installed = _copy_skills(package_skills, hermes_skills_dir)
 
     if installed:
-        print(f"[post_install] Installed {len(installed)} skills to Hermes:")
-        for name in installed:
-            print(f"  ✓ {name}")
+        count_msg = f"[post_install] Installed {len(installed)} skills: {', '.join(installed)}"
+        if progress_callback:
+            progress_callback(count_msg)
+        else:
+            print(count_msg)
     else:
-        print(
-            "[post_install] WARNING: No b2b-* skills found to install.",
-            file=sys.stderr,
-        )
+        warn_msg = "[post_install] WARNING: No skills found to install."
+        if progress_callback:
+            progress_callback(warn_msg)
+        else:
+            print(warn_msg, file=sys.stderr)
 
     # 同时复制 .trade-template 到 Trade 运行时数据目录
     template_dir = package_skills.parent / ".trade-template"
+    if not template_dir.is_dir():
+        # PyInstaller _MEIPASS 回退
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            template_dir = Path(meipass) / ".trade-template"
     if not template_dir.is_dir():
         # 开发模式回退：从脚本所在目录查找
         template_dir = Path(__file__).parent.parent.parent / ".trade-template"
 
     if template_dir.is_dir():
-        print(f"[post_install] Trade home:    {trade_home}")
+        template_msg = (
+            f"[post_install] Trade home: {trade_home}"
+        )
+        if progress_callback:
+            progress_callback(template_msg)
+        else:
+            print(template_msg)
         trade_home.mkdir(parents=True, exist_ok=True)
         _copy_trade_template(template_dir, trade_home)
-        print(
-            "[post_install] Trade data template installed to: "
-            f"{trade_home}/.trade-template"
-        )
+        done_msg = f"[post_install] Trade data template installed to: {trade_home}/.trade-template"
+        if progress_callback:
+            progress_callback(done_msg)
+        else:
+            print(done_msg)
 
-    print("[post_install] Done.")
+    if progress_callback:
+        progress_callback("[post_install] Done.")
+    else:
+        print("[post_install] Done.")
 
 
 def update_skills() -> None:
@@ -239,8 +280,10 @@ def update_skills() -> None:
     failed = 0
 
     for skill_dir in sorted(package_skills.iterdir()):
-        if not skill_dir.is_dir() or not skill_dir.name.startswith("b2b-"):
-            continue  # 只处理 b2b- 前缀的 skill 目录
+        if not skill_dir.is_dir() or not (
+            skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")
+        ):
+            continue  # 只处理 b2b- 和 auto- 前缀的 skill 目录
 
         skill_name = skill_dir.name
 
@@ -249,7 +292,7 @@ def update_skills() -> None:
             ".." in skill_name
             or "/" in skill_name
             or "\\" in skill_name
-            or not skill_name.startswith("b2b-")
+            or not (skill_name.startswith("b2b-") or skill_name.startswith("auto-"))
         ):
             print(f"  ✗ {skill_name} (invalid name, skipped)", file=sys.stderr)
             failed += 1

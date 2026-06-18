@@ -116,7 +116,7 @@ Python 装好之后，最省事的方法是用**一键安装脚本**——把下
 irm https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.ps1 | iex
 ```
 
-这个脚本会自动完成：安装 AI 引擎 → 安装 Smart Trade AI → 安装 17 个专业功能 → 初始化数据库 → 设置开机自启动。
+这个脚本会自动完成：安装 AI 引擎 → 安装 Smart Trade AI → 安装 19 个专业功能 → 初始化数据库 → 设置开机自启动。
 
 等它跑完后，继续往下看**第七步**获取 API Key 就行。
 

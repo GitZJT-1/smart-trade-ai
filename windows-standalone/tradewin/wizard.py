@@ -180,7 +180,7 @@ class ApiKeyPage(QWizardPage):
         self.registerField("api_key*", self._key_input)
         self.registerField("tavily_key", self._tavily_input)
 
-    def initializePage(self) -> None:
+    def initializePage(self) -> None:  # noqa: N802 — Qt framework override
         """根据向导页 2 的选择更新获取链接。"""
         provider_data = self.wizard().page(1)._provider_combo.currentData()
         if provider_data:
@@ -217,8 +217,11 @@ class InstallPage(QWizardPage):
 
         self._worker = SetupWorker()
 
-    def initializePage(self) -> None:
+    def initializePage(self) -> None:  # noqa: N802 — Qt framework override
         """启动后台安装。"""
+        # 安装期间禁用「完成」按钮，避免用户在安装未完成时点击
+        self.wizard().button(QWizard.FinishButton).setEnabled(False)
+
         provider_data = self.wizard().page(1)._provider_combo.currentData()
         provider_id = provider_data["id"] if provider_data else "openai"
         api_key = self.field("api_key")

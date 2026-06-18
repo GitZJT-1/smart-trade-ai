@@ -36,10 +36,118 @@ injection_prompt: |
 
   1. 加载 skill: b2b-lead-generation
   2. 根据用户需求执行对应子任务：
-     - 找客户：使用 b2b-platform/LinkedIn/海关数据等来源
+     - 找客户：使用「三通道并行搜索 + 域名级去重 + 黑名单过滤」（见下方 Phase 0），或使用 b2b-platform/LinkedIn/海关数据等来源
      - 写开发信：先加载 b2b-email-intel 查邮箱背景，再撰写个性化邮件。邮件以客户痛点为开头，不讲产品
      - 客户分析：提取客户名称/公司/地区，从对话或文档中获取信息
      - 报价/谈判：强调差异化服务价值，不陷入价格战
+
+  ## Phase 0 — 三通道并行潜客搜索（找客户专用）
+
+  当用户说「找客户」「找潜客」「找买家」时，启用三通道并行搜索。单通道搜索会漏掉大量优质客户，必须三通道并行。
+
+  ### 通道 A — Google Maps（本地分销商/批发商）
+
+  适合找有实体店/仓库的本地买家。这类客户决策快、订单稳定。
+
+  搜索 query 模板（按目标市场语言生成）：
+  - `{product} distributor in {country/city}`
+  - `{product} wholesaler near {city}`
+  - `{product} supplier {country}`
+
+  执行方式：
+  1. `web_search` 搜索上述 query
+  2. 对前 10 条结果用 `browser_navigate` 访问 Google Maps 页面，提取商家名/官网/电话/地址
+  3. 注意：Google Maps 数据受地区限制，必要时用 `https://www.google.com/maps/search/{query}` 直接访问
+
+  ### 通道 B — Google Search（B2B 买家站点）
+
+  适合找品牌方/工厂/连锁超市的采购负责人。
+
+  搜索 query 模板：
+  - `{product} buyer OR importer OR purchasing {country}`
+  - `site:linkedin.com/in {product} procurement {country}`
+  - `site:linkedin.com/company {product} {country}`
+  - `{product} "purchasing manager" OR "procurement lead" {country}`
+  - `{product} trade shows {country} 2026` → 拿到展会参展商名单
+
+  执行方式：
+  1. 每个 query 用 `web_search` 取前 20 条
+  2. 用 `browser_navigate` 访问linkedin.com/company 页面，提取官网域名 + 员工规模
+  3. 对站点结果，从首页和 About/Contact 页面提取邮箱/电话
+
+  ### 通道 C — Facebook Pages / LinkedIn 公司页
+
+  适合找活跃在线的中小买家（FB）+ 中大型企业（LinkedIn）。
+
+  搜索 query 模板：
+  - Facebook: `site:facebook.com {product} {country}`
+  - Facebook: `site:facebook.com "{product brand}" {country}`
+  - LinkedIn: `site:linkedin.com/company {product} {country} "1-10 employees" OR "11-50 employees"`
+
+  执行方式：
+  1. `web_search` 搜索上述 query
+  2. 对前 10 条 FB 结果用 `browser_navigate` 访问，提取 Page 名/官网/联系方式（About 栏）
+  3. 对前 10 条 LinkedIn 结果，提取公司名/官网/员工数/关键人
+
+  ### 跨通道去重规则
+
+  **域名级去重**（关键）：
+  1. 对每条结果提取 `company_website`（去掉 www. / http:// 前缀，统一为 `domain.com` 形式）
+  2. 同一域名出现多次只保留信息最全的一条（首选有邮箱 + LinkedIn + 电话的）
+  3. 没有 `company_website` 的（仅有 FB Page）按 `facebook.com/{page-id}` 去重
+
+  **去重后排序**：
+  - 优先级 1：同时命中 3 通道的（信号最强）
+  - 优先级 2：命中 2 通道
+  - 优先级 3：仅命中 1 通道但信息完整（有邮箱+电话+LinkedIn）
+
+  ### 黑名单过滤
+
+  命中以下任一特征的条目直接剔除：
+
+  | 类别 | 黑名单特征 | 示例 |
+  |------|-----------|------|
+  | 平台目录页 | URL 含 alibaba.com / made-in-china.com / tradekey.com / globalsources.com | 阿里产品页本身不是买家 |
+  | 聚合页 | URL 含 yellowpages.com / yelp.com / opencorporates.com | 这类是目录不是客户 |
+  | 竞争对手 | 同行业供应商官网（你卖他卖的同一类产品） | 用产品名+manufacturer 搜出的同行 |
+  | 政府机构 | URL 含 .gov / .edu / .org（除非明确是采购方） | 一般非目标客户 |
+  | 死链 | browser_navigate 返回 404 / 503 | 不可达 |
+  | 占位页 | 官网为 Wix/Squarespace 模板页且无具体业务 | 通常是空壳公司 |
+
+  ### 多语言查询
+
+  目标市场非英语时，必须生成当地语言版本的 query：
+  - 西班牙语市场（拉美/西班牙）：`{product} distribuidor {country}` / `{product} mayorista {country}`
+  - 阿拉伯语市场（中东）：`{product} موزع {country}` / `{product} مستورد {country}`
+  - 德语市场（DACH）：`{product} Händler {country}` / `{product} Großhändler {country}`
+  - 法语市场：`{product} distributeur {country}` / `{product} grossiste {country}`
+  - 俄语市场：`{product} дистрибьютор {country}` / `{product} оптовый {country}`
+  - 葡语市场（巴西/葡萄牙）：`{product} distribuidor {country}` / `{product} atacadista {country}`
+
+  ### 输出格式
+
+  ```
+  ## 🔍 三通道搜索结果
+
+  ### 通道分布
+  | 通道 | 原始结果 | 去重后 | 通过黑名单 |
+  |------|---------|--------|------------|
+  | A: Google Maps | N1 | N1' | N1'' |
+  | B: Google Search | N2 | N2' | N2'' |
+  | C: FB/LinkedIn | N3 | N3' | N3'' |
+  **最终候选**：N 家
+
+  ### TOP 10 候选客户
+  | # | 公司名 | 官网 | 国家 | 通道 | 邮箱 | LinkedIn | 电话 |
+  |---|--------|------|------|------|------|----------|------|
+  | 1 | ... | ... | ... | A+B+C | ... | ... | ... |
+  ```
+
+  ### STOP RULE
+
+  - 单次搜索总轮次上限 15 轮（每通道 5 轮）
+  - 达到上限或候选数 ≥ 30 家即停止
+  - 候选数 < 5 家时告知用户「信号不足，建议换关键词或扩大市场范围」
   3. 按以下格式返回：
      - 客户分类：高价值（A）/ 中等（B）/ 潜力（C）
      - 具体行动建议：第一步做什么、第二步做什么
@@ -562,6 +670,94 @@ Mit freundlichen Grüßen,
 7. **No clear CTA**: Always tell the prospect what to do next
 8. **Price-only negotiation**: Never compete on price alone — compete on the unique value only you provide
 9. **Skipping sample phase**: Always insist on sample approval before bulk orders
+
+## 反营销腔自检（生成后强制执行）
+
+> 每封开发信生成后、输出给用户前，必须对照以下清单逐项检查。任何一项 fail 必须重写后再检查，不得跳过。
+
+### 禁用词清单（命中即重写）
+
+| 类别 | 禁用表达 | 替换为 |
+|------|---------|--------|
+| 空洞话术 | "质量好价格优服务好" | "每批货附 X 项检测数据 / 从下单到出货最快 Y 天 / 欧美 CE/FDA 认证我们在行" |
+| 营销硬卖 | "Best price / Lowest price / Best quality" | 具体数据 + 对比锚点（如 "MOQ 200 vs 行业 500"）|
+| 催促话术 | "Act now / Limited time / Don't miss out" | 客观时间窗口（如 "我们的 Q3 产能还剩 30%"）|
+| 自吹自擂 | "We are the leading / We are the best" | 客户背书（如 "X 公司用我们 3 年了，复购率 85%"）|
+| 模糊承诺 | "We can do anything / We support everything" | 明确边界（如 "我们做 X 不做 Y，因为 X 才是我们的强项"）|
+
+### 反营销腔语气校验
+
+读一遍开发信，问自己 5 个问题：
+
+1. **第一句是在讲客户还是在讲自己？** — 必须是客户（"I noticed your..."）而非自己（"We are..."）
+2. **60% 篇幅在讲客户痛点还是在讲产品？** — 必须客户痛点为主
+3. **有没有具体到这个客户独有的细节？** — 必须有（客户网站/动态/产品线某一项）
+4. **删掉公司名后这封信是否适用任何同行？** — 如果适用则失败（说明太泛）
+5. **客户 5 秒内能否感受到"这封信和我有关"？** — 不能则重写
+
+### 反垃圾邮件规则（避免进垃圾箱）
+
+**主题行**：
+- [ ] 不含 SPAM 触发词：FREE / GUARANTEED / 100% / WINNER / URGENT / ACT NOW / LIMITED TIME / NO OBLIGATION
+- [ ] 不全大写（如 "BUY NOW" → "Buy now"）
+- [ ] 不含过多感叹号（最多 1 个）
+- [ ] 字符数 30-50（移动端 5-7 词预览）
+- [ ] 不含过多特殊符号（$$$ / !!! / ???）
+
+**正文**：
+- [ ] 大写单词 ≤1 个（专有名词除外）
+- [ ] 红色字体强调 ≤2 处
+- [ ] 图片面积 < 总面积 50%
+- [ ] 包含退订方式（"Reply STOP to unsubscribe"）
+- [ ] 附件 < 10MB
+- [ ] 收件人非 role email（info@/sales@/contact@ 提醒用户尝试找具体人名）
+- [ ] HTML 邮件必须同时带纯文本版本（multipart/alternative）
+- [ ] 字体使用 web-safe（Arial / Helvetica / Georgia）
+
+## 替换法 A/B 测试（每封开发信强制）
+
+> 同一客户生成 2 个正文变体，择优发送。这不是可选项 — 99% 的开发信死于「我以为这封好」。
+
+### 变体生成规则
+
+对同一背调结果，生成 2 个变体：
+
+- **变体 A — 痛点先行型**：开头 1-2 句直接戳客户最可能的痛点，再用 2-3 个 bullet 给方案，最后 1 句 CTA
+- **变体 B — 价值先行型**：开头 1-2 句展示能给客户带来的具体价值（数字化），再用 1-2 个证据支撑，最后 1 句 CTA
+
+两个变体必须：
+- 基于同一背调结果（不能 A 用一套信息 B 用另一套）
+- 主题行不同（A 用策略 A 个性化引用，B 用策略 B 提问引发好奇）
+- CTA 相同（避免测试变量太多）
+- 字数差异 ≤20%
+
+### 选择规则
+
+默认推荐变体 A（痛点先行），原因：外贸买家痛点驱动 > 价值驱动。
+但以下场景选变体 B：
+- 客户是连锁超市 / 大品牌（已被各种供应商围着转，痛点信太多，价值信反而新鲜）
+- 客户在 LinkedIn 上发过招聘 / 扩张信号（说明有预算，直接给价值更直接）
+- 客户是 trading company / middleman（他们关心的是「你能帮我赚多少」而非「你能解决我什么痛」）
+
+### 输出格式
+
+```
+━━━ 变体 A — 痛点先行 ━━━
+主题：[Subject A]
+正文：
+[Body A]
+
+━━━ 变体 B — 价值先行 ━━━
+主题：[Subject B]
+正文：
+[Body B]
+
+━━━ 推荐 ━━━
+推荐变体 [A/B]，原因：[基于客户类型判断]
+
+⚠️ 反营销腔自检：[PASS/FAIL]
+⚠️ 反垃圾邮件自检：[PASS/FAIL]
+```
 
 ## Quality Gate Checklist — 发送前 60 秒自检
 

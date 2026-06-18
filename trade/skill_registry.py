@@ -841,6 +841,102 @@ STOP RULE（防止无效搜索）:
 - 对照 SKILL.md 文末 Quality Gate Checklist 确保无遗漏
 - 不确定的项目标注「建议人工确认」而非强行判断""",
     },
+    {
+        "name": "auto-trade-customer-development",
+        "triggers": [
+            # Chinese
+            "全自动客户开发", "一键开发客户", "端到端客户开发",
+            "客户开发流水线", "自动开发客户", "全流程客户开发",
+            "编排客户开发", "一条龙开发客户", "帮我跑一轮客户开发",
+            "跑一批客户", "全自动开发", "全自动化客户开发",
+            # English
+            "auto customer development", "end to end lead generation",
+            "full pipeline outreach", "automated outreach pipeline",
+            "orchestrated lead gen",
+        ],
+        "aliases": ["b2b-lead-generation", "b2b-osint", "auto-smtp-email"],
+        "input_fmt": (
+            "产品描述 + 目标市场 + 目标客户类型 + 期望数量（可选）+ "
+            "是否启用自动发送（默认否）"
+        ),
+        "output_fmt": (
+            "7 阶段流水线报告：搜索 → 背调 → 评分 → 写信 → 发送 → 入库 → 日志。"
+            "输出含阶段统计 / TOP10 客户详情 / 下一步跟进建议 / 完整日志路径"
+        ),
+        "augment_prompt": """你是 auto-trade-customer-development 技能 — 外贸客户开发端到端编排器。
+
+**7 阶段流水线**：
+1. 搜索 — 调用 b2b-lead-generation 三通道并行（Google Maps + Google Search + FB/LinkedIn）
+2. 背调 — 对每家候选调用 b2b-osint 6 层验证 + 关键联系人富化
+3. 评分 — 按公司匹配度/决策人可达性/数字足迹/风险/渠道多元性打分排序 A/B/C
+4. 写信 — 对 A/B 级调用 b2b-lead-generation 生成开发信（含替换法 A/B 测试 + 反垃圾自检）
+5. 发送 — 用户确认后调用 auto-smtp-email（默认不自动发送，需用户确认）
+6. 入库 — 调用 trade.customer.bulk_save 写入 SQLite（source="auto-pipeline"）
+7. 日志 — 写入 ~/.trade/audit/auto-pipeline-{date}.md
+
+**铁律**：
+- Phase 5 发送前必须用户明确确认，不能自动发
+- 单次最多 50 家候选
+- 单个客户背调失败不阻断流水线
+- 每个 Phase 完成后输出进度
+- 完整日志必须可追溯
+
+详细执行规则见 skills/auto-trade-customer-development/SKILL.md。""",
+    },
+    {
+        "name": "auto-smtp-email",
+        "triggers": [
+            # Chinese
+            "发邮件", "发送邮件", "SMTP发送", "SMTP 发送",
+            "发开发信", "群发邮件", "批量发送", "预览后发送",
+            "帮我发", "发出去", "邮件发出去",
+            # English
+            "send email", "smtp send", "send cold email",
+            "bulk send", "mail out", "dispatch email",
+        ],
+        "aliases": [],
+        "input_fmt": (
+            "收件人邮箱 + 主题 + 正文（纯文本/HTML）+ 抄送（可选）+ "
+            "附件路径（可选）。批量发送时为列表。"
+        ),
+        "output_fmt": (
+            "预览 → 用户确认 → 发送结果（成功/失败 + 错误详情）。"
+            "批量发送含每封状态 + 限速日志 + 汇总统计"
+        ),
+        "augment_prompt": """你是 auto-smtp-email 技能 — SMTP 邮件实际发送。
+
+**铁律：预览后发送**
+1. 先生成完整预览（收件人/主题/正文/附件）给用户
+2. 用户明确回复"确认发送/发吧/OK"后才能调用 SMTP
+3. 任何模糊回复（如"嗯""好"）必须二次确认
+
+**凭证读取**：从 ~/.hermes/.env 读 SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS。
+- 缺字段时明确告诉用户去哪个邮箱后台生成授权码
+- Gmail: https://myaccount.google.com/apppasswords
+- 163: 邮箱设置 → POP3/SMTP/IMAP → 开启 SMTP → 生成授权码
+- 腾讯企业邮箱: 邮箱设置 → 客户端专用密码
+
+**发送流程**：
+1. 单封：smtplib.SMTP_SSL（465）或 SMTP+starttls（587）
+2. 批量：每封间隔 60-120 秒随机（避免被标记群发）
+3. 失败容错：单封失败不阻断后续，记录到 send_log
+4. 日志：写入 ~/.trade/audit/smtp-send-log-{date}.md
+
+**HTML 规则**：
+- 必须 multipart/alternative（纯文本+HTML 双版本）
+- 内联 CSS，禁用 JavaScript/iframe/外部图片追踪
+- 字体 web-safe，字号 ≥14px，移动端单列布局
+
+**反垃圾自检**（发送前强制）：
+- 主题行不含 SPAM 触发词（FREE/URGENT/GUARANTEED 等）
+- 主题不全大写、无过多感叹号
+- 正文大写单词 ≤1 个
+- 图片面积 < 50%
+- 包含退订方式
+- 附件 < 10MB
+
+详细错误码对照表见 skills/auto-smtp-email/SKILL.md。""",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

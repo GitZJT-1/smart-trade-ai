@@ -69,6 +69,72 @@ injection_prompt: |
   使用 browser_navigate 访问 LinkedIn 公司页搜索。
   提取：公司名、官网URL、LinkedIn URL、邮箱、关键人姓名/职位、所在国家/城市
 
+  ### 关键联系人富化（必做，不能跳过）
+
+  外贸背调最容易漏的就是「找不到具体决策人」。info@/sales@ 这类 role email 回复率极低，必须挖出具体人名。
+
+  **目标角色优先级**（按这个顺序找，找到一个就够，能找全更好）：
+  1. CEO / Founder / Owner（小公司首选）
+  2. Purchasing Manager / Procurement Lead / Buyer（工厂/品牌方首选）
+  3. Import Manager / Sourcing Manager（贸易公司首选）
+  4. Supply Chain Manager / Category Manager（连锁超市/分销商首选）
+  5. Sales Director / Business Development（找不到采购时退而求其次，通过销售转介）
+
+  **结构化字段**（每个关键联系人都按此结构提取）：
+
+  | 字段 | 必填 | 获取方式 |
+  |------|------|---------|
+  | name | ✅ | 官网 Team 页 / LinkedIn Employees / About 页 |
+  | title | ✅ | 同上 |
+  | email | ✅ | 官网 / LinkedIn 联系方式 / 邮箱推测（见下） |
+  | linkedin_url | ⭐ | LinkedIn 搜索 "site:linkedin.com/in {公司名} {title}" |
+  | whatsapp | ⭐ | 官网 Contact 页 / LinkedIn 个人页 About |
+  | phone | ⭐ | 官网 / WHOIS 注册电话（慎用，可能隐私） |
+  | decision_maker | ✅ | 是否决策人（Y/N），依据 title 判断 |
+
+  ⭐ = 强烈建议但允许缺失；✅ = 必须有，缺失需在报告中标注
+
+  **邮箱推测（email pattern discovery）**：
+
+  如果官网只给了 info@，但 LinkedIn 找到了具体人名，尝试推测邮箱：
+  1. 用 browser_navigate 访问 https://hunter.io/email-finder/{domain} （免费 5 次/月）
+  2. 或用 email-checker 类工具验证以下模式：
+     - `{first}.{last}@{domain}` (john.smith@x.com)
+     - `{first}@{domain}` (john@x.com)
+     - `{first}{last}@{domain}` (johnsmith@x.com)
+     - `{first_initial}{last}@{domain}` (jsmith@x.com)
+     - `{last}@{domain}` (smith@x.com)
+  3. 推测出的邮箱必须用 verify_corporate_email 验证存在性才能列入 [确切]
+  4. 未经验证的推测邮箱标注为 [推测 — 待验证]
+
+  **双跑验证（WebFetch + WebSearch 强制双跑）**：
+
+  关键事实（关键人姓名/邮箱/职位）必须双跑验证，避免单一来源失真：
+
+  1. **WebFetch 路径**：用 browser_navigate 直接访问官网 Team/About/Contact 页 → 提取结构化字段
+  2. **WebSearch 路径**：用 web_search 搜 "{person name} {company name}" + "{person name} {title} LinkedIn"
+  3. **交叉对比**：
+     - 两个来源一致 → 标为 [确切]
+     - 仅 WebFetch 有 → 标为 [网页确认]
+     - 仅 WebSearch 有 → 标为 [搜索确认 — 建议人工核对]
+     - 两个来源冲突 → 在报告中明确标注「⚠️ 来源冲突」并列出两个来源
+
+  ### 采购偏好结构化输出
+
+  背调不仅要查「这家公司是谁」，更要推断「他们怎么买」。基于官网/LinkedIn/News 提取以下字段：
+
+  | 字段 | 推断依据 | 输出值示例 |
+  |------|---------|----------|
+  | typical_order_size | 员工规模 / 产品线 / 海关数据 | "中等（$10K-50K）" / "大批量（>$100K）" / "小试单（<$5K）" |
+  | price_sensitivity | 行业 / 客户类型 | "高（零售商）/ 中（品牌方）/ 低（OEM）" |
+  | quality_vs_price | 官网是否强调认证 / 案例客户 | "质量优先" / "价格优先" / "平衡" |
+  | preferred_channels | 官网 Contact 页 + LinkedIn 活跃度 | "邮箱" / "LinkedIn" / "WhatsApp" / "电话" |
+  | certification_requirements | 行业 + 目标市场 | "CE/FDA 必须" / "ISO 9001 加分" / "无要求" |
+  | language_preference | 官网语言 + 所在国 | "英语" / "本地语 + 英语" / "本地语" |
+  | buying_cycle_signals | News / LinkedIn 近期动态 | "扩张期（最近招聘）" / "稳定" / "收缩（裁员）" |
+
+  缺失字段标为 [未观察到]，不要瞎猜。
+
   ════════════════════════════════════════
   Phase 3: 深度背调 (Deep Verification)
   ════════════════════════════════════════
@@ -79,6 +145,7 @@ injection_prompt: |
   5. 对发现的域名：调用 domain_whois(域名)、detect_tech_stack(https://域名)、check_sanctions(公司名)
   6. 调用 linkedin_company_verify(域名, 公司名) 生成 LinkedIn 验证指令
   7. 所有信息汇总后调用 compute_risk_score() 和 generate_recommendations()
+  8. **对 Phase 2 富化出的每个关键联系人**：再次调用 email_background_check 验证邮箱是否真实存在 + 检查是否有 LinkedIn/WhatsApp 社交档案
 
   ════════════════════════════════════════
   输出格式（建议结构，可在基础上补充）
@@ -94,6 +161,44 @@ injection_prompt: |
   ## 🔗 发现的联系方式
   | 姓名 | 职位 | 邮箱 | 电话 | 来源 |
   |------|------|------|------|------|
+
+  ## 👥 关键联系人详表（富化版）
+
+  对每个关键决策人输出完整结构化字段：
+
+  ### 联系人 1: [姓名] — [职位]
+  | 字段 | 值 | 验证状态 |
+  |------|-----|---------|
+  | 姓名 | [name] | [确切/网页确认/搜索确认] |
+  | 职位 | [title] | [验证状态] |
+  | 是否决策人 | [Y/N — 依据] | - |
+  | 邮箱 | [email] | [确切/推测-待验证] |
+  | LinkedIn | [url] | [验证状态] |
+  | WhatsApp | [number] | [验证状态] |
+  | 电话 | [phone] | [验证状态] |
+
+  **双跑验证结果**：
+  - WebFetch 来源：[URL] → 提取到 [字段]
+  - WebSearch 来源：[query] → 提取到 [字段]
+  - 交叉对比：[一致/冲突/单源]
+
+  （如有多个联系人，逐一列出）
+
+  ## 🎯 采购偏好（用于后续开发信个性化）
+
+  | 字段 | 推断值 | 依据 |
+  |------|--------|------|
+  | 典型订单规模 | [...] | [员工数/海关数据/产品线] |
+  | 价格敏感度 | [...] | [客户类型] |
+  | 质量 vs 价格 | [...] | [官网认证/案例客户] |
+  | 偏好沟通渠道 | [...] | [Contact 页/LinkedIn 活跃度] |
+  | 认证要求 | [...] | [行业/目标市场] |
+  | 语言偏好 | [...] | [官网语言/所在国] |
+  | 采购周期信号 | [...] | [近期 News/LinkedIn 动态] |
+
+  **给开发信撰写的提示**（直接喂给 b2b-lead-generation）：
+  - ✅ 推荐切入点：[基于采购偏好推断的最有效 hook]
+  - ⚠️ 避雷点：[基于客户特征应避免的话术]
 
   ## 📋 引用验证
   以下每条关键 claim 需标注来源，确保信息可追溯。

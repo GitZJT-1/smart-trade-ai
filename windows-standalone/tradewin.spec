@@ -13,7 +13,6 @@ a = Analysis(
     pathex=[str(_TRADEWIN_ROOT), str(_PROJECT_ROOT)],
     binaries=[],
     datas=[
-        (str(_TRADEWIN_ROOT / 'tradewin' / 'resources' / 'icon.ico'), 'tradewin/resources'),
         (str(_TRADEWIN_ROOT / 'tradewin' / 'resources' / 'style.qss'), 'tradewin/resources'),
         (str(_PROJECT_ROOT / 'skills'), 'skills'),
         (str(_PROJECT_ROOT / '.trade-template'), '.trade-template'),
@@ -75,5 +74,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(_TRADEWIN_ROOT / 'tradewin' / 'resources' / 'icon.ico'),
+    # icon 暂时移除 — 之前生成的 ICO 文件 PyInstaller CopyIcons 报 WinError 87
+    # 后续如需自定义图标，需用标准工具（如 ImageMagick）生成多尺寸 ICO
 )

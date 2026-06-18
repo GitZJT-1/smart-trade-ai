@@ -33,7 +33,7 @@ Foreign Trade Assistant 的 Windows 原生桌面应用。
 
 ## 开发者构建
 
-在 Windows 上：
+**方式 1：本地构建（需 Windows + Python 3.11+）**
 
 ```cmd
 cd windows-standalone
@@ -41,6 +41,19 @@ build.bat
 ```
 
 构建产物在 `dist/TradeWin.exe`（约 80-120 MB）。
+
+**方式 2：GitHub Actions 自动构建（推荐）**
+
+打 tag 触发自动构建，产物上传到 Releases 页面：
+
+```bash
+git tag v0.6.2
+git push origin v0.6.2
+```
+
+构建流程定义在 `.github/workflows/build-tradewin.yml`，约 5-10 分钟完成。产物命名 `TradeWin-{version}.exe`，同时作为 workflow artifact 保留 30 天。
+
+也可在 GitHub 仓库的 **Actions** 页面手动触发（`workflow_dispatch`）。
 
 ## 技术栈
 

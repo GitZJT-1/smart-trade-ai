@@ -1,0 +1,89 @@
+name: Build TradeWin Windows Exe
+
+on:
+  # 推送 tag 时触发构建（推荐：发版时打 tag 即自动产出 exe）
+  push:
+    tags:
+      - "v*"
+  # 支持手动触发（Actions 页面点 Run workflow）
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install build dependencies
+        working-directory: windows-standalone
+        run: pip install -r requirements.txt
+
+      - name: Install Trade (editable, from project root)
+        run: pip install -e .
+
+      - name: Install Hermes Agent
+        run: pip install hermes-agent
+        continue-on-error: true  # Hermes 装失败不阻断 exe 构建
+
+      - name: Clean old builds
+        working-directory: windows-standalone
+        shell: cmd
+        run: |
+          if exist build rmdir /s /q build
+          if exist dist rmdir /s /q dist
+
+      - name: Build single-exe with PyInstaller
+        working-directory: windows-standalone
+        run: pyinstaller --clean --noconfirm tradewin.spec
+
+      - name: Verify exe exists
+        working-directory: windows-standalone
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist\TradeWin.exe")) {
+            Write-Error "dist\TradeWin.exe not found — build failed"
+            exit 1
+          }
+          $size = (Get-Item "dist\TradeWin.exe").Length / 1MB
+          Write-Host "✓ TradeWin.exe built: $([math]::Round($size, 1)) MB"
+
+      - name: Rename exe with version tag
+        working-directory: windows-standalone
+        shell: pwsh
+        run: |
+          # tag 形如 v0.6.2 → 产物 TradeWin-0.6.2.exe
+          $tag = "${{ github.ref_name }}"
+          if ($tag -and $tag.StartsWith("v")) {
+            $ver = $tag.Substring(1)
+            Move-Item "dist\TradeWin.exe" "dist\TradeWin-$ver.exe" -Force
+            Write-Host "✓ Renamed to TradeWin-$ver.exe"
+          }
+
+      - name: Upload exe as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TradeWin-exe
+          path: windows-standalone/dist/TradeWin*.exe
+          retention-days: 30
+
+      - name: Attach exe to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: windows-standalone/dist/TradeWin*.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

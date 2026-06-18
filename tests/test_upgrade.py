@@ -329,3 +329,150 @@ class TestSystemRouter:
 
         paths = [r.path for r in router.routes if hasattr(r, "path")]
         assert "/system/restart" in paths
+
+
+# ── update_trade 测试 ─────────────────────────────────────────────────────
+
+
+class TestUpdateTrade:
+    """测试 trade.post_install.update_trade 的 7 步更新流程。
+
+    用 mock 隔离 git/pip/skills/db 等外部副作用，仅验证流程编排逻辑。
+    """
+
+    def _make_completed(self, returncode=0, stdout="", stderr=""):
+        """构造 subprocess.run 的 CompletedProcess 替身。"""
+        cp = MagicMock()
+        cp.returncode = returncode
+        cp.stdout = stdout
+        cp.stderr = stderr
+        return cp
+
+    def test_update_trade_success(self, tmp_path, monkeypatch):
+        """全部步骤成功时，update_trade 应正常返回（无 sys.exit）。"""
+        from trade.post_install import update as update_module
+
+        # 准备假的 trade 运行目录
+        fake_trade_dir = tmp_path / "foreign-trade-assistant"
+        fake_trade_dir.mkdir()
+        (fake_trade_dir / ".trade-template").mkdir()
+
+        # mock _get_trade_home 返回 tmp_path，使 update_trade 找到 fake_trade_dir
+        monkeypatch.setattr(
+            update_module, "_get_trade_home", lambda: tmp_path
+        )
+
+        # mock subprocess.run：git pull 成功 + pip install 成功
+        subprocess_calls = []
+        def fake_run(cmd, *args, **kwargs):
+            subprocess_calls.append(cmd)
+            if cmd[0] == "git" and cmd[1] == "pull":
+                return self._make_completed(0, stdout="Already up-to-date.")
+            if cmd[0:3] == [sys.executable, "-m", "pip"]:
+                return self._make_completed(0, stdout="Successfully installed")
+            return self._make_completed(0, stdout="", stderr="")
+
+        monkeypatch.setattr(update_module.subprocess, "run", fake_run)
+
+        # mock 后续步骤
+        monkeypatch.setattr(update_module, "install_skills", lambda: None)
+        monkeypatch.setattr(update_module, "update_skills", lambda: None)
+        monkeypatch.setattr(update_module, "_sync_trade_template", lambda s, d: None)
+        monkeypatch.setattr(update_module, "_ensure_auto_start", lambda d: None)
+
+        # mock init_db
+        def fake_init_db():
+            return tmp_path / "trade.db"
+        import trade.database as db_module
+        monkeypatch.setattr(db_module, "init_db", fake_init_db)
+
+        # 不应抛 SystemExit
+        update_module.update_trade()
+
+        # 验证调用了 git pull 和 pip install
+        assert any(c[0] == "git" and c[1] == "pull" for c in subprocess_calls)
+        # pip 命令形如 [python, "-m", "pip", "install", "-e", dir]
+        assert any(
+            len(c) >= 4 and c[0] == sys.executable and c[2] == "pip" and c[3] == "install"
+            for c in subprocess_calls
+        )
+
+    def test_update_trade_pip_install_failure(self, tmp_path, monkeypatch):
+        """pip install 失败时，update_trade 应继续执行后续步骤但不退出。"""
+        from trade.post_install import update as update_module
+
+        fake_trade_dir = tmp_path / "foreign-trade-assistant"
+        fake_trade_dir.mkdir()
+
+        monkeypatch.setattr(
+            update_module, "_get_trade_home", lambda: tmp_path
+        )
+
+        def fake_run(cmd, *args, **kwargs):
+            if cmd[0] == "git" and cmd[1] == "pull":
+                return self._make_completed(0, stdout="Already up-to-date.")
+            if cmd[0:3] == [sys.executable, "-m", "pip"]:
+                # pip 失败
+                return self._make_completed(1, stdout="", stderr="ERROR: package conflict")
+            return self._make_completed(0, stdout="", stderr="")
+
+        monkeypatch.setattr(update_module.subprocess, "run", fake_run)
+        monkeypatch.setattr(update_module, "install_skills", lambda: None)
+        monkeypatch.setattr(update_module, "update_skills", lambda: None)
+        monkeypatch.setattr(update_module, "_sync_trade_template", lambda s, d: None)
+        monkeypatch.setattr(update_module, "_ensure_auto_start", lambda d: None)
+
+        import trade.database as db_module
+        monkeypatch.setattr(db_module, "init_db", lambda: tmp_path / "trade.db")
+
+        # 不应抛异常（失败仅设置 ok=False）
+        update_module.update_trade()
+
+    def test_update_trade_git_pull_stash_failure(self, tmp_path, monkeypatch):
+        """git pull 失败 + git stash 也失败时，update_trade 应继续后续步骤。"""
+        from trade.post_install import update as update_module
+
+        fake_trade_dir = tmp_path / "foreign-trade-assistant"
+        fake_trade_dir.mkdir()
+
+        monkeypatch.setattr(
+            update_module, "_get_trade_home", lambda: tmp_path
+        )
+
+        def fake_run(cmd, *args, **kwargs):
+            if cmd[0] == "git" and cmd[1] == "pull":
+                # 第一次 pull 失败
+                if len(cmd) == 5:  # ['git', 'pull', '--ff-only', 'origin', 'main']
+                    return self._make_completed(1, stdout="", stderr="local changes")
+            if cmd[0] == "git" and cmd[1] == "stash":
+                # stash 也失败
+                return self._make_completed(1, stdout="", stderr="no stash")
+            if cmd[0:3] == [sys.executable, "-m", "pip"]:
+                return self._make_completed(0, stdout="OK")
+            return self._make_completed(0, stdout="", stderr="")
+
+        monkeypatch.setattr(update_module.subprocess, "run", fake_run)
+        monkeypatch.setattr(update_module, "install_skills", lambda: None)
+        monkeypatch.setattr(update_module, "update_skills", lambda: None)
+        monkeypatch.setattr(update_module, "_sync_trade_template", lambda s, d: None)
+        monkeypatch.setattr(update_module, "_ensure_auto_start", lambda d: None)
+
+        import trade.database as db_module
+        monkeypatch.setattr(db_module, "init_db", lambda: tmp_path / "trade.db")
+
+        # 不应抛异常
+        update_module.update_trade()
+
+    def test_update_trade_missing_install_dir(self, tmp_path, monkeypatch):
+        """运行目录不存在时，update_trade 应 sys.exit(1)。"""
+        from trade.post_install import update as update_module
+
+        # tmp_path 下没有 foreign-trade-assistant 目录
+        monkeypatch.setattr(
+            update_module, "_get_trade_home", lambda: tmp_path
+        )
+
+        import pytest
+        with pytest.raises(SystemExit) as exc_info:
+            update_module.update_trade()
+        assert exc_info.value.code == 1

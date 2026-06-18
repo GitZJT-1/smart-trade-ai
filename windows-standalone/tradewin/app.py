@@ -146,11 +146,10 @@ class MainWindow(QMainWindow):
             dlg = CustomerDialog(self)
             dlg.exec()
             return
-        # 索引 2 = 文档库（弹出对话框）
+        # 索引 2 = 文档库（弹出 LibraryDialog）
         if idx == 2:
-            from tradewin.dialogs import CompanyDialog
-            dlg = CompanyDialog(self)
-            dlg.company_created.connect(self.refresh_companies)
+            from tradewin.dialogs import LibraryDialog
+            dlg = LibraryDialog(self)
             dlg.exec()
             return
         # 索引 4 = 设置（弹出设置对话框）

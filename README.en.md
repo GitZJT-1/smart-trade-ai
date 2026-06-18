@@ -243,7 +243,7 @@ trade/                     B2B business layer
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
 ├── skill_registry.py      17 skill registry (pure data)
-└── ... + 15 business modules
+└── ... + 17 business modules
 
 skills/                    17 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)

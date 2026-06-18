@@ -247,7 +247,7 @@ trade/                     B2B 业务层
 ├── app.py                  FastAPI app factory
 └── ... + 17 个业务模块
 
-skills/                    15 个 B2B skills（Markdown 驱动）
+skills/                    17 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
 server.py                  FastAPI 入口
 ```
@@ -371,6 +371,32 @@ python server.py
 ### 升级后页面样式异常
 
 浏览器缓存了旧版 CSS/JS，按 `Cmd+Shift+R` (macOS) 或 `Ctrl+Shift+R` (Windows) 强制刷新即可。
+
+---
+
+## TradeWin — Windows 原生桌面版
+
+除了默认的浏览器访问方式，项目还提供一个独立的 Windows 桌面版 `TradeWin.exe`，基于 PySide6 (Qt6) 构建，双击即用，无需安装 Python 或浏览器。
+
+**特性：**
+
+- 单一 `.exe` 文件（约 80-120 MB），干净 Windows 10/11 机器双击即用
+- 首次启动自动检测并安装 Hermes Agent（通过 4 步 QWizard 引导用户选择 LLM + 填入 API Key）
+- 原生 Qt 界面：左侧导航树 + 右侧多视图切换（聊天/客户/文档库/任务/设置）
+- SSE 流式聊天，每条 AI 回复附「📋 复制」按钮
+- 多公司切换、客户管理、文档库浏览、许可证激活、一键更新全部内置
+- 最小化到系统托盘，开机自启动
+
+**构建方式**（需 Windows + Python 3.11+）：
+
+```cmd
+cd windows-standalone
+build.bat
+```
+
+构建产物在 `windows-standalone/dist/TradeWin.exe`。详见 [windows-standalone/README.md](windows-standalone/README.md)。
+
+> TradeWin 与 Web 版功能对等，所有后端 API 共用同一套 `trade/` 包。前端实现独立（PySide6 vs vanilla JS），遵循「跨平台一致性」原则——任何 Trade 功能修改必须同步两个前端。
 
 ---
 

@@ -83,10 +83,12 @@ class ChatView(QWidget):
         self._input_field.clear()
         self._input_field.setEnabled(False)
 
-        # AI 消息占位（插入带唯一 copy_id 的模板，用于 SSE 更新 + 复制定位）
+        # AI 消息占位：先插入头部（含复制按钮），再记录 anchor cursor
+        # 后续 SSE 增量更新通过 anchor cursor 定位，无需 toHtml()/setHtml()
         self._msg_counter += 1
         self._copy_id = f"ai-response-{self._msg_counter}"
         self._response_buffer = ""
+
         self._msg_browser.moveCursor(QTextCursor.End)
         self._msg_browser.insertHtml(
             '<div style="margin:8px 0; padding:10px 14px; '
@@ -96,9 +98,12 @@ class ChatView(QWidget):
             f'<a href="copy://{self._copy_id}" '
             'style="color:#9CA3AF; font-size:11px; text-decoration:none; '
             'padding:2px 6px; border:1px solid #D1D5DB; border-radius:4px;">📋 复制</a>'
-            '</div>'
-            f'<span id="{self._copy_id}">⏳ 思考中...</span></div>'
+            '</div><br>'
         )
+        # 保存 anchor cursor：当前位置即为 AI 回复文本的起始点
+        self._ai_anchor_cursor = QTextCursor(self._msg_browser.textCursor())
+        # 插入占位文本（后续 _update_ai_message 会替换它）
+        self._msg_browser.insertText("⏳ 思考中...")
         self._scroll_to_bottom()
 
         # 启动 SSE 后台线程
@@ -118,21 +123,9 @@ class ChatView(QWidget):
         if etype == "response":
             chunk = data.get("content", "")
             self._response_buffer += chunk
-            html = self._msg_browser.toHtml()
-            # 增量更新 AI 回复内容（替换 span 内的文本）
-            escaped = (
-                self._response_buffer
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\n", "<br>")
-            )
-            html = html.replace(
-                f'<span id="{self._copy_id}">⏳ 思考中...</span>',
-                f'<span id="{self._copy_id}">{escaped}</span>'
-            )
-            self._msg_browser.setHtml(html)
-            self._scroll_to_bottom()
+            # 增量更新：用 QTextCursor 定位到 AI 回复 anchor，仅重写该段文本
+            # 避免 toHtml()/setHtml() 整文档重排造成的 O(n²) 性能问题
+            self._update_ai_message(self._response_buffer)
         elif etype == "tool_start":
             self._append_status(f"🔧 调用工具: {data.get('tool', 'unknown')}")
         elif etype == "tool_complete":
@@ -141,6 +134,32 @@ class ChatView(QWidget):
             self._append_status(f"💭 {data.get('content', '思考中...')}")
         elif etype == "error":
             self._append_status(f"❌ {data.get('message', '未知错误')}")
+
+    def _update_ai_message(self, full_text: str) -> None:
+        """增量更新当前 AI 回复的内容。
+
+        通过保存的 anchor QTextCursor 定位到 AI 回复占位文本的起始位置，
+        删除旧内容并插入新内容。相比 toHtml()/setHtml() 全文重排，
+        此方式只触发局部重排，长回答下从 O(n²) 降到 O(n)。
+
+        Args:
+            full_text: 当前累积的完整回复文本（纯文本，含换行）
+        """
+        cursor = self._msg_browser.textCursor()
+        # 切换到 AI 回复 anchor 位置（_send_message 中保存）
+        anchor_cursor = getattr(self, '_ai_anchor_cursor', None)
+        if anchor_cursor is not None:
+            # 复制 anchor cursor 以免修改原对象
+            cursor = QTextCursor(anchor_cursor)
+        # 选中从 anchor 到末尾的范围（即旧 AI 文本），用新文本替换
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        # 插入新文本（QTextCursor.insertText 会自动处理 HTML 转义）
+        # 先删除选中内容，再插入
+        cursor.removeSelectedText()
+        # 保留换行：QTextCursor.insertText 不会解释 HTML，但会保留 \\n 为段落分隔
+        # 使用 insertText 配配 plain text，让 Qt 自动处理换行渲染
+        cursor.insertText(full_text if full_text else "⏳ 思考中...")
+        self._scroll_to_bottom()
 
     def _on_stream_done(self) -> None:
         """SSE 流结束 → 恢复输入框 + 替换复制链接的 copy_id 指向纯文本。"""

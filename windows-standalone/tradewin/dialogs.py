@@ -22,20 +22,12 @@ from PySide6.QtWidgets import (
 )
 
 from tradewin.api import (
+    activate_license,
     create_company,
     get_license_status,
-    activate_license,
     list_companies,
     list_customers,
-    system_update,
-    system_restart,
-)
-
-from tradewin.api import (
-    activate_license,
-    create_company,
-    get_license_status,
-    list_companies,
+    list_libraries,
     system_restart,
     system_update,
 )
@@ -100,6 +92,7 @@ class CustomerDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("客户列表:"))
         self._tree = QTreeWidget()
+        # 固定 4 列表头，避免空列表时被改写成单列
         self._tree.setHeaderLabels(["客户名称", "等级", "国家", "最近跟进"])
         self._tree.setAlternatingRowColors(True)
         self._refresh_list()
@@ -111,6 +104,12 @@ class CustomerDialog(QDialog):
     def _refresh_list(self) -> None:
         self._tree.clear()
         customers = list_customers()
+        if not customers:
+            # 用占位行而不是改写表头，保持 4 列结构
+            placeholder = QTreeWidgetItem(["（暂无客户数据）", "", "", ""])
+            placeholder.setFlags(Qt.NoItemFlags)  # 不可选中
+            self._tree.addTopLevelItem(placeholder)
+            return
         for c in customers:
             item = QTreeWidgetItem([
                 c.get("name", ""),
@@ -120,11 +119,50 @@ class CustomerDialog(QDialog):
             ])
             item.setData(0, Qt.UserRole, c.get("id"))
             self._tree.addTopLevelItem(item)
-        if not customers:
-            self._tree.setHeaderLabels(["暂无客户数据"])
-        else:
-            for i in range(4):
-                self._tree.resizeColumnToContents(i)
+        for i in range(4):
+            self._tree.resizeColumnToContents(i)
+
+
+class LibraryDialog(QDialog):
+    """文档库管理对话框。
+
+    展示当前公司下的所有文档库（名称 + root_path）。
+    TradeWin 暂不提供创建/删除入口（由 AI 在聊天中通过工具完成）。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("文档库")
+        self.resize(600, 400)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("文档库列表:"))
+        self._tree = QTreeWidget()
+        self._tree.setHeaderLabels(["库名称", "根目录", "说明"])
+        self._tree.setAlternatingRowColors(True)
+        self._refresh_list()
+        layout.addWidget(self._tree)
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+
+    def _refresh_list(self) -> None:
+        self._tree.clear()
+        libs = list_libraries()
+        if not libs:
+            placeholder = QTreeWidgetItem(["（暂无文档库）", "", ""])
+            placeholder.setFlags(Qt.NoItemFlags)
+            self._tree.addTopLevelItem(placeholder)
+            return
+        for lib in libs:
+            item = QTreeWidgetItem([
+                lib.get("name", ""),
+                lib.get("root_path", ""),
+                lib.get("description", "") or "",
+            ])
+            item.setData(0, Qt.UserRole, lib.get("id"))
+            self._tree.addTopLevelItem(item)
+        for i in range(3):
+            self._tree.resizeColumnToContents(i)
 
 
 class LicenseDialog(QDialog):

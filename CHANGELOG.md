@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Added
+- **TradeWin 文档库对话框**：新增 `LibraryDialog`，列出当前公司所有文档库（名称/根目录/说明）；侧边栏「📁 文档库」导航从错连 CompanyDialog 改为正确弹出 LibraryDialog
+- **update_trade 单元测试**：`tests/test_upgrade.py::TestUpdateTrade` 新增 4 个用例（成功流程 / pip 失败 / git stash 失败 / 运行目录缺失），覆盖 7 步更新编排逻辑，测试总数 201 → 205
+
+### Changed
+- **TradeWin ChatView 流式渲染性能**：SSE `response` 事件改用 `QTextCursor` 锚点增量更新，取代原 `toHtml()/setHtml()` 全文重排，长回答下从 O(n²) 降到 O(n)
+- **TradeWin CustomerDialog 空列表表头污染修复**：空列表时改用 `Qt.NoItemFlags` 占位行，不再 `setHeaderLabels(["暂无客户数据"])` 破坏 4 列结构
+
+### Fixed
+- **TradeWin dialogs.py 重复 import**：删除冗余的第二个 `from tradewin.api import (...)` 块
+- **TradeWin 文档库导航错连 CompanyDialog**：侧边栏索引 2 标注「文档库」却弹出公司管理对话框，已改为 LibraryDialog
+
 ### Changed
 - **OSINT Phase 1 搜索决策树**：从固定 5 轮 STOP RULE 升级为状态驱动的 A/B/C/D 四分支决策，避免无效搜索浪费 token
 - **OSINT 输出格式增强**：公司概况表格新增「来源」列，新增「引用验证」章节（3 级可信度），新增「数据合规」声明

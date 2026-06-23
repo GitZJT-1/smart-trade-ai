@@ -348,13 +348,22 @@ def create_app() -> FastAPI:
     @app.get("/api/status", include_in_schema=False)
     async def status():
         # 读取当前版本号（从 pyproject.toml）
+        # 优先级: 运行时目录 > PyInstaller _MEIPASS > 开发目录
+        # system_update() 只更新运行时目录，不更新 PyInstaller 打包版本
         version = "0.0.0"
         try:
             import tomllib as _toml
         except ImportError:
             import tomli as _toml
         try:
-            pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            # 1. 运行时更新目录（~/.trade/foreign-trade-assistant/pyproject.toml）
+            runtime_pyproject = Path.home() / ".trade" / "foreign-trade-assistant" / "pyproject.toml"
+            if not runtime_pyproject.is_file() and os.name == "nt":
+                local_appdata = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+                runtime_pyproject = Path(local_appdata) / "trade" / "foreign-trade-assistant" / "pyproject.toml"
+            # 2. 回退：PyInstaller _MEIPASS 或开发目录
+            fallback = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            pyproject = runtime_pyproject if runtime_pyproject.is_file() else fallback
             data = _toml.loads(pyproject.read_text())
             version = data.get("project", {}).get("version", version)
         except Exception:

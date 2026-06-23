@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
 
         self._sidebar = self._build_sidebar()
         self._splitter.addWidget(self._sidebar)
-        self._splitter.setSizes([260, 940])
+        self._splitter.setSizes([175, 1025])
 
         self._stack = QStackedWidget()
         self._splitter.addWidget(self._stack)

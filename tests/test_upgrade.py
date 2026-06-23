@@ -464,7 +464,7 @@ class TestUpdateTrade:
         update_module.update_trade()
 
     def test_update_trade_missing_install_dir(self, tmp_path, monkeypatch):
-        """运行目录不存在且 git clone 失败时，update_trade 应 sys.exit(1)。"""
+        """运行目录不存在且 git clone 失败时，返回 ok=False + errors 含提示。"""
         import subprocess as _sp
 
         from trade.post_install import update as update_module
@@ -485,7 +485,6 @@ class TestUpdateTrade:
 
         monkeypatch.setattr(_sp, "run", _fake_run)
 
-        import pytest
-        with pytest.raises(SystemExit) as exc_info:
-            update_module.update_trade()
-        assert exc_info.value.code == 1
+        result = update_module.update_trade()
+        assert result["ok"] is False
+        assert any("git clone failed" in e for e in result["errors"])

@@ -240,31 +240,34 @@ def _ensure_linux_auto_start(trade_dir: Path) -> None:
 
 # ── 一键更新主函数 ────────────────────────────────────────────────────────
 
-def update_trade() -> None:
+def update_trade() -> dict:
     """一键更新 Foreign Trade Assistant 系统。
 
-    7 步更新流程：
-      1. git pull：在运行目录（~/.trade/foreign-trade-assistant/）
-         拉取最新代码。本地有修改时自动 stash → pull → pop。
-      2. install_skills()：安装新增的 b2b-* skill 目录到 ~/.hermes/skills/
-      3. update_skills()：从 GitHub 同步每个 skill 的 SKILL.md 内容
-      4. pip install -e .：更新包及依赖项
-      5. _sync_trade_template()：同步 .trade-template/ 新增模板文件
-      6. _ensure_auto_start()：开机自启动幂等检查
-      7. 数据库迁移检查（幂等 init_db）
+    返回结构化结果: {"ok": bool, "version": str, "errors": list[str], "messages": list[str]}
 
-    用法：trade-update（或 trade update）
+    7 步更新流程（全部在 ~/.trade/foreign-trade-assistant/ 中执行，不依赖开发目录）：
+      1. git pull / git clone
+      2. install_skills()
+      3. update_skills()
+      4. pip install -e .
+      5. template sync
+      6. auto-start check
+      7. database migration
     """
-    # 运行目录是唯一的代码管理位置，不依赖桌面开发目录
     trade_dir = _get_trade_home() / "foreign-trade-assistant"
+    errors: list[str] = []
+    messages: list[str] = []
+    new_version = ""
 
-    ok = True
+    def _emit(msg: str) -> None:
+        """同时 print 和记录到 messages（保持 CLI 和 API 兼容）。"""
+        print(msg)
+        messages.append(msg)
 
-    # ── Step 1: git pull（缺失目录则 git clone）───────────────────────────
+    # ── Step 1: git pull / clone ───────────────────────────────────────────
     if not trade_dir.is_dir():
-        # 运行时目录不存在 → git clone
-        print("→ Step 1/7: git clone (install directory not found) ...")
-        print(f"  Target: {trade_dir}")
+        _emit("→ Step 1/7: git clone (install directory not found) ...")
+        _emit(f"  Target: {trade_dir}")
         trade_dir.parent.mkdir(parents=True, exist_ok=True)
         clone_result = subprocess.run(
             ["git", "clone", "https://github.com/chefroger/smart-trade-ai.git",
@@ -273,124 +276,129 @@ def update_trade() -> None:
         )
         if clone_result.returncode != 0:
             err = clone_result.stderr.strip()
-            print(f"  ❌ git clone failed: {err}")
-            print("  Please install Git and retry, or download TradeWin.exe from releases",
-                  file=sys.stderr)
-            sys.exit(1)
-        print(f"  ✓ Repository cloned to {trade_dir}")
+            _emit(f"  ❌ git clone failed: {err}")
+            errors.append(f"git clone failed: {err}")
+            return {"ok": False, "version": "", "errors": errors, "messages": messages}
+        _emit(f"  ✓ Repository cloned to {trade_dir}")
     else:
-        print("→ Step 1/7: git pull ...")
+        _emit("→ Step 1/7: git pull ...")
         result = subprocess.run(
             ["git", "pull", "--ff-only", "origin", "main"],
-            cwd=str(trade_dir),
-            capture_output=True,
-            text=True,
-            timeout=120,
+            cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
         )
         if result.returncode != 0:
             err_text = result.stderr.strip()
-            print(f"  ⚠ git pull failed: {err_text}")
-            print("  💡 尝试自动 stash 后重试...")
-            _stash = subprocess.run(
-                ["git", "stash"],
-                cwd=str(trade_dir),
-                capture_output=True,
-                text=True,
-                timeout=30,
+            _emit(f"  ⚠ git pull failed: {err_text}")
+            _emit("  💡 尝试自动 stash 后重试...")
+            stash = subprocess.run(
+                ["git", "stash"], cwd=str(trade_dir),
+                capture_output=True, text=True, timeout=30,
             )
-            if _stash.returncode == 0:
-                _pull2 = subprocess.run(
+            if stash.returncode == 0:
+                pull2 = subprocess.run(
                     ["git", "pull", "--ff-only", "origin", "main"],
-                    cwd=str(trade_dir),
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
+                    cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
                 )
-                if _pull2.returncode == 0:
-                    last_line = _pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else "OK"
-                    print(f"  ✓ git pull (after stash) — {last_line}")
-                    _pop = subprocess.run(
-                        ["git", "stash", "pop"],
-                        cwd=str(trade_dir),
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
+                if pull2.returncode == 0:
+                    _emit("  ✓ git pull (after stash) OK")
+                    subprocess.run(
+                        ["git", "stash", "pop"], cwd=str(trade_dir),
+                        capture_output=True, text=True, timeout=30,
                     )
-                    if _pop.returncode == 0:
-                        print("  ✓ 本地修改已恢复")
-                    else:
-                        print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
-                        print(f"    恢复: cd {trade_dir} && git stash pop")
                 else:
-                    print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
-                    ok = False
+                    err2 = pull2.stderr.strip()
+                    _emit(f"  ❌ git pull failed after stash: {err2}")
+                    errors.append(f"git pull failed: {err2}")
+                    return {"ok": False, "version": "", "errors": errors, "messages": messages}
             else:
-                print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
-                ok = False
+                err_s = stash.stderr.strip()
+                _emit(f"  ❌ git stash also failed: {err_s}")
+                errors.append(f"git stash failed: {err_s}")
+                return {"ok": False, "version": "", "errors": errors, "messages": messages}
         else:
-            last_line = result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else "Already up-to-date."
-            print(f"  ✓ {last_line}")
+            last_line = result.stdout.strip().split("\n")[-1] if result.stdout.strip() else "Already up-to-date."
+            _emit(f"  ✓ {last_line}")
+
+    # ── 读取更新后的版本号 ─────────────────────────────────────────────────
+    try:
+        import tomllib as _toml_v
+    except ImportError:
+        import tomli as _toml_v
+    try:
+        pyproject = trade_dir / "pyproject.toml"
+        data = _toml_v.loads(pyproject.read_text())
+        new_version = data.get("project", {}).get("version", "")
+        _emit(f"  ℹ️  Target version: v{new_version}")
+    except Exception:
+        pass
 
     # ── Step 2: install_skills ────────────────────────────────────────────
-    print("→ Step 2/7: install skills (新增 skill 目录) ...")
+    _emit("→ Step 2/7: install skills ...")
     try:
         install_skills()
+        _emit("  ✓ Skills installed")
     except SystemExit:
-        ok = False  # skills 安装致命错误（如找不到 skills 目录）
+        msg = "install_skills failed"
+        _emit(f"  ⚠ {msg}")
+        errors.append(msg)
 
     # ── Step 3: update_skills ─────────────────────────────────────────────
-    print("→ Step 3/7: update skills (同步 SKILL.md) ...")
+    _emit("→ Step 3/7: update skills ...")
     try:
         update_skills()
+        _emit("  ✓ Skills updated")
     except SystemExit:
-        ok = False
+        msg = "update_skills failed"
+        _emit(f"  ⚠ {msg}")
+        errors.append(msg)
 
     # ── Step 4: pip install ───────────────────────────────────────────────
-    print("→ Step 4/7: pip install ...")
+    _emit("→ Step 4/7: pip install ...")
     pip_args = [sys.executable, "-m", "pip", "install", "-e", str(trade_dir)]
-    # timeout=600 给依赖解析+下载留充裕时间，但避免 PyPI 挂起永久阻塞
     result = subprocess.run(pip_args, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
-        print(f"  ⚠ pip install failed: {result.stderr.strip()}")
-        ok = False
-    else:
-        print("  ✓ Package updated")
+        err = result.stderr.strip()
+        _emit(f"  ❌ pip install failed: {err}")
+        errors.append(f"pip install failed: {err[:200]}")
+        return {"ok": False, "version": "", "errors": errors, "messages": messages}
+    _emit("  ✓ Package updated")
 
     # ── Step 5: template sync ─────────────────────────────────────────────
-    print("→ Step 5/7: template sync ...")
+    _emit("→ Step 5/7: template sync ...")
     try:
         template_src = trade_dir / ".trade-template"
         trade_home = _get_trade_home()
         trade_home.mkdir(parents=True, exist_ok=True)
         _sync_trade_template(template_src, trade_home)
-        print("  ✓ Templates synced")
+        _emit("  ✓ Templates synced")
     except Exception as e:
-        print(f"  ⚠ Template sync failed: {e}")
-        # 模板同步失败不影响其他步骤（非致命）
+        _emit(f"  ⚠ Template sync failed: {e}")
 
     # ── Step 6: auto-start ────────────────────────────────────────────────
-    print("→ Step 6/7: auto-start check ...")
+    _emit("→ Step 6/7: auto-start check ...")
     try:
         _ensure_auto_start(trade_dir)
+        _emit("  ✓ Auto-start OK")
     except Exception as e:
-        print(f"  ⚠ Auto-start setup failed: {e}")
+        _emit(f"  ⚠ Auto-start setup failed: {e}")
 
-    # ── Step 7: database migration ────────────────────────────────────────
-    print("→ Step 7/7: database check ...")
+    # ── Step 7: database ──────────────────────────────────────────────────
+    _emit("→ Step 7/7: database check ...")
     try:
         from trade.database import init_db
         db_path = init_db()
-        print(f"  ✓ Database OK ({db_path})")
+        _emit(f"  ✓ Database OK ({db_path})")
     except Exception as e:
-        print(f"  ⚠ Database check failed: {e}")
-        ok = False
+        _emit(f"  ❌ Database check failed: {e}")
+        errors.append(f"Database check failed: {e}")
+        return {"ok": False, "version": "", "errors": errors, "messages": messages}
+
+    # ── 结果 ──────────────────────────────────────────────────────────────
+    has_critical_errors = bool(errors)  # pip install / database 等关键步骤失败
+    ok = not has_critical_errors
 
     if ok:
-        print("\n✅ Trade update complete.")
-        print("  ℹ️  服务将在 HTTP 响应返回后自动重启。")
+        _emit("\n✅ Trade update complete. Restarting...")
     else:
-        print(
-            "\n⚠️  Trade update completed with warnings. "
-            "Check the output above."
-        )
-        print("  ℹ️  由于更新未完全成功，服务将不会自动重启。")
+        _emit("\n⚠️  Update completed with errors. No restart.")
+    return {"ok": ok, "version": new_version, "errors": errors, "messages": messages}

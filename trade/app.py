@@ -253,7 +253,6 @@ def _create_system_router() -> APIRouter:
     """创建系统管理路由（更新/备份/重启），需要 session token 认证。"""
     from fastapi import BackgroundTasks, Request
 
-    from trade.api.cron import _capture_output
     from trade.api.deps import require_session
 
     router = APIRouter(tags=["system"], dependencies=[Depends(require_session)])
@@ -262,34 +261,21 @@ def _create_system_router() -> APIRouter:
     def api_update_trade(background_tasks: BackgroundTasks, request: Request):
         """一键更新 Trade 系统。
 
-        升级成功后通过 BackgroundTasks 调度全量重启——这样响应能先送达前端，
-        前端拿到 restart_scheduled=True 后开始轮询服务状态，等待重启完成。
+        升级成功后通过 BackgroundTasks 调度全量重启。
+        返回 {"ok": bool, "version": str, "errors": list, "restart_scheduled": bool}
         """
-        # 系统端点限流（用 session token hash 作为分桶 key）
         _tk = request.headers.get("X-Hermes-Session-Token", "")
         if _tk and not _check_system_rate_limit(hash(_tk)):
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 
         from trade.post_install import update_trade as _do_update
-        result = _capture_output(_do_update)
-        output = result.get("output", "")
+        result = _do_update()  # 现在返回结构化 dict，不再依赖 _capture_output
 
-        # 检测 update_trade 输出中的致命失败标记（⚠️ 不纳入——模板同步/自启动失败不影响升级）
-        _failed = any(marker in output for marker in [
-            "❌", "update failed", "git pull failed", "pip install failed",
-            "git stash 也失败", "Database check failed",
-        ])
-
-        if result.get("ok") and not _failed:
-            # 升级成功后立即使 GitHub 版本缓存失效，下次 /api/status 强制重新拉取
-            _latest_version_cache["ts"] = 0.0
+        if result["ok"]:
+            _latest_version_cache["ts"] = 0.0  # 强制重新拉取 GitHub latest
             background_tasks.add_task(_perform_restart)
             result["restart_scheduled"] = True
-        else:
-            result["ok"] = False
-            if _failed:
-                result["error"] = "更新失败，请查看 output 了解详情"
         return result
 
     @router.post("/system/backup")
@@ -300,6 +286,7 @@ def _create_system_router() -> APIRouter:
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 
+        from trade.api.cron import _capture_output
         from trade.post_install import backup_trade as _do_backup
         return _capture_output(_do_backup)
 
@@ -359,33 +346,31 @@ def create_app() -> FastAPI:
     # Health check
     @app.get("/api/status", include_in_schema=False)
     async def status():
-        # 读取当前版本号（从 pyproject.toml）
-        # 优先级: 运行时目录 > PyInstaller _MEIPASS > 开发目录
-        # system_update() 只更新运行时目录，不更新 PyInstaller 打包版本
+        # 读取当前版本号
+        # 策略：importlib.metadata（pip install -e . 后自动更新）→ pyproject.toml
         version = "0.0.0"
         try:
-            import tomllib as _toml
-        except ImportError:
-            import tomli as _toml
-        try:
-            # 1. 运行时更新目录（~/.trade/foreign-trade-assistant/pyproject.toml）
-            trade_home = _get_trade_home_path()
-            runtime_pyproject = trade_home / "foreign-trade-assistant" / "pyproject.toml"
-            # 2. PyInstaller _MEIPASS（打包版本，仅运行时目录不存在时回退）
-            _meipass = getattr(sys, "_MEIPASS", None)
-            meipass_pyproject = Path(_meipass) / "pyproject.toml" if _meipass else None
-            # 3. 开发目录（最后回退）
-            dev_pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
-            # 按优先级选择第一个存在的
-            pyproject = runtime_pyproject
-            if not pyproject.is_file() and meipass_pyproject and meipass_pyproject.is_file():
-                pyproject = meipass_pyproject
-            elif not pyproject.is_file():
-                pyproject = dev_pyproject
-            data = _toml.loads(pyproject.read_text())
-            version = data.get("project", {}).get("version", version)
+            from importlib.metadata import version as _pkg_version
+            version = _pkg_version("smart-trade-ai")
         except Exception:
-            pass
+            _pyproject = None
+            # 1. PyInstaller _MEIPASS
+            _meipass = getattr(sys, "_MEIPASS", None)
+            if _meipass:
+                _pyproject = Path(_meipass) / "pyproject.toml"
+            # 2. 开发目录
+            if not _pyproject or not _pyproject.is_file():
+                _pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            if _pyproject and _pyproject.is_file():
+                try:
+                    import tomllib as _toml
+                except ImportError:
+                    import tomli as _toml
+                try:
+                    data = _toml.loads(_pyproject.read_text())
+                    version = data.get("project", {}).get("version", version)
+                except Exception:
+                    pass
 
         # 用缓存降低 GitHub API 调用频率，防止限流导致版本检测失效
         import time as _time

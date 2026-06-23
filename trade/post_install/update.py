@@ -319,7 +319,7 @@ def update_trade() -> dict:
             last_line = result.stdout.strip().split("\n")[-1] if result.stdout.strip() else "Already up-to-date."
             _emit(f"  ✓ {last_line}")
 
-    # ── 读取更新后的版本号 ─────────────────────────────────────────────────
+    # ── 读取更新后的版本号并写入 version.txt ─────────────────────────────
     try:
         import tomllib as _toml_v
     except ImportError:
@@ -396,6 +396,16 @@ def update_trade() -> dict:
     # ── 结果 ──────────────────────────────────────────────────────────────
     has_critical_errors = bool(errors)  # pip install / database 等关键步骤失败
     ok = not has_critical_errors
+
+    # ── 写入版本标记文件（/api/status 直接读取，零中间层） ──────────────
+    if ok and new_version:
+        try:
+            data_dir = _get_trade_home() / "data"
+            data_dir.mkdir(parents=True, exist_ok=True)
+            (data_dir / "version.txt").write_text(new_version)
+            _emit(f"  ✓ Version marker written: {new_version}")
+        except Exception as e:
+            _emit(f"  ⚠ Failed to write version marker: {e}")
 
     if ok:
         _emit("\n✅ Trade update complete. Restarting...")

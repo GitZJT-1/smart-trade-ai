@@ -347,18 +347,23 @@ def create_app() -> FastAPI:
     @app.get("/api/status", include_in_schema=False)
     async def status():
         # 读取当前版本号
-        # 策略：importlib.metadata（pip install -e . 后自动更新）→ pyproject.toml
+        # 策略：version.txt（update_trade 写入）→ importlib.metadata → pyproject.toml
         version = "0.0.0"
         try:
-            from importlib.metadata import version as _pkg_version
-            version = _pkg_version("smart-trade-ai")
+            # 1. 优先读 version.txt（升级成功后写入，最可靠）
+            version_file = _get_trade_data_dir() / "version.txt"
+            if version_file.is_file():
+                version = version_file.read_text().strip()
+            else:
+                # 2. importlib.metadata（pip install 后的包元数据）
+                from importlib.metadata import version as _pkg_version
+                version = _pkg_version("smart-trade-ai")
         except Exception:
+            # 3. pyproject.toml 文件系统兜底
             _pyproject = None
-            # 1. PyInstaller _MEIPASS
             _meipass = getattr(sys, "_MEIPASS", None)
             if _meipass:
                 _pyproject = Path(_meipass) / "pyproject.toml"
-            # 2. 开发目录
             if not _pyproject or not _pyproject.is_file():
                 _pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
             if _pyproject and _pyproject.is_file():

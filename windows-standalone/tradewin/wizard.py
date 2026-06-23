@@ -95,36 +95,39 @@ class ProviderPage(QWizardPage):
             self._provider_combo.addItem(f"{p['name']} — {p['description']}", p)
         layout.addWidget(self._provider_combo)
 
-        # 模型预览
-        self._model_label = QLabel("")
-        self._model_label.setStyleSheet(
-            "color: #64748B; font-size: 12px; padding: 4px 8px;"
-        )
-        layout.addWidget(self._model_label)
+        # 模型下拉框
+        layout.addWidget(QLabel("选择模型:"))
+        self._model_combo = QComboBox()
+        layout.addWidget(self._model_combo)
 
         # 提示
         hint = QLabel(
-            "💡 推荐：DeepSeek V4 Pro（性价比高）或 MiniMax M3（中文外贸场景最优）\n"
-            "   如果您已有 OpenAI / Anthropic 的 API Key，也可以选择对应提供商。"
+            "💡 推荐：DeepSeek V3 / V4（性价比高）或 MiniMax M3（中文外贸场景最优）\n"
+            "   也可选择 OpenAI GPT-4o / Anthropic Claude 等其他提供商。\n"
+            "   每个提供商对应不同的 API Key，请确保已有对应账号。"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #64748B; font-size: 11px; margin-top: 12px;")
         layout.addWidget(hint)
 
-        self._provider_combo.currentIndexChanged.connect(self._update_model_preview)
-        self._update_model_preview(0)
+        self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        self._on_provider_changed(0)
 
         self.registerField("provider*", self._provider_combo, "currentData",
                           self._provider_combo.currentIndexChanged)
+        self.registerField("model", self._model_combo, "currentText",
+                          self._model_combo.currentIndexChanged)
 
-    def _update_model_preview(self, index: int) -> None:
-        """更新模型预览文本。"""
+    def _on_provider_changed(self, index: int) -> None:
+        """提供商切换时更新模型下拉框。"""
         data = self._provider_combo.itemData(index)
+        self._model_combo.clear()
         if data:
             models = data.get("models", [])
-            self._model_label.setText(
-                f"可用模型: {', '.join(models)}"
-            )
+            self._model_combo.addItems(models)
+            # 默认选第一个
+            if models:
+                self._model_combo.setCurrentIndex(0)
 
 
 # ── 向导页 3: API Key 输入 ────────────────────────────────────────────────
@@ -224,6 +227,7 @@ class InstallPage(QWizardPage):
 
         provider_data = self.wizard().page(1)._provider_combo.currentData()
         provider_id = provider_data["id"] if provider_data else "openai"
+        model = self.field("model") or ""  # 用户选择的模型
         api_key = self.field("api_key")
         tavily_key = self.field("tavily_key")
 
@@ -248,7 +252,7 @@ class InstallPage(QWizardPage):
         if api_key:
             steps.append(("写入 API Key 配置", lambda cb=None: (
                 write_hermes_env(provider_id, api_key, tavily_key)
-                and write_hermes_config(provider_id)
+                and write_hermes_config(provider_id, model)
             )))
 
         self._worker.set_steps(steps)

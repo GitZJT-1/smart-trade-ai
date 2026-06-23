@@ -125,6 +125,18 @@ def _get_trade_data_dir() -> Path:
     return Path(trade_home) / "data"
 
 
+def _get_trade_home_path() -> Path:
+    """返回 Trade 根目录（不带 /data 后缀），与 _get_trade_data_dir 逻辑一致。"""
+    trade_home = os.environ.get("TRADE_HOME", "").strip()
+    if not trade_home:
+        if os.name == "nt":
+            _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+            trade_home = str(Path(_local) / "trade")
+        else:
+            trade_home = str(Path.home() / ".trade")
+    return Path(trade_home)
+
+
 def _kill_gateway() -> None:
     """终止当前 Hermes Gateway 进程（升级/重启时调用，新进程会重启它）。
 
@@ -357,13 +369,19 @@ def create_app() -> FastAPI:
             import tomli as _toml
         try:
             # 1. 运行时更新目录（~/.trade/foreign-trade-assistant/pyproject.toml）
-            runtime_pyproject = Path.home() / ".trade" / "foreign-trade-assistant" / "pyproject.toml"
-            if not runtime_pyproject.is_file() and os.name == "nt":
-                local_appdata = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-                runtime_pyproject = Path(local_appdata) / "trade" / "foreign-trade-assistant" / "pyproject.toml"
-            # 2. 回退：PyInstaller _MEIPASS 或开发目录
-            fallback = Path(__file__).resolve().parent.parent / "pyproject.toml"
-            pyproject = runtime_pyproject if runtime_pyproject.is_file() else fallback
+            trade_home = _get_trade_home_path()
+            runtime_pyproject = trade_home / "foreign-trade-assistant" / "pyproject.toml"
+            # 2. PyInstaller _MEIPASS（打包版本，仅运行时目录不存在时回退）
+            _meipass = getattr(sys, "_MEIPASS", None)
+            meipass_pyproject = Path(_meipass) / "pyproject.toml" if _meipass else None
+            # 3. 开发目录（最后回退）
+            dev_pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            # 按优先级选择第一个存在的
+            pyproject = runtime_pyproject
+            if not pyproject.is_file() and meipass_pyproject and meipass_pyproject.is_file():
+                pyproject = meipass_pyproject
+            elif not pyproject.is_file():
+                pyproject = dev_pyproject
             data = _toml.loads(pyproject.read_text())
             version = data.get("project", {}).get("version", version)
         except Exception:
@@ -411,11 +429,16 @@ def create_app() -> FastAPI:
 
 def serve_trade_chat(app: FastAPI) -> None:
     """注册 /trade SPA 路由（需要 app 实例和 _SESSION_TOKEN）。"""
-    # PyInstaller 打包后资源文件在 _MEIPASS 目录中
-    if getattr(sys, "frozen", False):
+    # 静态文件查找优先级：PyInstaller _MEIPASS > 运行时目录 > 开发目录
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         _STATIC_DIR = Path(sys._MEIPASS) / "static"
     else:
-        _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+        # 运行时目录（~/.trade/foreign-trade-assistant/static/）
+        _runtime_static = _get_trade_home_path() / "foreign-trade-assistant" / "static"
+        if _runtime_static.is_dir():
+            _STATIC_DIR = _runtime_static
+        else:
+            _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
     _TRADE_CHAT_HTML = _STATIC_DIR / "trade_chat.html"
 
     @app.get("/trade", response_class=HTMLResponse, include_in_schema=False)

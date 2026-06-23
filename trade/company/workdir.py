@@ -92,7 +92,18 @@ def _ensure_data_dir(slug: str, trade_home: Path) -> Path:
         创建或已存在的公司数据目录路径
     """
     target = trade_home / slug
-    template_src = Path(__file__).resolve().parent.parent.parent / ".trade-template"
+
+    # 模板源查找优先级：PyInstaller _MEIPASS > 运行时目录 > 开发目录
+    _meipass = getattr(sys, "_MEIPASS", None)
+    if _meipass:
+        template_src = Path(_meipass) / ".trade-template"
+    else:
+        # 运行时目录优先（update_trade 同步后模板在此）
+        _runtime_tmpl = trade_home / ".trade-template"
+        if _runtime_tmpl.is_dir():
+            template_src = _runtime_tmpl
+        else:
+            template_src = Path(__file__).resolve().parent.parent.parent / ".trade-template"
 
     if target.exists():
         return target  # 目标目录已存在，无需重复创建

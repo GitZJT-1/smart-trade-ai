@@ -158,13 +158,25 @@ def sync_b2b_skills():
     except Exception as e:
         print(f"  GitHub skills update failed ({e}), falling back to local sync")
 
-        # PyInstaller _MEIPASS 优先（one-file 打包模式）
+        # 优先级：PyInstaller _MEIPASS > 运行时目录 > 开发目录
         _meipass = getattr(sys, "_MEIPASS", None)
         if _meipass:
             _project_skills = Path(_meipass) / "skills"
         else:
-            _project_root = Path(__file__).resolve().parent.parent
-            _project_skills = _project_root / "skills"
+            # 运行时目录优先（update_trade 同步后 skills 在此）
+            _trade_home = os.environ.get("TRADE_HOME", "").strip()
+            if not _trade_home:
+                if os.name == "nt":
+                    _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+                    _trade_home = str(Path(_local) / "trade")
+                else:
+                    _trade_home = str(Path.home() / ".trade")
+            _runtime_skills = Path(_trade_home) / "foreign-trade-assistant" / "skills"
+            if _runtime_skills.is_dir():
+                _project_skills = _runtime_skills
+            else:
+                _project_root = Path(__file__).resolve().parent.parent
+                _project_skills = _project_root / "skills"
         if not _project_skills.is_dir():
             return
 

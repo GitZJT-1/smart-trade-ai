@@ -216,28 +216,35 @@ _capture_lock = threading.Lock()
 
 
 def _capture_output(func, *args, **kwargs) -> dict:
-    """在内存中捕获函数的 print 输出，返回 {"ok": True, "output": str} 或 error。
+    """在内存中捕获函数的 print 输出（含 stdout 和 stderr），返回 {"ok": True, "output": str}。
 
-    线程安全：全局锁防止并发请求时 sys.stdout 重定向互相污染。
+    线程安全：全局锁防止并发请求时 sys.stdout/stderr 重定向互相污染。
+    subprocess 的 stderr 也会被捕获，不会再静默丢失。
     """
     with _capture_lock:
         try:
             import io
-            _buf = io.StringIO()
+            _buf_stdout = io.StringIO()
+            _buf_stderr = io.StringIO()
             _orig_stdout = sys.stdout
-            sys.stdout = _buf
+            _orig_stderr = sys.stderr
+            sys.stdout = _buf_stdout
+            sys.stderr = _buf_stderr
             try:
                 result = func(*args, **kwargs)
             finally:
                 sys.stdout = _orig_stdout
-            output = _buf.getvalue()
+                sys.stderr = _orig_stderr
+            output = _buf_stdout.getvalue()
+            errors = _buf_stderr.getvalue()
+            if errors:
+                output += "\n[stderr]\n" + errors
             resp = {"ok": True, "output": output}
             if isinstance(result, str) and result:
                 resp["file"] = result
             return resp
         except SystemExit as e:
-            # sys.exit() 被 _capture_output 拦截，视为失败（如 install_skills 找不到目录）
-            return {"ok": False, "error": f"Process exited with code {e.code}"}
+            return {"ok": False, "error": f"Process exited with code {e.code}", "output": getattr(sys, 'stdout', None) and ''}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 

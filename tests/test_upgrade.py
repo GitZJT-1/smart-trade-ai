@@ -464,13 +464,26 @@ class TestUpdateTrade:
         update_module.update_trade()
 
     def test_update_trade_missing_install_dir(self, tmp_path, monkeypatch):
-        """运行目录不存在时，update_trade 应 sys.exit(1)。"""
+        """运行目录不存在且 git clone 失败时，update_trade 应 sys.exit(1)。"""
+        import subprocess as _sp
+
         from trade.post_install import update as update_module
 
-        # tmp_path 下没有 foreign-trade-assistant 目录
         monkeypatch.setattr(
             update_module, "_get_trade_home", lambda: tmp_path
         )
+        # 模拟 git clone 失败（无网络 / git 未安装）
+        _orig_run = _sp.run
+
+        def _fake_run(cmd, **kwargs):
+            if isinstance(cmd, list) and cmd[0] == "git" and "clone" in cmd:
+                result = _orig_run(["echo", "fake"], capture_output=True, text=True)
+                result.returncode = 1
+                result.stderr = "fatal: could not resolve host"
+                return result
+            return _orig_run(cmd, **kwargs)
+
+        monkeypatch.setattr(_sp, "run", _fake_run)
 
         import pytest
         with pytest.raises(SystemExit) as exc_info:

@@ -257,73 +257,79 @@ def update_trade() -> None:
     """
     # 运行目录是唯一的代码管理位置，不依赖桌面开发目录
     trade_dir = _get_trade_home() / "foreign-trade-assistant"
-    if not trade_dir.is_dir():
-        print(
-            "[update_trade] ERROR: Trade install directory not found.",
-            file=sys.stderr,
-        )
-        print(f"  Expected: {trade_dir}", file=sys.stderr)
-        sys.exit(1)
 
     ok = True
 
-    # ── Step 1: git pull ──────────────────────────────────────────────────
-    print("→ Step 1/7: git pull ...")
-    result = subprocess.run(
-        ["git", "pull", "--ff-only", "origin", "main"],
-        cwd=str(trade_dir),
-        capture_output=True,
-        text=True,
-        timeout=120,  # timeout 防止网络挂起时永久阻塞
-    )
-    if result.returncode != 0:
-        err_text = result.stderr.strip()
-        print(f"  ⚠ git pull failed: {err_text}")
-        # 自动 stash → pull → pop（处理用户本地修改导致 git pull 失败的常见场景）
-        print("  💡 尝试自动 stash 后重试...")
-        _stash = subprocess.run(
-            ["git", "stash"],
+    # ── Step 1: git pull（缺失目录则 git clone）───────────────────────────
+    if not trade_dir.is_dir():
+        # 运行时目录不存在 → git clone
+        print("→ Step 1/7: git clone (install directory not found) ...")
+        print(f"  Target: {trade_dir}")
+        trade_dir.parent.mkdir(parents=True, exist_ok=True)
+        clone_result = subprocess.run(
+            ["git", "clone", "https://github.com/chefroger/smart-trade-ai.git",
+             str(trade_dir)],
+            capture_output=True, text=True, timeout=300,
+        )
+        if clone_result.returncode != 0:
+            err = clone_result.stderr.strip()
+            print(f"  ❌ git clone failed: {err}")
+            print("  Please install Git and retry, or download TradeWin.exe from releases",
+                  file=sys.stderr)
+            sys.exit(1)
+        print(f"  ✓ Repository cloned to {trade_dir}")
+    else:
+        print("→ Step 1/7: git pull ...")
+        result = subprocess.run(
+            ["git", "pull", "--ff-only", "origin", "main"],
             cwd=str(trade_dir),
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=120,
         )
-        if _stash.returncode == 0:
-            _pull2 = subprocess.run(
-                ["git", "pull", "--ff-only", "origin", "main"],
+        if result.returncode != 0:
+            err_text = result.stderr.strip()
+            print(f"  ⚠ git pull failed: {err_text}")
+            print("  💡 尝试自动 stash 后重试...")
+            _stash = subprocess.run(
+                ["git", "stash"],
                 cwd=str(trade_dir),
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=30,
             )
-            if _pull2.returncode == 0:
-                last_line = _pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else "OK"
-                print(f"  ✓ git pull (after stash) — {last_line}")
-                # 尝试恢复用户本地修改
-                _pop = subprocess.run(
-                    ["git", "stash", "pop"],
+            if _stash.returncode == 0:
+                _pull2 = subprocess.run(
+                    ["git", "pull", "--ff-only", "origin", "main"],
                     cwd=str(trade_dir),
                     capture_output=True,
                     text=True,
-                    timeout=30,
+                    timeout=120,
                 )
-                if _pop.returncode == 0:
-                    print("  ✓ 本地修改已恢复")
-                else:
-                    print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
-                    print(
-                        "    恢复: cd ~/.trade/foreign-trade-assistant "
-                        "&& git stash pop"
+                if _pull2.returncode == 0:
+                    last_line = _pull2.stdout.strip().split(chr(10))[-1] if _pull2.stdout.strip() else "OK"
+                    print(f"  ✓ git pull (after stash) — {last_line}")
+                    _pop = subprocess.run(
+                        ["git", "stash", "pop"],
+                        cwd=str(trade_dir),
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
                     )
+                    if _pop.returncode == 0:
+                        print("  ✓ 本地修改已恢复")
+                    else:
+                        print("  ⚠ 本地修改合并冲突，已保留在 git stash 中")
+                        print(f"    恢复: cd {trade_dir} && git stash pop")
+                else:
+                    print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
+                    ok = False
             else:
-                print(f"  ⚠ git pull failed after stash: {_pull2.stderr.strip()}")
+                print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
                 ok = False
         else:
-            print(f"  ⚠ git stash 也失败了: {_stash.stderr.strip()}")
-            ok = False
-    else:
-        last_line = result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else "Already up-to-date."
-        print(f"  ✓ {last_line}")
+            last_line = result.stdout.strip().split(chr(10))[-1] if result.stdout.strip() else "Already up-to-date."
+            print(f"  ✓ {last_line}")
 
     # ── Step 2: install_skills ────────────────────────────────────────────
     print("→ Step 2/7: install skills (新增 skill 目录) ...")

@@ -90,11 +90,14 @@ def _get_package_skills_dir() -> Path | None:
     return None
 
 
-def _copy_skills(src: Path, dst_base: Path) -> list[str]:
+def _copy_skills(src: Path, dst_base: Path, progress_callback=None) -> list[str]:
     """将 src 下的所有 skill 目录复制到 dst_base 对应的 skill 目录。
 
     每个 skill 在目标创建 dst_base/{name}/SKILL.md。
     处理 b2b-* 和 auto-* 前缀的目录，忽略其他文件和目录。
+
+    Args:
+        progress_callback: 可选回调 f(msg)，每安装一个 skill 调用一次
 
     Returns:
         已安装的 skill 目录名列表（如 ["b2b-document", "auto-smtp-email", ...]）
@@ -103,7 +106,6 @@ def _copy_skills(src: Path, dst_base: Path) -> list[str]:
     for skill_dir in sorted(src.iterdir()):
         if not skill_dir.is_dir():
             continue
-        # 处理 b2b-* 和 auto-* 前缀的 skill 目录
         if not (skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")):
             continue
         skill_file = skill_dir / "SKILL.md"
@@ -114,6 +116,8 @@ def _copy_skills(src: Path, dst_base: Path) -> list[str]:
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(skill_file, dest)
         installed.append(skill_dir.name)
+        if progress_callback:
+            progress_callback(f"  ✓ {skill_dir.name}")
 
     return installed
 
@@ -195,7 +199,7 @@ def install_skills(progress_callback=None) -> None:
     else:
         print(info)
 
-    installed = _copy_skills(package_skills, hermes_skills_dir)
+    installed = _copy_skills(package_skills, hermes_skills_dir, progress_callback=progress_callback)
 
     if installed:
         count_msg = f"[post_install] Installed {len(installed)} skills: {', '.join(installed)}"

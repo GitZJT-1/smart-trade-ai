@@ -4,7 +4,7 @@ TradeWin — 嵌入式功能视图。
 每个视图是一个 QWidget，直接挂载到主窗口 QStackedWidget，替换原来的 QLabel 占位。
 """
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -608,8 +608,10 @@ class SettingsView(QWidget):
 
     def _do_update(self) -> None:
         from tradewin.api import system_update
-        QMessageBox.information(self, "更新", "正在后台执行更新，完成后将自动重启。")
+        QMessageBox.information(self, "更新", "正在后台执行更新，完成后将自动重启服务。\n等待约 10 秒后版本号将自动刷新。")
         system_update()
+        # 延迟 10s 重新检查版本（等待后端重启完成）
+        QTimer.singleShot(10000, self._refresh_version)
 
     def _do_restart(self) -> None:
         r = QMessageBox.question(self, "确认重启", "确定要重启 Trade 服务吗？",
@@ -617,3 +619,24 @@ class SettingsView(QWidget):
         if r == QMessageBox.Yes:
             from tradewin.api import system_restart
             system_restart()
+            QMessageBox.information(self, "重启中", "服务正在重启，请等待几秒。")
+            QTimer.singleShot(8000, self._refresh_version)
+
+    def _refresh_version(self) -> None:
+        """延迟重新检查版本号（更新/重启后调用）。"""
+        from tradewin.api import get_status
+        status = get_status()
+        if status:
+            ver = status.get("version", "?.?.?")
+            # 更新 SettingsView 内的版本标签
+            for i in range(self.layout().count()):
+                w = self.layout().itemAt(i).widget()
+                if isinstance(w, QGroupBox) and w.title() == "⚙️ 系统":
+                    for j in range(w.layout().count()):
+                        item = w.layout().itemAt(j)
+                        if isinstance(item.widget(), QLabel) and item.widget().text().startswith("当前版本"):
+                            item.widget().setText(f"当前版本: v{ver}")
+            # 同时刷新主窗口状态栏
+            mw = self.window()
+            if hasattr(mw, '_check_version'):
+                mw._check_version()

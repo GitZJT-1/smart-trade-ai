@@ -182,13 +182,15 @@ class MainWindow(QMainWindow):
             )
 
     def _check_version(self) -> None:
-        """检查版本状态并在状态栏显示。"""
+        """检查版本状态并在状态栏显示（仅在 session 存活期调用一次）。"""
         status = get_status()
         if status:
             self._version_label.setText(f"v{status.get('version', '?.?.?')}")
             latest = status.get("latest_version")
             if latest and status.get("version") != latest:
-                self._status_bar.showMessage(f"新版本 {latest} 可用！")
+                self._status_bar.showMessage(f"新版本 {latest} 可用！", 15000)
+            else:
+                self._status_bar.clearMessage()
 
     def get_stack(self) -> QStackedWidget:
         return self._stack

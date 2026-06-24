@@ -1,14 +1,11 @@
 #!/bin/bash
 # ==============================================================================
-# Foreign Trade Assistant — 构建打包脚本
+# Foreign Trade Assistant — 构建打包脚本（macOS）
 # ==============================================================================
 # 使用 PyInstaller 打包为独立可执行文件。
 #
 # macOS: 生成 .app 应用包
 #   ./scripts/build.sh
-#
-# Windows: 生成 .exe
-#   powershell -File scripts/build.ps1
 #
 # 前置要求:
 #   pip install pyinstaller
@@ -37,25 +34,17 @@ rm -rf build dist *.spec.bak
 
 # ── Build ──
 echo "→ 开始打包..."
-python -m PyInstaller pyinstaller.spec --noconfirm --clean 2>&1 | tail -10
+python -m PyInstaller tradewin-mac.spec --noconfirm --clean 2>&1 | tail -10
 
 # ── Verify ──
-if [ -d "dist/Foreign Trade Assistant.app" ]; then
-    APP_SIZE=$(du -sh "dist/Foreign Trade Assistant.app" | cut -f1)
+if [ -d "dist/TradeWin.app" ]; then
+    APP_SIZE=$(du -sh "dist/TradeWin.app" | cut -f1)
     echo ""
     echo "══ 构建完成 ══"
-    echo "  位置: $ROOT/dist/Foreign Trade Assistant.app"
+    echo "  位置: $ROOT/dist/TradeWin.app"
     echo "  大小: $APP_SIZE"
     echo ""
-    echo "  双击 Foreign Trade Assistant.app 启动"
-elif [ -f "dist/Foreign Trade Assistant" ]; then
-    EXE_SIZE=$(du -sh "dist/Foreign Trade Assistant" | cut -f1)
-    echo ""
-    echo "══ 构建完成 ══"
-    echo "  位置: $ROOT/dist/Foreign Trade Assistant"
-    echo "  大小: $EXE_SIZE"
-    echo ""
-    echo "  ./dist/Foreign\ Trade\ Assistant 启动（或双击）"
+    echo "  双击 TradeWin.app 启动"
 else
     echo "✗ 构建失败，请检查上方错误信息"
     exit 1

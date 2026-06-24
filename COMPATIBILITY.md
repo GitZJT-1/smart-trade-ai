@@ -13,6 +13,7 @@
 | 0.14.0 | ✅ 兼容 | 2026-05-18 | AI | config.model 从嵌套 dict 变为扁平字符串；name_to_models 移除。已适配。 |
 | 0.15.0 | ✅ 兼容 | 2026-05-29 | AI | run_agent.py 拆分到 agent/ 但 AIAgent re-export 正常；config.model / _PROVIDER_MODELS 未变。 |
 | 0.16.0 | ✅ 兼容 | 2026-06-11 | AI | 扫描了 origin/main 领先 387 commits：AIAgent 新增可选参数（tool_progress_mode/read_terminal_callback）向后兼容；config.model 格式不变；_PROVIDER_MODELS 结构不变；hermes_constants 无变更。无需 Trade 修改。 |
+| 0.17.0 | ✅ 兼容 | 2026-06-24 | AI | v2026.6.19 版本。AIAgent 重构为 `agent.agent_init.init_agent` 转发器，所有参数可选带默认值；load_config/PROVIDER_REGISTRY/_PROVIDER_MODELS/get_hermes_home/load_hermes_dotenv 均无 breaking change。仅需更新 `_MAX_HERMES_VERSION` 到 0.18.0 并升级 git tag。 |
 
 ## 升级检查流程
 

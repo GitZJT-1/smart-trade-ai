@@ -251,10 +251,10 @@ def get_available_providers() -> list[dict]:
         {
             "id": "deepseek",
             "name": "DeepSeek",
-            "description": "Chat — 代码 + 推理能力强，价格便宜",
+            "description": "V4 Flash — 性价比最高，外贸场景首选",
             "key_name": "DEEPSEEK_API_KEY",
             "key_url": "https://platform.deepseek.com/api_keys",
-            "models": ["deepseek-chat", "deepseek-reasoner"],
+            "models": ["deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
         },
         {
             "id": "moonshot",

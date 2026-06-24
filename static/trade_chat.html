@@ -826,6 +826,8 @@ async function doTradeUpdate(e) {
         btn.textContent = '⬆️ 系统更新';
         return;
     }
+    // 存入标记，页面 reload 后检测并显示 toast
+    try { sessionStorage.setItem('_trade_upgrade_done', '1'); } catch(_) {}
     // 后端已通过 BackgroundTasks 调度重启——等待服务先 DOWN 再 UP，然后 hard-reload
     _waitForRestartAndReload(() => {
         btn.disabled = false;
@@ -2940,6 +2942,14 @@ async function saveCompanyIdentity() {
 
 // ═════════════════════ INIT ═════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+    // 检测是否刚完成系统升级（页面 reload 后显示 toast）
+    try {
+        if (sessionStorage.getItem('_trade_upgrade_done')) {
+            sessionStorage.removeItem('_trade_upgrade_done');
+            setTimeout(() => toast('✅ 系统更新完成！'), 500);
+        }
+    } catch(_) {}
+
     // 许可证状态检查
     loadLicenseStatus();
 

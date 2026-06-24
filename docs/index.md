@@ -7,21 +7,17 @@ layout: default
   .container .content { max-width: 100% !important; }
   pre, code { white-space: pre-wrap !important; word-break: break-all !important; }
   pre { padding: 1rem !important; font-size: 0.9rem !important; }
+  .step-num { display:inline-block; width:32px; height:32px; line-height:32px;
+    text-align:center; background:#2563EB; color:#fff; border-radius:50%;
+    font-weight:bold; font-size:16px; margin-right:8px; }
+  .step-title { font-size:1.3rem; font-weight:bold; margin:1.5rem 0 0.5rem; }
 </style>
 
 <!-- Hero -->
 <div style="text-align:center; padding:2rem 1rem 1rem;">
   <h1 style="font-size:2.4rem; margin-bottom:0.2em;">Smart Trade AI</h1>
   <p style="font-size:1.2rem; color:#58a6ff; margin:0;">外贸业务员的本地 AI 助手</p>
-  <p style="color:#8b949e;">不需要懂技术，跟着步骤走，10 分钟装好</p>
-  <a href="#windows-install" class="btn" style="margin:0.5rem;">点我开始安装 →</a>
-</div>
-
----
-
-<div style="text-align:center;">
-  <img src="screenshot-2.png" alt="Customer & Cron Panel" style="max-width:75%; border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.4);">
-  <p><em>客户管理 + 定时任务面板</em></p>
+  <p style="color:#8b949e;">Windows 版安装教程 · 不需要懂技术，跟着步骤走，20 分钟装好</p>
 </div>
 
 ---
@@ -39,427 +35,170 @@ layout: default
 
 ---
 
-<div style="text-align:center;">
-  <img src="screenshot-1.png" alt="AI Chat Interface" style="max-width:75%; border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.4);">
-  <p><em>AI 对话界面 — 像聊天一样使用</em></p>
-</div>
+## 第一步：确保科学上网已启动
+
+这个工具需要从 GitHub 下载代码，而 GitHub 在国内访问不稳定。在开始之前，**必须先打开你的科学上网工具**（VPN / Clash / V2Ray 等），确保网络通畅。
+
+**验证方法：** 打开 **Google Chrome 浏览器**，在地址栏输入 `github.com`，回车。如果页面能正常打开，说明网络没问题，可以继续。
+
+> 如果 GitHub 打不开，检查你的科学上网工具是否已启动、是否设为**全局模式**或 **TUN 模式**。
 
 ---
 
-## <a id="windows-install"></a>Windows 电脑安装教程
+## 第二步：注册 DeepSeek 并获取 API Key
 
-> 整个过程大约 10 分钟。你不需要懂任何电脑技术，只要会下载安装软件、会复制粘贴文字就行。
+AI 不是免费的，需要去 DeepSeek 注册账号并充值。
 
-Windows 有两种安装方式，**先选一种**：
+1. 用 **Google Chrome 浏览器** 打开 **platform.deepseek.com**
+2. 点击「注册」，用手机号注册一个账号
+3. 登录后，点击页面上的「**充值**」，**充值 10 元以上**（按用量扣费，10 块钱能用很久）
+4. 在左侧菜单找到「**API Keys**」，点击进入
+5. 点击「**创建 API Key**」，名称填 `trade`，点确定
+6. 页面上会显示一串字符（以 `sk-` 开头）——这就是你的 **DeepSeek API Key**
+7. **立刻复制保存**，关掉后就再也看不到了
 
-| 方式 | 适合你吗？ | 需要装 Python/Git 吗？ |
-|------|-----------|----------------------|
-| **A. 桌面版 TradeWin.exe**（推荐给小白） | 只想双击运行，不想敲命令 | ❌ 不需要 |
-| **B. 命令行版**（传统方式） | 想要完整功能，或电脑上已经有 Python | ✅ 需要 |
-
-- 选 **A** → 直接跳到本页底部的「[方式 A：桌面版 TradeWin.exe](#way-a-tradewin-exe)」
-- 选 **B** → 继续看下面的第一步
-
----
-
-### 第一步：安装 Python 和 Git（只需做一次）
-
-这个工具是用 Python 语言写的，你的电脑需要先装两个小程序才能运行它：**Python**（运行工具本身）和 **Git**（从网上下载工具代码）。就像你要看 PDF 文件得先装一个 PDF 阅读器一样。
-
-#### 1.1 安装 Python
-
-1. 打开浏览器（就是上网用的那个程序），在地址栏输入 **python.org/downloads** 然后回车
-2. 页面会自动识别你是 Windows 电脑，点击页面上那个 **黄色的大按钮** 开始下载
-3. 下载完后，**双击**打开刚才下载的那个文件（一般在浏览器左下角能点开）
-4. 安装窗口打开后，**先看窗口最下面**——有一个小方框写着「**Add Python to PATH**」，**一定要打勾！** 这一步最容易忘记，忘了后面整个装不了
-5. 打勾之后，点击上面的「**Install Now**」按钮
-6. 等进度条跑完，出现「Setup was successful」就装好了，关掉安装窗口
-
-> 如果你以前已经装过 Python，这一步可以跳过。
-
-#### 1.2 安装 Git
-
-1. 打开浏览器，在地址栏输入 **git-scm.com/download/win** 然后回车
-2. 页面会自动开始下载一个安装包（如果没自动下载，点页面里的「**Click here to download**」链接）
-3. 下载完后，**双击**打开安装包
-4. 一路点「**Next**」（下一步），所有选项都用默认的就行，最后点「**Install**」
-5. 安装完成后点「**Finish**」关闭安装窗口
-
-> 如果你以前已经装过 Git，这一步可以跳过。
->
-> **装完 Python 和 Git 后，关闭所有已经打开的 PowerShell 窗口，再重新打开一个新的**——这一步很重要，不重开的话系统可能还认不出刚装好的程序。
+> 把这串 Key 先粘贴到记事本里，后面要用。
 
 ---
 
-### 第二步：打开 PowerShell
+## 第三步：注册 Tavily 并获取 API Key
 
-接下来的安装步骤需要在 **PowerShell** 里操作。你可能在电视剧里见过黑客在黑屏幕上敲代码——PowerShell 就是那样的一个窗口。不过别紧张，你不需要自己写代码，只要**把我给你的命令复制进去、按回车就行**。
+Tavily 是联网搜索引擎，让 AI 能搜索实时信息。
 
-**怎么找到 PowerShell：**
+1. 用 **Google Chrome 浏览器** 打开 **tavily.com**
+2. 点击「Sign Up」，**用 Gmail 邮箱注册**一个账号
+3. 登录后进入 Dashboard，在 API Keys 区域找到你的 Key（以 `tvly-` 开头）
+4. **复制保存**到记事本里
 
-1. 看你的键盘，**左下角有一个 Windows 图标的键**（四个方块组成的那个，叫 Win 键），按一下它
-2. 这时候屏幕上会弹出一个搜索框，**直接打字**输入：`powershell`
-3. 搜索结果里会出现一个图标是**蓝色**的、名字叫「**Windows PowerShell**」的程序，**点击它**
-4. 屏幕上会弹出一个**蓝色背景**（也可能是黑色背景）的窗口，里面有一些白色文字和一个闪烁的光标——这就是 PowerShell 了
-
-> **两个小提示：**
-> - 在 PowerShell 里**粘贴文字的方法**和平时不一样：不是按 Ctrl+V，而是**在窗口里点一下鼠标右键**，刚才复制的内容就会粘上去
-> - 下面出现的所有 `灰底文字`，都是你需要复制到 PowerShell 里执行的命令
+> Tavily 每月有 1000 次免费搜索额度，个人使用足够了。
 
 ---
 
-### 第三步（推荐）：一键安装
+## 第四步：在桌面创建 API Key 文件
 
-Python 装好之后，最省事的方法是用**一键安装脚本**——把下面这一行命令复制到 PowerShell 里执行，它会自动帮你装好所有东西：
+把刚才拿到的两个 Key 整理到一个文件里，后面配置时会用到。
+
+1. 在桌面上**右键** → 新建 → 文本文档
+2. 把文件重命名为 `apikey.txt`
+3. 打开文件，按以下格式粘贴：
 
 ```
-irm https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.ps1 | iex
+DeepSeek API Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Tavily API Key: tvly-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-这个脚本会自动完成：安装 AI 引擎 → 安装 Smart Trade AI → 安装 19 个专业功能 → 初始化数据库 → 设置开机自启动。
-
-等它跑完后，继续往下看**第七步**获取 API Key 就行。
-
-> **如果一键脚本跑失败了**，不要紧，跟着下面的第四步、第五步和第六步手动装就行，效果一样。
+4. 保存并关闭。后面配置 Hermes 时需要从这里复制粘贴。
 
 ---
 
-### 第四步：开启长路径支持（只做一次，以前做过的跳过）
+## 第五步：安装 Hermes Agent（AI 引擎）
 
-> 如果你已经通过一键脚本安装成功，可以跳过第四步、第五步和第六步，直接看第七步。
+Hermes Agent 是驱动 AI 的底层引擎，Trade 基于它运行。
 
-Windows 系统有一个默认设置，不允许文件路径太长。但这个工具安装时会产生比较长的路径，如果不改这个设置，后面安装会报错。我们只需要改一次，改完就不用管了。
+### 5.1 以管理员身份打开 PowerShell
 
-**操作步骤：**
+1. 按键盘 **Win 键**，输入 `powershell`
+2. **右键点击**搜索结果里的「Windows PowerShell」
+3. 选择「**以管理员身份运行**」
+4. 弹出提示问"是否允许此应用对设备进行更改"，点「**是**」
 
-1. 按键盘上的 **Win 键**，输入 `powershell`
-2. 这一次不要直接点开，而是**用鼠标右键点击**搜索结果里的「Windows PowerShell」
-3. 在弹出的菜单里点「**以管理员身份运行**」
-4. 弹出一个提示问"是否允许此应用对设备进行更改"，点「**是**」
-5. 这时打开的 PowerShell 窗口标题栏会写着「**管理员**」——说明你成功以管理员身份打开了
-6. 把下面这行命令**完整复制**（从 New 一直复制到 Force），在 PowerShell 窗口里**点右键粘贴**，然后**按回车**：
+### 5.2 开启长路径支持
+
+在 PowerShell 里粘贴下面这行命令，按回车：
 
 ```
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 ```
 
-7. 没有出现红色报错就说明成功了，**关掉这个管理员窗口**
-8. **重启电脑**让设置生效
+### 5.3 一键安装 Hermes
 
-> 这一步一辈子只需要做一次。重启电脑后继续下一步。
-
----
-
-### 第五步：安装 Hermes Agent
-
-这个工具背后需要一个叫 Hermes Agent 的程序来驱动 AI 功能。你可以把它理解为"发动机"——我们的工具是车身，得先有发动机才能跑。
-
-1. 打开 PowerShell（这次用**普通方式**打开就行，不需要管理员）
-2. 把下面这行命令**完整复制**，在 PowerShell 里**点右键粘贴**，按回车：
+接着执行下面这行命令：
 
 ```
 irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
 ```
 
-3. 等待几分钟，它会自动下载和安装需要的文件
-4. 看到提示「安装完成」或「Installation complete」就说明好了
+等待几分钟，看到「安装完成」提示即可。
 
-> 如果等了很久都没反应或者报错了，多半是网络问题——参考页面底部的「常见问题」。
-
----
-
-### 第六步：安装 Smart Trade AI
-
-发动机装好了，现在装车身。
-
-把下面 4 行命令**一行一行**地复制到 PowerShell 里执行。方法是：复制第一行 → 在 PowerShell 里右键粘贴 → 按回车 → 等它跑完 → 再复制第二行……以此类推。
-
-```
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
-```
-
-```
-cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
-```
-
-```
-pip install -e "."
-```
-
-```
-install-trade-skills
-```
-
-> 每一行都要等它跑完再执行下一行。如果中间某一行出现红色报错，不要慌，大多数是网络不好——重新复制那一行再执行一次。
+> 在 PowerShell 里粘贴的方法是**点一下鼠标右键**（不是 Ctrl+V）。
 
 ---
 
-### 第七步：获取 API Key
+## 第六步：配置 Hermes（大模型 + 搜索）
 
-这个工具需要连接 AI 大模型才能工作。AI 不是免费的，你需要去 AI 厂商那里注册一个账号、获取一个 **API Key**。
-
-API Key 是一串很长的字母和数字，就像一个密码，用来证明你有权限使用这个 AI 服务。
-
-**推荐用 DeepSeek（国产，便宜好用）：**
-
-1. 打开浏览器，访问 **platform.deepseek.com**
-2. 用手机号注册一个账号
-3. 登录之后，点页面上的「**充值**」，充 10 块钱就够了（按用量扣费，10 块钱能用很久）
-4. 在页面左侧找到「**API Keys**」，点进去，再点「**创建 API Key**」
-5. 页面上会显示一串字符——这就是你的 API Key。**立刻把它复制保存下来**（比如粘贴到记事本里），因为它只显示这一次，关了就看不到了
-
-拿到 API Key 之后，回到 PowerShell 窗口，输入下面这个命令然后回车：
+安装完成后，在同一个 PowerShell 窗口输入：
 
 ```
 hermes setup
 ```
 
-这时会出现一个交互界面，操作方法：
-1. 用键盘的 **上下方向键** 选择「**DeepSeek**」，选中后**按回车**
-2. 它会问你要 API Key——把刚才保存的那串字符**右键粘贴**进去，按回车
-3. 看到「配置成功」之类的提示就完成了
+这时会出现交互配置界面，按以下步骤操作：
 
-> 还建议顺手注册一个 [Tavily](https://tavily.com)（免费的，不用充值），它能让工具搜索实时信息。注册后同样在 `hermes setup` 里配置，选 Tavily 那一项，粘贴 Key。
+1. 用键盘的 **上下方向键** 选择「**DeepSeek**」→ 按回车
+2. 选择模型时，选「**deepseek-chat**」（即 DeepSeek V4 Flash）→ 按回车
+3. 粘贴你的 **DeepSeek API Key**（从桌面的 `apikey.txt` 复制）→ 按回车
+4. 搜索服务选「**Tavily**」→ 按回车
+5. 粘贴你的 **Tavily API Key** → 按回车
 
----
-
-### 第八步：启动！
-
-全部装好了，现在来运行它。在 PowerShell 里输入：
-
-```
-python server.py
-```
-
-按回车。等待几秒，看到窗口里出现 **「Uvicorn running on http://127.0.0.1:9119」** 这行字，就说明启动成功了。
-
-然后打开浏览器，在地址栏输入：**http://127.0.0.1:9119/trade** ，按回车，你就能看到界面了。
-
-> **以后每次要用的时候：** 打开 PowerShell → 输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant` 回车 → 输入 `python server.py` 回车 → 打开浏览器访问上面的地址。**关掉 PowerShell 窗口，程序就会停止**，所以使用期间不要关那个窗口。
+看到「配置成功」提示就完成了。
 
 ---
 
-### 让电脑每次开机自动启动（可选）
+## 第七步：验证 Hermes 是否正常
 
-如果你不想每次都手动打开 PowerShell 输入命令，可以生成一个 exe 程序，以后双击就能运行：
-
-在 PowerShell 里依次执行这两行（一行一行来）：
-
-```
-pip install pyinstaller
-```
-
-```
-powershell -File scripts\build.ps1
-```
-
-等它跑完后，在安装目录下的 `dist` 文件夹里会出现一个 **Smart Trade AI.exe**。你可以把它**拖到桌面上**，以后双击这个图标就能启动，不需要再打开 PowerShell。
-
----
-
-### 安装中可能遇到的问题
-
-| 你看到的现象 | 可能的原因 | 怎么解决 |
-|------------|-----------|---------|
-| 输入 python 后提示「不是内部或外部命令」 | 安装 Python 时忘记勾选「Add Python to PATH」 | 回到第一步重新安装 Python，**一定要勾选那个框**。装完后关闭 PowerShell 重新打开再试 |
-| 输入 git 后提示「不是内部或外部命令」 | 没装 Git，或装完没重开 PowerShell | 回到第一步的 1.2 小节安装 Git。装完后**一定要关闭所有 PowerShell 窗口再重新打开** |
-| 安装到一半卡住不动了 | 你的网络访问 GitHub 不稳定 | 你需要开 **VPN**（就是翻墙工具），开到**全局模式**。开好之后关掉 PowerShell 重新打开，重新执行卡住的那行命令 |
-| 出现一大堆红色文字 | 大多是网络不好，没下载完整 | 把报错的那行命令重新复制执行一次。反复报错就确认 VPN 是否开好了 |
-| 浏览器打开显示「无法访问此网站」 | 程序没有在运行 | 回到 PowerShell 看看是不是关掉了或者报错了。如果关了就重新打开 PowerShell，重新执行 `python server.py` |
-| 页面打开了但是显示不正常、按钮点不动 | 浏览器缓存了旧版本的文件 | 同时按下键盘的 **Ctrl + Shift + R** 三个键，页面会强制刷新 |
-| 提示「Filename too long」 | 第四步的长路径设置没生效 | 确认第四步已经做过，并且**重启过电脑**。如果还没重启，先重启再来 |
-
----
-
-## <a id="way-a-tradewin-exe"></a>方式 A：桌面版 TradeWin.exe（零配置）
-
-如果你不想敲命令、不想装 Python，只想双击运行，这种方式最适合你。
-
-### 下载和运行
-
-1. 打开浏览器，访问 **github.com/chefroger/smart-trade-ai/releases**
-2. 找到最新版本，下载那个名字叫 **`TradeWin.exe`** 的文件（大约 80-120 MB）
-3. 下载完后，**双击** `TradeWin.exe` 就能运行——不需要安装，直接用
-
-> 如果 Windows 弹出「已保护你的电脑」蓝色窗口，点「**更多信息**」→ 点「**仍要运行**」。这是因为程序没有数字签名，Windows 会默认拦截，但程序本身是安全的。
-
-### 首次启动的配置向导
-
-第一次双击运行后，会自动弹出一个配置向导，跟着走 4 步：
-
-1. **欢迎页** — 直接点「下一步」
-2. **选择 AI 提供商** — 用键盘上下键选 DeepSeek（推荐，便宜好用），按回车
-3. **填入 API Key** — 把你在 DeepSeek 申请的 API Key 粘贴进去
-4. **（可选）填入 Tavily Key** — 启用联网搜索（强烈建议，免费注册：[tavily.com](https://tavily.com)）
-
-点「完成」后，程序会自动帮你装好 AI 引擎、专业功能、数据库——**全程不需要你做任何事**，等几分钟就好。
-
-### 以后怎么用？
-
-- **启动**：双击 `TradeWin.exe`
-- **关闭**：点窗口右上角的 ×（可以最小化到系统托盘，后台运行）
-- **升级**：点界面里的「⚙️ 设置」→「系统」→「⬆️ 系统更新」
-
-> 桌面版和命令行版功能完全一样，数据互通，可以同时安装。
-
----
-
-## 方式 C：让 AI 帮你装（如果你已经装好了 Hermes）
-
-如果你已经装好了 Hermes Agent（AI 引擎）并配置好了 API Key，最省心的方式是让 AI 自己装 Trade——它能根据你的电脑环境智能调整，比固定脚本更不容易出错。
-
-**前提条件：**
-- 已安装 Hermes Agent（看上面的第五步）
-- 已运行 `hermes setup` 配置好 LLM 和 **Tavily 搜索**（重要！没 Tavily AI 看不到 GitHub 仓库）
-
-**操作步骤：**
-
-1. 在 PowerShell 里启动 Hermes：
+在 PowerShell 里输入：
 
 ```
 hermes
 ```
 
-2. 等 Hermes 启动好后，在对话框里**直接粘贴**这句话（中文即可）：
+等它启动后，在对话框里输入：
 
-> 请分析 https://github.com/chefroger/smart-trade-ai 这个 GitHub 仓库，并帮我安装
+```
+hello
+```
 
-3. AI 会自己去 GitHub 看这个项目的说明，然后帮你执行所有安装命令。遇到报错它会自己排查重试，你只需要等它装完。
+按回车发送。如果 AI 正常回复了，说明大模型配置成功。
 
-4. 装完后，**关闭原来的 PowerShell，重新打开一个新的**（这一步很重要，让系统认得新装的 `trade` 命令），然后输入：
+> 按 `Ctrl+C` 可以退出 Hermes，回到命令行。
+
+---
+
+## 第八步：让 AI 帮你安装 Trade
+
+重新启动 Hermes（输入 `hermes`），在聊天框里**复制粘贴**下面这句话：
+
+```
+请帮我安装 trade，地址是 https://github.com/chefroger/smart-trade-ai
+```
+
+AI 会自己去 GitHub 查看项目说明，然后自动执行所有安装命令。遇到报错它会自己排查重试，你只需要等它装完。
+
+装完后，**关闭当前 PowerShell，重新打开一个新的**，输入：
 
 ```
 trade
 ```
 
-按回车，等几秒钟浏览器会自动打开界面。
-
-> 如果输入 `trade` 后提示「不是内部或外部命令」，说明 PATH 没生效。改用这种方式启动：
->
-> ```
-> cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
-> python server.py
-> ```
->
-> 然后浏览器手动打开 **http://127.0.0.1:9119/trade**
-
-> 这种方式的好处：AI 会根据你电脑上已经装了什么、Python 是什么版本、网络情况如何，动态调整安装命令。遇到冲突或报错它也能自己想办法，比固定脚本成功率高。
+浏览器会自动打开 Trade 界面。如果没有自动打开，手动访问 **http://127.0.0.1:9119/trade**。
 
 ---
 
-## 苹果电脑（Mac）安装教程
+## 常见问题
 
-### 打开终端
-
-Mac 上的操作窗口叫「**终端**」，和 Windows 的 PowerShell 类似。
-
-**怎么打开：** 在桌面右上角点**放大镜图标**（或者同时按 Command + 空格键），输入 `终端` 两个字，按回车，就打开了。
-
-### 一键安装
-
-在终端里复制粘贴下面这行命令，按回车：
-
-```
-curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
-```
-
-等它自动安装完，然后配置 AI：
-
-```
-hermes setup
-```
-
-按提示选择 DeepSeek，粘贴 API Key（和上面 Windows 第七步的操作一样）。
-
-最后启动：
-
-```
-python server.py
-```
-
-浏览器打开 **http://127.0.0.1:9119/trade** 。
-
-### 手动安装（一键脚本失败时用）
-
-在终端里依次执行以下每一行：
-
-```
-git clone --branch main https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
-```
-
-```
-cd ~/.hermes/hermes-agent && pip install -e "."
-```
-
-```
-hermes setup
-```
-
-```
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
-```
-
-```
-cd ~/.trade/foreign-trade-assistant && pip install -e "."
-```
-
-```
-install-trade-skills
-```
-
-```
-python server.py
-```
-
-> Mac 如果遇到下载超时，同样需要开 VPN 全局模式。
+| 你看到的现象 | 怎么解决 |
+|------------|---------|
+| 第五步安装 Hermes 卡住不动 | 科学上网没开好。确认 VPN 是全局模式，关掉 PowerShell 重开再试 |
+| `hermes` 输入后提示「不是内部或外部命令」 | 关掉 PowerShell 重新打开一个新的 |
+| `trade` 输入后提示「不是内部或外部命令」 | 改成输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant` 然后 `python server.py` |
+| Hermes 对话没反应 | API Key 没配置对。重新运行 `hermes setup` 检查 |
+| 浏览器打开显示「无法访问此网站」 | 程序没在运行。打开一个新的 PowerShell，输入 `trade` 启动 |
+| 提示「Filename too long」 | 第五步的长路径设置没做。回到 5.2 执行那行命令，然后**重启电脑** |
 
 ---
 
-## 17 项专业能力
-
-| 场景 | 能力 |
-|------|------|
-| 平台诊断 | 分析阿里国际站 / 中国制造网产品页面，给出优化建议 |
-| 社媒营销 | 生成 Facebook / Instagram / TikTok / YouTube 内容日历 |
-| LinkedIn 运营 | 个人资料优化 + 内容策略 + 私信模板 |
-| 海关数据 | 分析进出口数据，帮你找到高价值采购商 |
-| 客户开发 | 根据目标市场和产品，自动生成开发信和跟进邮件，含价格/付款/交期谈判 |
-| 客户管理 | A/B/C 重要度分级、客户详情、关联合同文件 |
-| 文档分析 | 上传 PDF / Word / Excel / PPT，AI 自动读取分析 |
-| 商务文档生成 | 一键生成报价单、形式发票、合同 |
-| 报价谈判 | 根据产品库和客户情况，给出谈判策略建议 |
-| 客户背调 | 6 层验证：邮箱检测 → WHOIS → 制裁名单 → 邮箱真实性 → 技术栈 → LinkedIn |
-| 每日简报 | 实时汇率 + 大宗商品行情 + 市场新闻 + 客户跟进提醒 |
-| 定时任务 | 工作日自动执行：早报、开发信、社媒发布、每日总结 |
-| 对话记录 | 按公司分开存储聊天记录，随时搜索回顾 |
-| 履约运营 | 催款/索赔/展会/验厂/物流/售后/满意度/年度总结等 11 个场景 |
-| 贸易合规 | 文化禁忌检查/缩写规范/ICC 术语/翻译二审/投标/电商上架 |
-| 能力生成器 | 用大白话描述你的需求，自动创建新功能 |
-
----
-
-## 你的数据安全吗？
-
-- **所有业务数据都存在你自己的电脑里**，不会上传到任何服务器
-- 如果你用的是云端 AI（比如 DeepSeek），对话内容会发给 AI 厂商处理，**但不会包含客户姓名等身份信息**
-- 如果你装 [Ollama](https://ollama.com) 用本地模型，连对话内容都不出你的电脑
-- 多公司之间数据互相隔离
-- 程序只允许你自己电脑上的浏览器访问，别人看不到
-
----
-
-## 联系作者
-
-<div style="text-align:center;">
-  <img src="wechat-contact.jpeg" alt="WeChat Contact" width="200" style="border-radius:8px;">
-  <p>扫码添加微信，备注「Trade」</p>
-  <p>商务合作或技术支持：<a href="mailto:lauroge@gmail.com">lauroge@gmail.com</a></p>
-</div>
-
----
-
-<p style="text-align:center; color:#8b949e;">
-  Smart Trade AI — 外贸业务员的本地 AI 助手 · 不需要懂技术<br>
+<p style="text-align:center; color:#8b949e; margin-top:3rem;">
+  Smart Trade AI — 外贸业务员的本地 AI 助手<br>
   <a href="https://github.com/chefroger/smart-trade-ai">GitHub</a> ·
   <a href="https://github.com/chefroger/smart-trade-ai/releases">Releases</a>
 </p>

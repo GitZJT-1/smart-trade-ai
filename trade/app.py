@@ -347,19 +347,16 @@ def create_app() -> FastAPI:
     @app.get("/api/status", include_in_schema=False)
     async def status():
         # 读取当前版本号
-        # 策略：version.txt（update_trade 写入）→ importlib.metadata → pyproject.toml
+        # 策略：version.txt（update_trade 写入）→ 自动同步 pyproject.toml
+        # 手动 git pull + 重启后 pyproject.toml 可能比 version.txt 新，自动覆盖
         version = "0.0.0"
         try:
             # 1. 优先读 version.txt（升级成功后写入，最可靠）
             version_file = _get_trade_data_dir() / "version.txt"
             if version_file.is_file():
                 version = version_file.read_text().strip()
-            else:
-                # 2. importlib.metadata（pip install 后的包元数据）
-                from importlib.metadata import version as _pkg_version
-                version = _pkg_version("smart-trade-ai")
-        except Exception:
-            # 3. pyproject.toml 文件系统兜底
+
+            # 1b. 对比 pyproject.toml，如有更新则自动同步 version.txt
             _pyproject = None
             _meipass = getattr(sys, "_MEIPASS", None)
             if _meipass:
@@ -371,11 +368,21 @@ def create_app() -> FastAPI:
                     import tomllib as _toml
                 except ImportError:
                     import tomli as _toml
+                _pv = ""
                 try:
-                    data = _toml.loads(_pyproject.read_text())
-                    version = data.get("project", {}).get("version", version)
+                    _data = _toml.loads(_pyproject.read_text())
+                    _pv = _data.get("project", {}).get("version", "")
                 except Exception:
                     pass
+                if _pv and _pv != version:
+                    version = _pv
+                    try:
+                        version_file.parent.mkdir(parents=True, exist_ok=True)
+                        version_file.write_text(version)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
         # 用缓存降低 GitHub API 调用频率，防止限流导致版本检测失效
         import time as _time

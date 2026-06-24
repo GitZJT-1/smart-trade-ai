@@ -100,37 +100,17 @@ Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，�
 
 ## 3 分钟上手
 
-提供四种安装方式，按你的场景挑一种即可：
+提供三种安装方式，按你的场景挑一种即可：
 
-| # | 方式 | 适合场景 | 需要手动安装 |
-|---|------|---------|-------------|
-| 1 | **TradeWin.exe 桌面版**（仅 Windows） | 干净 Windows 电脑，不想装 Python/Git，只想双击运行 | 无 |
-| 2 | **Hermes 代装** | 已装好 Hermes 并配置好 LLM，让 AI 帮你装 Trade | Python · Git · Hermes |
-| 3 | **一键脚本** | macOS/Linux，或 Windows 想用命令行 | Python · Git |
-| 4 | **手动一步步装** | 想完全控制每一步 | Python · Git |
-
----
-
-### 方式 1：TradeWin.exe 桌面版（仅 Windows，零配置）
-
-适合干净的 Windows 10/11 电脑，**不需要装 Python、不需要装 Git**，下载一个 `.exe` 双击就能用。
-
-1. 前往 [Releases](https://github.com/chefroger/smart-trade-ai/releases) 页面，下载最新的 `TradeWin.exe`（约 80-120 MB）
-2. 双击运行
-3. 首次启动自动弹出 4 步配置向导：
-   - 选择 LLM 提供商（OpenAI / Claude / MiniMax / DeepSeek / Moonshot）
-   - 填入 API Key（自动写入 `~/.hermes/.env`）
-   - （可选）填入 Tavily Search API Key 启用联网搜索
-   - 点击「完成」→ 程序自动安装 Hermes + Trade Skills + 初始化数据库
-4. 配置完成后即可使用，无需任何手动设置
-
-> 详见 [windows-standalone/README.md](windows-standalone/README.md)。
->
-> 已知限制：QTextBrowser 对复杂 Markdown 表格/代码块渲染有限；无数字签名的 exe 可能被 Windows Defender 误报。
+| # | 方式 | 适合场景 |
+|---|------|---------|
+| 1 | **Hermes 代装** | 已装好 Hermes 并配置好 LLM，让 AI 帮你装 Trade |
+| 2 | **一键脚本** | macOS/Linux，或 Windows 想用命令行 |
+| 3 | **手动一步步装** | 想完全控制每一步 |
 
 ---
 
-### 方式 2：让 Hermes 帮你装 Trade（推荐给 AI 用户）
+### 方式 1：让 Hermes 帮你装 Trade（推荐给 AI 用户）
 
 如果你已经装好 Hermes Agent 并配置好 LLM + Tavily 搜索，最省心的方式是让 AI 自己装 Trade——它能根据你的环境动态调整命令，成功率比固定脚本更高。
 
@@ -167,7 +147,7 @@ trade
 
 ---
 
-### 方式 3：一键脚本（macOS / Linux）
+### 方式 2：一键脚本（macOS / Linux）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
@@ -193,7 +173,7 @@ install-trade-skills
 python server.py
 ```
 
-### 方式 4：手动一步步装
+### 方式 3：手动一步步装
 
 **前置条件**：Python >= 3.11 · Git · LLM API Key（OpenAI / Anthropic / DeepSeek / MiniMax 等）
 
@@ -246,14 +226,6 @@ python server.py
 ```
 
 > 如果第 3 步 `pip install` 报 `Filename too long` 错误，说明长路径未生效，请确认已完成第 0 步并重启电脑。
-
-### 打包为独立应用（双击运行，无需终端）
-
-```bash
-pip install pyinstaller
-./scripts/build.sh          # macOS → dist/Smart Trade AI.app
-powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
-```
 
 ---
 

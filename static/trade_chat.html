@@ -1104,27 +1104,13 @@ function stopCronPolling() {
 let _versionPollTimer = null;
 
 async function checkVersion() {
+    // 关闭版本升级提醒：用户手上版本稳定就不强制升级
     try {
         const r = await fetch('/api/status?_=' + Date.now(), { cache: 'no-store' });
-        if (!r.ok) { console.log('Version check: HTTP ' + r.status); return; }
+        if (!r.ok) return;
         const data = await r.json();
-        const latest = data.latest_version || '';
-        console.log('Version check: current=' + data.version + ' latest=' + latest);
-
-        const banner = document.getElementById('update-banner');
-        if (latest && data.version && data.version !== latest) {
-            if (!banner) {
-                const b = document.createElement('div');
-                b.id = 'update-banner';
-                b.style.cssText = 'background:#FEF3C7;color:#92400E;padding:8px 16px;text-align:center;font-size:14px;flex-shrink:0;';
-                b.innerHTML = `系统有新版本 ${esc(latest)}（当前 ${esc(data.version)}）— <a href="#" onclick="doUpdateSystem();return false" style="color:#D97706;font-weight:600;">点击更新</a>`;
-                const main = document.getElementById('main-content');
-                if (main) main.insertBefore(b, main.firstChild);
-            }
-        } else if (banner) {
-            banner.remove();
-        }
-    } catch(e) { console.log('Version check error:', e); }
+        console.log('Version check: current=' + data.version + ' latest=' + (data.latest_version || ''));
+    } catch(e) { /* 静默 */ }
 }
 
 function startVersionCheck() {

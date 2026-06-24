@@ -346,8 +346,11 @@ def _verify_license(data: dict) -> bool:
         public_key = ed25519.Ed25519PublicKey.from_public_bytes(_PUBLIC_KEY_BYTES)
         public_key.verify(sig, payload)
         return True
-    except (InvalidSignature, Exception):
-        # 签名不匹配 或 任何其他异常 — 篡改证据
+    except ImportError:
+        # cryptography 未安装 — 无法验签，视为无效（提示用户安装依赖）
+        return False
+    except (InvalidSignature, ValueError, TypeError):
+        # 签名不匹配 / base64 解码失败 / payload 构造失败 — 篡改证据
         return False
 
 
@@ -485,19 +488,19 @@ def _decode_activation_code(code: str) -> dict:
     b64 += "=" * (-len(b64) % 4)
     decoded = base64.urlsafe_b64decode(b64)
 
-    # 根据总长度判断格式：88 bytes = 新 16 hex / 80 bytes = 旧 8 hex
-    if len(decoded) >= 88:
+    # 根据总长度严格判断格式：88 bytes = 新 16 hex / 80 bytes = 旧 8 hex
+    if len(decoded) == 88:
         # 新格式 (v0.6.3+): date(8) + hash(16) + sig(64) = 88
         date_part = decoded[:8].decode()
         req_hash = decoded[8:24].decode()
         sig = decoded[24:88]
-    elif len(decoded) >= 80:
+    elif len(decoded) == 80:
         # 旧格式 (v0.6.2-): date(8) + hash(8) + sig(64) = 80
         date_part = decoded[:8].decode()
         req_hash = decoded[8:16].decode()
         sig = decoded[16:80]
     else:
-        raise ValueError(f"Invalid code: expected >= 80 bytes, got {len(decoded)}")
+        raise ValueError(f"Invalid code: expected 80 or 88 bytes, got {len(decoded)}")
 
     # 验证 Ed25519 签名
     payload = date_part.encode() + req_hash.encode()

@@ -301,6 +301,8 @@ def _create_system_router() -> APIRouter:
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 
+        # 清缓存：用户可能手动 git pull 后只 restart，避免重启后 latest_version 显示旧值
+        _latest_version_cache["ts"] = 0.0
         _perform_restart()
         return {"ok": True, "message": "重启指令已发送"}
 
@@ -385,8 +387,7 @@ def create_app() -> FastAPI:
             pass
 
         # 用缓存降低 GitHub API 调用频率，防止限流导致版本检测失效
-        import time as _time
-        _now = _time.monotonic()
+        _now = time.monotonic()
         if (_latest_version_cache["value"] is not None
                 and _now - _latest_version_cache["ts"] < _LATEST_VERSION_TTL):
             latest = _latest_version_cache["value"]

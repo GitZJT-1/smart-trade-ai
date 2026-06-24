@@ -412,7 +412,7 @@ def create_app() -> FastAPI:
             # 仅在 GitHub API 调用成功时更新缓存（失败时 keep 旧值，宁可短暂不一致）
             if latest:
                 _latest_version_cache["value"] = latest
-                _latest_version_cache["ts"] = _time.monotonic()
+                _latest_version_cache["ts"] = time.monotonic()
 
         return {
             "status": "ok",

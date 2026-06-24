@@ -416,12 +416,13 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
         return False, f"该激活码已到期（有效期至 {expires_at[:10]}）"
 
     # 写入激活信息（含 Ed25519 签名用于运行时防篡改验签）
+    # 签名直接从激活码中提取，无需作者私钥（用户端无私钥）
     data = _get_license_data(company_id)
     data["activated"] = True
     data["code"] = code
     data["expires_at"] = expires_at
     data["activated_at"] = now.isoformat()
-    data["signature"] = _sign_license(expires_at)
+    data["signature"] = base64.urlsafe_b64encode(decoded["signature"]).decode()
     _save_license_data(data, company_id)
 
     return True, f"激活成功，有效期至 {expires_at[:10]}"
@@ -466,7 +467,7 @@ def _encode_activation_code(request_code: str, expires_at: str) -> str:
 
 
 def _decode_activation_code(code: str) -> dict:
-    """解码激活码，返回 {expires_at: str, machine_hash: str}。
+    """解码激活码，返回 {expires_at: str, machine_hash: str, signature: bytes}。
 
     激活码格式: TRADE-{base64url(日期+机器码哈希+Ed25519签名)}
     兼容新旧格式: 旧 8 hex (32 bit) 80 bytes / 新 16 hex (64 bit) 88 bytes。
@@ -509,7 +510,7 @@ def _decode_activation_code(code: str) -> dict:
     # 解码日期
     expires_at = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:8]}"
 
-    return {"expires_at": expires_at, "machine_hash": req_hash}
+    return {"expires_at": expires_at, "machine_hash": req_hash, "signature": sig}
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────────

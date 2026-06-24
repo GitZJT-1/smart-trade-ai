@@ -332,6 +332,7 @@ ruff check trade/ server.py  # 代码检查
 
 ## 文档
 
+- [Windows 安装教程](docs/index.md) — 零基础用户 20 分钟快速安装指南
 - [项目需求文档](项目需求文档.md) ([English](项目需求文档.en.md))
 - [业务概览](业务概览.md) ([English](业务概览.en.md))
 - [外贸业务知识库](外贸业务知识库.md) ([English](外贸业务知识库.en.md))

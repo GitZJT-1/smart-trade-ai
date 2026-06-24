@@ -20,6 +20,11 @@ layout: default
   <p style="color:#8b949e;">Windows 版安装教程 · 不需要懂技术，跟着步骤走，20 分钟装好</p>
 </div>
 
+<div style="text-align:center; margin:1rem 0;">
+  <p style="color:#8b949e; margin-bottom:0.5rem;">安装遇到问题？扫码加微信，备注「Trade」</p>
+  <img src="wechat-contact.jpeg" alt="WeChat Contact" width="180" style="border-radius:8px;">
+</div>
+
 ---
 
 ## 这个工具能帮你做什么？

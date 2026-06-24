@@ -4,7 +4,7 @@
 
 ## 兼容性矩阵
 
-> **当前声明范围**：`0.13.0 <= version < 0.17.0`（定义在 `trade/bootstrap.py` 的 `_MIN_HERMES_VERSION` / `_MAX_HERMES_VERSION`）
+> **当前声明范围**：`0.13.0 <= version < 0.18.0`（定义在 `trade/bootstrap.py` 的 `_MIN_HERMES_VERSION` / `_MAX_HERMES_VERSION`）
 
 | Hermes 版本 | 兼容状态 | 测试日期 | 测试人 | 备注 |
 |------------|---------|---------|--------|------|

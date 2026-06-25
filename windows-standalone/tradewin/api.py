@@ -158,7 +158,7 @@ def stream_chat(query: str, on_event, library_id: int | None = None) -> None:
         req.add_header("X-Company-ID", _company_id)
 
     try:
-        with _ur.urlopen(req, timeout=600) as resp:  # 10分钟超时（长文档分析）
+        with _ur.urlopen(req, timeout=1800) as resp:  # 30分钟超时（与后端 Agent 兜底一致，网站诊断等长任务需要）
             buf = ""
             while True:
                 chunk = resp.read(4096)

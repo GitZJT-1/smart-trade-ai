@@ -1103,6 +1103,7 @@ function renderChatViewInto(container, ctx, name) {
                 <textarea id="msg-input" aria-label="输入消息" placeholder="${placeholders[ctx] || ''}" rows="1"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
                 <button onclick="sendMsg()" id="send-btn">发送</button>
+                <button id="stop-btn" class="hidden" style="background:var(--accent-red);color:#fff;">🛑 停止</button>
             </div>
         </div>
         <div class="drop-overlay" id="drop-overlay"><div class="drop-overlay-inner">&#128193; 释放以添加文件</div></div>`;
@@ -1673,12 +1674,29 @@ async function sendMsg() {
     const sendBtn = ct.querySelector('#send-btn');
     if (sendBtn) sendBtn.disabled = true;
 
+    // 用户可主动取消 SSE 流（替代原硬性 10 分钟超时）
+    // 网站诊断等复杂 skill 可能需要 >10 分钟，依赖 SSE 心跳保活即可
+    const streamCtl = new AbortController();
+    const stopBtn = ct.querySelector('#stop-btn');
+    if (stopBtn) {
+        stopBtn.classList.remove('hidden');
+        stopBtn.onclick = () => streamCtl.abort();
+    }
+    // 计时器：显示已用时，让用户知道仍在工作
+    const elapsedTimer = setInterval(() => {
+        const sec = Math.floor((Date.now() - startMs) / 1000);
+        const m = Math.floor(sec / 60), s = sec % 60;
+        const tEl = progDiv.querySelector('.elapsed');
+        if (tEl) tEl.textContent = `⏱ ${m}:${s.toString().padStart(2,'0')}`;
+    }, 1000);
+    const startMs = Date.now();
+
     const container = ct.querySelector('#chat-messages');
     const progDiv = document.createElement('div');
     progDiv.className = 'message assistant';
     const pid = 'prog-' + Date.now();
     progDiv.id = pid;
-    progDiv.innerHTML = '<div class="msg-avatar">🤖</div>';
+    progDiv.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-body"><div class="thinking-msg">💭 正在分析问题...</div><div class="elapsed" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div></div>';
     container.appendChild(progDiv);
     container.scrollTop = container.scrollHeight;
 
@@ -1713,7 +1731,7 @@ async function sendMsg() {
             method:'POST',
             headers:{'Content-Type':'application/json','X-Hermes-Session-Token':TOKEN,'X-Company-ID':String(currentCompanyId)},
             body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query}),
-            signal:AbortSignal.timeout(600000),
+            signal:streamCtl.signal,
         });
         if (!r.ok) { progDiv.remove(); addMsg('assistant', `⚠️ 请求失败 (${r.status})`, null); sendBtn.disabled = false; return; }
 
@@ -1750,8 +1768,11 @@ async function sendMsg() {
         else addMsg('assistant', '⚠️ Agent 未返回有效回复。', null);
     } catch(e) {
         progDiv.remove();
-        if (e.name==='AbortError'||e.name==='TimeoutError') addMsg('assistant','⏰ 请求超时（10分钟）',null);
+        if (e.name==='AbortError') addMsg('assistant','🛑 已停止生成。',null);
         else addMsg('assistant',`网络错误：${e.message}`,null);
+    } finally {
+        clearInterval(elapsedTimer);
+        if (stopBtn) { stopBtn.classList.add('hidden'); stopBtn.onclick = null; }
     }
     sendBtn.disabled = false;
 }

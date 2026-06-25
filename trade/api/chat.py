@@ -293,11 +293,19 @@ async def trade_chat_stream(
             return f"event: {ev_type}\ndata: {_json.dumps(payload, ensure_ascii=False)}\n\n"
 
         agent_task = loop.run_in_executor(None, _run_agent)
+        # 30 分钟 Agent 兜底超时 — 网站诊断等长任务也应在 30min 内完成
+        # 超时后发 error 事件并取消 agent，防止永久挂起
+        deadline = time.time() + 1800
         try:
             while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    _emit_threadsafe("error", {"message": "⏰ Agent 执行超过 30 分钟，已自动中止。请简化问题或联系支持。"})
+                    break
                 try:
-                    # 15s 心跳，防止反向代理/nginx 空闲断开
-                    ev_type, ev_data = await asyncio.wait_for(event_queue.get(), timeout=15.0)
+                    # 取 15s 心跳与剩余 deadline 的较小值，确保 deadline 到期时能及时触发
+                    wait_sec = min(15.0, remaining)
+                    ev_type, ev_data = await asyncio.wait_for(event_queue.get(), timeout=wait_sec)
                 except TimeoutError:
                     if agent_task.done():
                         break

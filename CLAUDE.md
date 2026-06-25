@@ -110,11 +110,65 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 205 tests across 7 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade).
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 205 tests across 8 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade).
+
+## Pre-install Check
+
+`pre_install_check.py` verifies Hermes Agent is installed and compatible **before** pip installing Trade. It checks:
+- Whether `hermes-agent` is installed at all
+- Whether the installed version is from the official `NousResearch/hermes-agent` (not the deprecated `chefroger` fork)
+- Whether the version meets the minimum requirement (`>= 0.13.0`)
+- Queries GitHub API for latest official release
+
+Exit codes: `0` = compatible, `1` = not installed, `2` = incompatible version.
+
+## CI/CD (GitHub Actions)
+
+Three workflows defined in `.github/workflows/`:
+
+1. **test.yml** — Runs on push/PR to `main`. Two-stage pipeline: lint first (ruff + `compileall`), then test across 3 OS (ubuntu/macos/windows) × 3 Python versions (3.11/3.12/3.13). Hermes Agent is NOT installed in CI — tests use mocks/stubs that don't require the full AI engine.
+
+2. **release.yml** — Triggered by `v*` tags or `workflow_dispatch`. Builds macOS `.app` via PyInstaller (`tradewin-mac.spec`), zips it, attaches to GitHub Release. Windows standalone has a separate build flow (see below).
+
+3. **pages.yml** — Triggered by pushes to `docs/` on `main`. Uses Jekyll to build GitHub Pages from `docs/` directory.
+
+## Desktop Builds (PyInstaller)
+
+Four PyInstaller spec files for packaging desktop apps:
+
+| Spec File | Platform | Output |
+|-----------|----------|--------|
+| `pyinstaller.spec` | Generic/legacy | Single executable |
+| `tradewin-mac.spec` | macOS | `TradeWin.app` → `.zip` for release |
+| `tradewin-linux.spec` | Linux | Linux executable |
+| `windows-standalone/tradewin.spec` | Windows | `TradeWin.exe` via `build.bat` |
+
+```bash
+# macOS .app (release pipeline equivalent)
+pyinstaller --clean --noconfirm tradewin-mac.spec
+
+# Windows standalone (requires Windows + PySide6)
+cd windows-standalone
+build.bat     # pip install -r requirements.txt → pip install -e .. → pyinstaller
+```
 
 ## Architecture
 
 ```
+windows-standalone/tradewin/    Windows Qt 桌面端 (PySide6) — 独立 exe 构建
+  ├── app.py                    MainWindow: QSplitter(侧边栏QTreeWidget + QStackedWidget)
+  ├── api.py                    urllib HTTP 客户端（无 httpx/requests，减小打包体积）
+  ├── chat.py                   ChatView: SSE 流式渲染 + QTextCursor 增量更新
+  ├── views.py                  CustomerView / LibraryView / TasksView / HistoryView / SettingsView
+  ├── dialogs.py                对话框（公司/客户/订单/许可证/升级）
+  ├── wizard.py                 首次运行配置向导（LLM provider + API Key）
+  ├── themes.py                 主题色定义
+  ├── tray.py                   系统托盘
+  ├── setup.py                  启动引导（session 初始化 + 服务器检测）
+  └── resources/
+      ├── style.qss             全局 Qt 样式表
+      └── icon.ico              应用图标
+
 static/trade_chat.html          Chat SPA — single-file vanilla JS (~2900 lines), served at /trade
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
         ▼
@@ -250,6 +304,31 @@ Trade depends on these Hermes internals (watch on Hermes upgrades):
 - `hermes_constants.get_hermes_home` — resolves `~/.hermes` path
 - Cognee knowledge graph (tools `cognee_remember` / `cognee_recall` referenced in system prompt)
 - `hermes gateway run` — spawned as detached subprocess for cron scheduling (port 8642)
+
+## Docs & GitHub Pages
+
+`docs/` 目录的 markdown 文档通过 GitHub Actions (`pages.yml`) 自动部署到 GitHub Pages。Jekyll 构建，源文件推送到 `main` 分支的 `docs/` 目录即自动触发部署。
+
+## Scripts
+
+| Script | Platform | Purpose |
+|--------|----------|---------|
+| `scripts/install.sh` | macOS/Linux | 一键安装（Hermes + Trade + skills + DB） |
+| `scripts/install.ps1` | Windows | 一键安装 PowerShell 版 |
+| `scripts/install_prereqs.sh` | macOS/Linux | 前置条件检查 |
+| `scripts/install_prereqs.ps1` | Windows | 前置条件检查 PowerShell 版 |
+| `scripts/build.sh` | macOS/Linux | 开发构建 |
+| `scripts/build.ps1` | Windows | 开发构建 PowerShell 版 |
+| `scripts/com.foreign-trade.gateway.plist` | macOS | LaunchAgent plist（Hermes Gateway 开机自启） |
+
+## Multi-Platform Sync
+
+代码修改需同步三平台（跨平台一致性规则）：
+1. **Web 前端** (`static/trade_chat.html`) — 所有 UI 功能的核心实现
+2. **Windows Qt 桌面端** (`windows-standalone/tradewin/`) — views.py / dialogs.py / chat.py / api.py
+3. **macOS desktop** (`tradewin.py`) — PyWebView 封装
+
+修改涉及 API 时需同步更新：api/views/spec/dialogs 四层。
 
 ## Skills Sync Mechanism
 

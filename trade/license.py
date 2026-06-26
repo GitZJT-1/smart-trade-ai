@@ -300,7 +300,13 @@ def status(company_id: int | None = None) -> dict:
     if not result["activated"] and result["days_remaining"] <= 0:
         result["status"] = "expired"
     elif result["activated"]:
-        result["status"] = "active"
+        # 验签：activated=True 不意味着签名有效（旧代码有 bug，签名从未正确验证过）
+        if not _verify_license(data):
+            result["status"] = "tampered"
+            # 签名验证失败时返回申请码，方便用户重新激活
+            result["request_code"] = _make_request_code()
+        else:
+            result["status"] = "active"
     else:
         result["status"] = "trial"
 
@@ -315,11 +321,16 @@ def _sign_license(expires_at: str) -> str:
 
     仅在 activate() 时由作者私钥调用。用户端无私钥，无法生成合法签名。
     返回 base64url 编码的签名字符串。
+
+    payload 格式与 _encode_activation_code / _verify_license 一致：
+      YYYYMMDD + SHA256(machine_id).hexdigest().upper()[:16]
     """
     private_key = _load_private_key()
     if private_key is None:
         raise ValueError("私钥未找到，无法签发许可证签名。")
-    payload = (expires_at + _machine_id()).encode()
+    mid_hash = hashlib.sha256(_machine_id().encode()).hexdigest().upper()[:16]
+    date_str = expires_at[:10].replace("-", "")
+    payload = (date_str + mid_hash).encode()
     sig = private_key.sign(payload)
     return base64.urlsafe_b64encode(sig).decode()
 
@@ -342,7 +353,12 @@ def _verify_license(data: dict) -> bool:
         from cryptography.hazmat.primitives.asymmetric import ed25519
 
         sig = base64.urlsafe_b64decode(sig_b64)
-        payload = (expires_at + _machine_id()).encode()
+        # 验签 payload 必须与 _encode_activation_code / _sign_license 签名时一致：
+        #   YYYYMMDD + SHA256(machine_id).hexdigest().upper()[:16]
+        # [:10] 截取纯日期部分，兼容 "2026-08-31" 和 "2027-12-31T00:00:00+00:00" 两种格式
+        mid_hash = hashlib.sha256(_machine_id().encode()).hexdigest().upper()[:16]
+        date_str = expires_at[:10].replace("-", "")
+        payload = (date_str + mid_hash).encode()
         public_key = ed25519.Ed25519PublicKey.from_public_bytes(_PUBLIC_KEY_BYTES)
         public_key.verify(sig, payload)
         return True
@@ -350,7 +366,7 @@ def _verify_license(data: dict) -> bool:
         # cryptography 未安装 — 无法验签，视为无效（提示用户安装依赖）
         return False
     except (InvalidSignature, ValueError, TypeError):
-        # 签名不匹配 / base64 解码失败 / payload 构造失败 — 篡改证据
+        # 签名不匹配 / base64 解码失败 / payload 构造失败 → 篡改证据或数据损坏
         return False
 
 

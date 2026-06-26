@@ -291,15 +291,19 @@ class TestLicenseStatus:
         assert s["request_code"].startswith("TRADE-REQ-")
 
     def test_active_status(self, monkeypatch):
+        # 激活状态需要有效签名（v0.6.9+ status() 会调用 _verify_license 验签）
+        _setup_temp_ed25519_key(monkeypatch)
+        from trade.license import _sign_license, status
         future = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)).isoformat()
+        sig = _sign_license(future)
         monkeypatch.setattr("trade.license._get_license_data",
                            lambda cid=None: {
                                "first_launch_at": "2026-01-01T00:00:00+00:00",
                                "activated": True,
                                "expires_at": future,
+                               "signature": sig,
                            })
 
-        from trade.license import status
         s = status(company_id=1)
         assert s["status"] == "active"
         assert s["activated"] is True

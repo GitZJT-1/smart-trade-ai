@@ -746,6 +746,15 @@ async function loadLicenseStatus() {
                 trialHtml += ' · 申请码: <code style="background:' + (data.days_remaining <= 7 ? '#FEF3C7' : '#DBEAFE') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + data.request_code + '</code>';
             }
             bar.innerHTML = trialHtml;
+        } else if (data.status === 'tampered') {
+            bar.style.display = 'block';
+            bar.style.background = '#FEF2F2';
+            bar.style.color = '#991B1B';
+            var tamperedHtml = '⚠️ 许可证数据异常 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;font-weight:600;">重新激活</a>';
+            if (data.request_code) {
+                tamperedHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + data.request_code + '</code>';
+            }
+            bar.innerHTML = tamperedHtml;
         }
     } catch(e) { /* license API 不可用时静默 */ }
 }

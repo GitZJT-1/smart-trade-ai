@@ -211,23 +211,46 @@ hermes gateway install
 
 上一步装好了 Gateway，但 Trade 本身还没设为自启。这一步用**注册表 + VBS 脚本**的方式让 Trade 开机自动运行，**且不弹出任何终端窗口**——开机后直接打开浏览器访问 **http://127.0.0.1:9119/trade** 就能用。
 
-### 10.1 创建 VBS 启动器脚本
+### 10.1 创建启动器脚本（VBS + BAT，带日志）
 
 把下面**整段命令**复制粘贴到 PowerShell 里，按回车：
 
 ```powershell
-$vbs = "$env:LOCALAPPDATA\trade\trade-autostart.vbs"
-New-Item -ItemType Directory -Force -Path (Split-Path $vbs) | Out-Null
-@"
+# 探测 trade.exe 完整路径（避免开机时 PATH 未完全加载导致找不到）
+$tradeExe = (Get-Command trade -ErrorAction Stop).Source
+if (-not $tradeExe) {
+    Write-Host "❌ 找不到 trade.exe，请先确认 trade 已安装" -ForegroundColor Red
+} else {
+    Write-Host "找到 trade.exe：$tradeExe" -ForegroundColor Green
+    $dir = "$env:LOCALAPPDATA\trade"
+    $bat = "$dir\trade-autostart.bat"
+    $vbs = "$dir\trade-autostart.vbs"
+    $logFile = "$dir\trade-autostart.log"
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+
+    # .bat 用完整路径调用 trade.exe 并重定向日志（启动失败时可查日志）
+    @"
+@echo off
+"$tradeExe" > "$logFile" 2>&1
+"@ | Out-File -FilePath $bat -Encoding ASCII
+
+    # VBS 隐藏窗口启动 .bat（不等待，不弹窗）
+    @"
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run "cmd /c trade", 0, False
+WshShell.Run "cmd /c ""$bat""", 0, False
 "@ | Out-File -FilePath $vbs -Encoding ASCII
-Write-Host "已创建 VBS 启动器：$vbs" -ForegroundColor Green
+
+    Write-Host "已创建启动器：$vbs" -ForegroundColor Green
+    Write-Host "日志文件：$logFile（启动失败时打开它排查）" -ForegroundColor Yellow
+}
 ```
 
-看到绿色提示「已创建 VBS 启动器」即成功。
+看到绿色「已创建启动器」即成功。
 
-> **这段命令做了什么：** 在 `%LOCALAPPDATA%\trade\` 目录下创建一个 VBS 脚本，它通过 `WScript.Shell` 以**隐藏窗口**模式运行 `trade` 命令，所以不会弹出黑框终端。
+> **这段命令做了什么：**
+> 1. 用 `Get-Command trade` 探测 `trade.exe` 的完整路径，写入 .bat 文件——**不依赖 PATH**，开机早期也能找到
+> 2. .bat 把 trade 的所有输出重定向到 `trade-autostart.log`——启动失败时打开这个日志就能看到错误，不用两眼一抹黑
+> 3. VBS 以**隐藏窗口**模式启动 .bat——不会弹出黑框终端
 
 ### 10.2 写入注册表，开机自动运行该脚本
 
@@ -247,7 +270,9 @@ New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Na
 wscript.exe "$env:LOCALAPPDATA\trade\trade-autostart.vbs"
 ```
 
-等约 10 秒，然后打开浏览器访问 **http://127.0.0.1:9119/trade**。如果能看到 Trade 界面，且**没有弹出任何终端窗口**，说明配置完全正确。
+等约 15 秒，然后打开浏览器访问 **http://127.0.0.1:9119/trade**。如果能看到 Trade 界面，且**没有弹出任何终端窗口**，说明配置完全正确。
+
+> **如果打不开**：打开文件 `%LOCALAPPDATA%\trade\trade-autostart.log`（直接在资源管理器地址栏粘贴这个路径回车），看里面的错误信息。最常见的是 `ModuleNotFoundError`——说明 trade 安装有问题，回到第八步重装。
 
 > **以后的使用方式：** 每天打开电脑，等约 30 秒（系统启动 + Trade 自动启动），直接浏览器访问 **http://127.0.0.1:9119/trade** 即可，**再也不用打开 PowerShell 手动输入 `trade`**。
 
@@ -272,7 +297,7 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
 | `trade` 输入后提示「不是内部或外部命令」 | 改成输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant` 然后 `python server.py` |
 | Hermes 对话没反应 | API Key 没配置对。重新运行 `hermes setup` 检查 |
 | 浏览器打开显示「无法访问此网站」 | 程序没在运行。打开一个新的 PowerShell，输入 `trade` 启动 |
-| 开机后访问 127.0.0.1:9119/trade 打不开 | Trade 自启还没跑完，等 30 秒再试。若仍不行，按 `Win+R` 输入 `taskmgr` 回车，看进程里有没有 `python.exe`，没有就手动运行第十步的 VBS 脚本 |
+| 开机后访问 127.0.0.1:9119/trade 打不开 | Trade 自启还没跑完，等 30 秒再试。若仍不行，打开 `%LOCALAPPDATA%\trade\trade-autostart.log` 看错误日志；或按 `Win+R` 输入 `taskmgr` 回车，看进程里有没有 `python.exe`，没有就手动运行第十步的 VBS 脚本 |
 | 定时任务（每日简报等）不执行 | 第九步的 Hermes Gateway 没装好或没运行。重新执行 `hermes gateway install`，再到 `services.msc` 确认服务状态 |
 | 提示「Filename too long」 | 第五步的长路径设置没做。回到 5.2 执行那行命令，然后**重启电脑** |
 

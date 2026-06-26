@@ -269,23 +269,33 @@ def update_trade() -> dict:
         _emit("→ Step 1/7: git clone (install directory not found) ...")
         _emit(f"  Target: {trade_dir}")
         trade_dir.parent.mkdir(parents=True, exist_ok=True)
-        clone_result = subprocess.run(
-            ["git", "clone", "https://github.com/chefroger/smart-trade-ai.git",
-             str(trade_dir)],
-            capture_output=True, text=True, timeout=300,
-        )
+        try:
+            clone_result = subprocess.run(
+                ["git", "clone", "https://github.com/chefroger/smart-trade-ai.git",
+                 str(trade_dir)],
+                capture_output=True, text=True, timeout=300,
+            )
+        except FileNotFoundError:
+            _emit("  ❌ git 命令未找到，请先安装 Git for Windows 并重启终端")
+            errors.append("git not found")
+            return {"ok": False, "version": "", "error": "Git 未安装或不在 PATH 中，请先安装 Git for Windows", "errors": errors, "messages": messages}
         if clone_result.returncode != 0:
             err = clone_result.stderr.strip()
             _emit(f"  ❌ git clone failed: {err}")
             errors.append(f"git clone failed: {err}")
-            return {"ok": False, "version": "", "errors": errors, "messages": messages}
+            return {"ok": False, "version": "", "error": err, "errors": errors, "messages": messages}
         _emit(f"  ✓ Repository cloned to {trade_dir}")
     else:
         _emit("→ Step 1/7: git pull ...")
-        result = subprocess.run(
-            ["git", "pull", "--ff-only", "origin", "main"],
-            cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
-        )
+        try:
+            result = subprocess.run(
+                ["git", "pull", "--ff-only", "origin", "main"],
+                cwd=str(trade_dir), capture_output=True, text=True, timeout=120,
+            )
+        except FileNotFoundError:
+            _emit("  ❌ git 命令未找到，请先安装 Git for Windows 并重启终端")
+            errors.append("git not found")
+            return {"ok": False, "version": "", "error": "Git 未安装或不在 PATH 中，请先安装 Git for Windows", "errors": errors, "messages": messages}
         if result.returncode != 0:
             err_text = result.stderr.strip()
             _emit(f"  ⚠ git pull failed: {err_text}")
@@ -309,12 +319,12 @@ def update_trade() -> dict:
                     err2 = pull2.stderr.strip()
                     _emit(f"  ❌ git pull failed after stash: {err2}")
                     errors.append(f"git pull failed: {err2}")
-                    return {"ok": False, "version": "", "errors": errors, "messages": messages}
+                    return {"ok": False, "version": "", "error": err2, "errors": errors, "messages": messages}
             else:
                 err_s = stash.stderr.strip()
                 _emit(f"  ❌ git stash also failed: {err_s}")
                 errors.append(f"git stash failed: {err_s}")
-                return {"ok": False, "version": "", "errors": errors, "messages": messages}
+                return {"ok": False, "version": "", "error": err_s, "errors": errors, "messages": messages}
         else:
             last_line = result.stdout.strip().split("\n")[-1] if result.stdout.strip() else "Already up-to-date."
             _emit(f"  ✓ {last_line}")
@@ -360,7 +370,7 @@ def update_trade() -> dict:
         err = result.stderr.strip()
         _emit(f"  ❌ pip install failed: {err}")
         errors.append(f"pip install failed: {err[:200]}")
-        return {"ok": False, "version": "", "errors": errors, "messages": messages}
+        return {"ok": False, "version": "", "error": err[:200], "errors": errors, "messages": messages}
     _emit("  ✓ Package updated")
 
     # ── Step 5: template sync ─────────────────────────────────────────────
@@ -391,7 +401,7 @@ def update_trade() -> dict:
     except Exception as e:
         _emit(f"  ❌ Database check failed: {e}")
         errors.append(f"Database check failed: {e}")
-        return {"ok": False, "version": "", "errors": errors, "messages": messages}
+        return {"ok": False, "version": "", "error": str(e), "errors": errors, "messages": messages}
 
     # ── 结果 ──────────────────────────────────────────────────────────────
     has_critical_errors = bool(errors)  # pip install / database 等关键步骤失败

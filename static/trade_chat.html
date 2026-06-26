@@ -911,8 +911,9 @@ async function doTradeUpdate(e) {
                 // 后端没安排重启（极少见，例如更新脚本被外部 patch 后），提醒用户手动重启
                 toast('✅ 更新完成。请点击"🔄 重启"以应用新版本。');
             }
-        } else if (resp && resp.error) {
-            toast('❌ 更新失败: ' + resp.error);
+        } else if (resp && (resp.error || (resp.errors && resp.errors.length))) {
+            const errMsg = resp.error || resp.errors.join('; ');
+            toast('❌ 更新失败: ' + errMsg);
             updateFailed = true;
         } else {
             toast('⚠️ 更新结果未知，请检查网络后重试');

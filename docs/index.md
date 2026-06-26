@@ -187,6 +187,80 @@ trade
 
 浏览器会自动打开 Trade 界面。如果没有自动打开，手动访问 **http://127.0.0.1:9119/trade**。
 
+> 验证能用后，按 `Ctrl+C` 退出 trade（暂时退出，下一步设置开机自启后会自动运行）。
+
+---
+
+## 第九步：设置 Hermes Gateway 开机自启
+
+Hermes Gateway 是定时任务调度器，Trade 的定时简报、定时询盘检查都依赖它。必须让它随系统启动，否则每天还要手动开。
+
+在 PowerShell 里执行：
+
+```
+hermes gateway install
+```
+
+看到「服务已安装」或类似提示即成功。**以后开机时 Hermes Gateway 会自动在后台运行，无需手动启动。**
+
+> 验证是否装好：按 `Win+R`，输入 `services.msc`，回车。在列表里找到「Hermes Gateway」服务，状态应为「正在运行」。
+
+---
+
+## 第十步：设置 Trade 开机自启（无终端窗口）
+
+上一步装好了 Gateway，但 Trade 本身还没设为自启。这一步用**注册表 + VBS 脚本**的方式让 Trade 开机自动运行，**且不弹出任何终端窗口**——开机后直接打开浏览器访问 **http://127.0.0.1:9119/trade** 就能用。
+
+### 10.1 创建 VBS 启动器脚本
+
+把下面**整段命令**复制粘贴到 PowerShell 里，按回车：
+
+```powershell
+$vbs = "$env:LOCALAPPDATA\trade\trade-autostart.vbs"
+New-Item -ItemType Directory -Force -Path (Split-Path $vbs) | Out-Null
+@"
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run "cmd /c trade", 0, False
+"@ | Out-File -FilePath $vbs -Encoding ASCII
+Write-Host "已创建 VBS 启动器：$vbs" -ForegroundColor Green
+```
+
+看到绿色提示「已创建 VBS 启动器」即成功。
+
+> **这段命令做了什么：** 在 `%LOCALAPPDATA%\trade\` 目录下创建一个 VBS 脚本，它通过 `WScript.Shell` 以**隐藏窗口**模式运行 `trade` 命令，所以不会弹出黑框终端。
+
+### 10.2 写入注册表，开机自动运行该脚本
+
+继续在 PowerShell 里粘贴下面这行，按回车：
+
+```powershell
+New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "TradeAutoStart" -Value "wscript.exe `"$env:LOCALAPPDATA\trade\trade-autostart.vbs`"" -PropertyType String -Force
+```
+
+没有报错就说明写入成功。
+
+### 10.3 立即测试（可选但推荐）
+
+不想等到明天才验证？在 PowerShell 里执行：
+
+```powershell
+wscript.exe "$env:LOCALAPPDATA\trade\trade-autostart.vbs"
+```
+
+等约 10 秒，然后打开浏览器访问 **http://127.0.0.1:9119/trade**。如果能看到 Trade 界面，且**没有弹出任何终端窗口**，说明配置完全正确。
+
+> **以后的使用方式：** 每天打开电脑，等约 30 秒（系统启动 + Trade 自动启动），直接浏览器访问 **http://127.0.0.1:9119/trade** 即可，**再也不用打开 PowerShell 手动输入 `trade`**。
+
+### 10.4 如果想取消开机自启
+
+将来不想要自启了，在 PowerShell 里执行：
+
+```powershell
+Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "TradeAutoStart" -Force
+```
+
+即可移除自启，不影响 Trade 本身的使用。
+
 ---
 
 ## 常见问题
@@ -198,6 +272,8 @@ trade
 | `trade` 输入后提示「不是内部或外部命令」 | 改成输入 `cd $env:LOCALAPPDATA\trade\foreign-trade-assistant` 然后 `python server.py` |
 | Hermes 对话没反应 | API Key 没配置对。重新运行 `hermes setup` 检查 |
 | 浏览器打开显示「无法访问此网站」 | 程序没在运行。打开一个新的 PowerShell，输入 `trade` 启动 |
+| 开机后访问 127.0.0.1:9119/trade 打不开 | Trade 自启还没跑完，等 30 秒再试。若仍不行，按 `Win+R` 输入 `taskmgr` 回车，看进程里有没有 `python.exe`，没有就手动运行第十步的 VBS 脚本 |
+| 定时任务（每日简报等）不执行 | 第九步的 Hermes Gateway 没装好或没运行。重新执行 `hermes gateway install`，再到 `services.msc` 确认服务状态 |
 | 提示「Filename too long」 | 第五步的长路径设置没做。回到 5.2 执行那行命令，然后**重启电脑** |
 
 ---

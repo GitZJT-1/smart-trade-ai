@@ -375,6 +375,55 @@ install-trade-skills
 
 > 如果执行 `git pull` 时报错找不到 `git`，说明 Git 未安装。请先打开终端输入 `hermes` 确认 Hermes 正常，或从 [git-scm.com](https://git-scm.com) 下载安装 Git 后再试。
 
+### 升级时报错「更新结果未知」「更新失败」「请求超时」等
+
+前端升级失败的错误提示各不相同，但**根本原因几乎都是网络问题**——`git pull` 或 `pip install` 无法稳定连接 GitHub/PyPI。**所有此类错误的解决方法完全相同**：跳过前端，直接在终端里手动执行更新命令。
+
+**macOS / Linux：**
+
+1. 关闭 Trade 页面，打开终端
+2. 逐行执行（确保 VPN 全局模式已开启）：
+
+```bash
+cd ~/.trade/foreign-trade-assistant
+git pull origin main
+pip install -e "."
+install-trade-skills
+python server.py
+```
+
+**Windows：**
+
+1. 关闭 Trade 页面，按 `Win + R`，输入 `powershell`，回车
+2. 逐行执行（确保 VPN 全局模式已开启）：
+
+```powershell
+cd $env:LOCALAPPDATA\trade\foreign-trade-assistant
+git pull origin main
+pip install -e "."
+install-trade-skills
+python server.py
+```
+
+**常见错误对照：**
+
+| 前端提示 | 实际原因 | 手动执行哪步 |
+|---------|---------|------------|
+| ⚠️ 更新结果未知，请检查网络 | `git pull` 超时（120s）或 HTTP 错误 | 全部 4 步 |
+| ⚠️ 请求超时 | `fetch()` 120s AbortController 触发 | 全部 4 步 |
+| ❌ 更新失败: Git 未安装或不在 PATH 中 | 系统找不到 `git` 命令 | [安装 Git](https://git-scm.com/download/win) 后全部 4 步 |
+| ❌ 更新失败: pip install failed | 依赖包下载失败（PyPI 不通） | `pip install -e "."` 重试 |
+| ❌ 更新失败: git pull / clone failed | GitHub 连不上 | 开 VPN 全局模式后重试 `git pull` |
+
+> 如果 VPN 已开启但仍失败，尝试在终端中先设置代理再执行更新：
+> ```bash
+> # macOS / Linux
+> export https_proxy=http://127.0.0.1:你的代理端口
+>
+> # Windows PowerShell
+> $env:HTTPS_PROXY = "http://127.0.0.1:你的代理端口"
+> ```
+
 ### 拖拽文件 / 上传报错「拒绝访问」
 
 如果你在聊天框拖入 Excel 等文件时看到类似 `[WinError 5] 拒绝访问: 'C:\\Windows\\System32\\.hermes'` 的错误，说明程序找不到正确的数据目录。

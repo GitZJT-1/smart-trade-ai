@@ -4,6 +4,8 @@ Trade AI Assistant — 客户管理 API 路由。
 端点：
   GET    /customers                              — 列出当前公司的客户
   POST   /customers                              — 创建客户
+  POST   /customers/bulk                         — 批量导入（CSV 文件上传）
+  GET    /customers/template                     — 下载 CSV 导入模板
   GET    /customers/{customer_id}                 — 获取客户详情
   PUT    /customers/{customer_id}                 — 更新客户
   DELETE /customers/{customer_id}                 — 删除客户
@@ -14,7 +16,12 @@ Trade AI Assistant — 客户管理 API 路由。
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+import io
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from trade import customer as customer_module
 from trade.api.deps import require_company
@@ -46,6 +53,8 @@ def create_customer(
         title=payload.title, email=payload.email, backup_email=payload.backup_email,
         phone=payload.phone, whatsapp=payload.whatsapp,
         wechat=payload.wechat, source=payload.source,
+        buyer_type=payload.buyer_type, follow_up_note=payload.follow_up_note,
+        main_category=payload.main_category, match_score=payload.match_score,
     )
 
 
@@ -84,6 +93,112 @@ def delete_customer(
     if not customer_module.delete(customer_id, company_id=cid):
         raise HTTPException(status_code=404, detail="Customer not found")
     return {"ok": True}
+
+
+# ── CSV 列名 → customer 字段映射（批量导入）──────────────────────────────
+
+# 用户 CSV 表头 → 内部字段名
+_CSV_FIELD_MAP = {
+    "name": "name",
+    "contact": "contact",
+    "title": "title",
+    "country": "country",
+    "email": "email",
+    "phone": "phone",
+    "whatsapp": "whatsapp",
+    "wechat": "wechat",
+    "linkedin_url": "linkedin_url",
+    "company_website": "company_website",
+    "tier": "tier",
+    "buyer_type": "buyer_type",
+    "main_category": "main_category",
+    "match_score": "match_score",
+    "note": "note",
+}
+
+
+def _find_static_dir() -> Path:
+    """查找静态文件目录，与 app.py 保持一致的查找逻辑。"""
+    import os as _os
+    import sys as _sys
+
+    if getattr(_sys, "frozen", False) and hasattr(_sys, "_MEIPASS"):
+        return Path(_sys._MEIPASS) / "static"
+    # 运行时目录
+    trade_home = _os.environ.get("TRADE_HOME", "").strip()
+    if not trade_home:
+        if _os.name == "nt":
+            _local = _os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+            trade_home = str(Path(_local) / "trade")
+        else:
+            trade_home = str(Path.home() / ".trade")
+    runtime_static = Path(trade_home) / "foreign-trade-assistant" / "static"
+    if runtime_static.is_dir():
+        return runtime_static
+    # 开发目录
+    return Path(__file__).resolve().parent.parent.parent / "static"
+
+
+@router.get("/customers/template")
+def download_customer_template():
+    """下载 CSV 客户导入模板。"""
+    template_path = _find_static_dir() / "trade-customer-template.csv"
+    if not template_path.is_file():
+        raise HTTPException(status_code=404, detail="Template not found")
+    return FileResponse(
+        str(template_path),
+        media_type="text/csv",
+        filename="trade-customer-template.csv",
+    )
+
+
+@router.post("/customers/bulk")
+async def bulk_import_customers(
+    file: UploadFile,
+    cid: int = Depends(require_company),
+):
+    """CSV 批量导入客户。
+
+    接收 CSV 文件（UTF-8 编码），按表头列名映射到客户字段。
+    跳过空名称行和重名行，返回导入统计。
+    """
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="请上传 .csv 格式的文件")
+
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")  # utf-8-sig 兼容 BOM 头
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="文件编码不是 UTF-8，请用 Excel 另存为 CSV UTF-8")
+
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        if reader.fieldnames is None:
+            raise HTTPException(status_code=400, detail="CSV 文件为空或缺少表头")
+    except csv.Error:
+        raise HTTPException(status_code=400, detail="CSV 格式解析失败")
+
+    # 映射 CSV 列到内部字段
+    customers = []
+    for row in reader:
+        cust = {}
+        for csv_col, internal_key in _CSV_FIELD_MAP.items():
+            if csv_col in row and row[csv_col]:
+                cust[internal_key] = row[csv_col].strip()
+        if cust.get("name"):
+            # match_score 从 CSV 字符串转为整数
+            if "match_score" in cust:
+                try:
+                    cust["match_score"] = int(cust["match_score"])
+                except (ValueError, TypeError):
+                    cust["match_score"] = 0
+            customers.append(cust)
+
+    if not customers:
+        raise HTTPException(status_code=400, detail="CSV 中没有有效数据（至少需要 name 列）")
+
+    result = customer_module.bulk_save(company_id=cid, customers=customers)
+    return result
 
 
 # ── 客户 ↔ 文档库关联 ────────────────────────────────────────────────────

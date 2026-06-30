@@ -84,7 +84,8 @@ class CustomerView(QWidget):
         for key, label in [
             ("name", "客户名称"), ("contact", "联系方式"), ("email", "邮箱"),
             ("phone", "电话"), ("whatsapp", "WhatsApp"), ("wechat", "微信"),
-            ("country", "国家"), ("tier", "等级 (A/B/C)"),
+            ("country", "国家"), ("tier", "等级 (A/B/C)"), ("buyer_type", "买家类型"),
+            ("main_category", "主营品类"), ("match_score", "匹配度"),
             ("linkedin_url", "LinkedIn"), ("company_website", "公司网站"),
             ("note", "备注"),
         ]:

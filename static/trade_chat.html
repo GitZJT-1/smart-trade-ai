@@ -629,9 +629,15 @@ body {
         </div>
         <div class="form-row">
             <div class="form-group"><label for="cust-tier">客户等级</label><select id="cust-tier"><option value="">未分级</option><option value="A">A 级</option><option value="B">B 级</option><option value="C">C 级</option></select></div>
+            <div class="form-group"><label for="cust-buyer-type">买家类型</label><select id="cust-buyer-type"><option value="">未设置</option><option value="品牌商">品牌商</option><option value="分销商">分销商</option><option value="代理商">代理商</option><option value="安装商">安装商</option><option value="维保商">维保商</option><option value="同行">同行</option><option value="其他">其他</option></select></div>
+            <div class="form-group"><label for="cust-main-category">主营品类</label><input type="text" id="cust-main-category" placeholder="客户主营产品或行业"></div>
             <div class="form-group"><label for="cust-backup-email">备用邮箱</label><input type="text" id="cust-backup-email" placeholder="backup@company.com"></div>
         </div>
+        <div class="form-row">
+            <div class="form-group"><label for="cust-match-score">匹配度</label><select id="cust-match-score"><option value="0">未评分</option><option value="1">1 - 低</option><option value="2">2</option><option value="3">3 - 中</option><option value="4">4</option><option value="5">5 - 高</option></select></div>
+        </div>
         <div class="form-group"><label for="cust-note">备注 / 跟进项目</label><textarea id="cust-note" placeholder="该联系人负责的项目、需求、注意事项等" style="min-height:80px;"></textarea></div>
+        <div class="form-group"><label for="cust-follow-up-note">AI 跟进建议</label><textarea id="cust-follow-up-note" placeholder="AI 基于客户画像自动生成的跟进策略..." style="min-height:60px;"></textarea></div>
         <div class="form-actions">
             <button class="btn" onclick="hideModal('customer-modal')">取消</button>
             <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
@@ -1806,6 +1812,13 @@ async function renderCustomersViewInto(container) {
             </div>
         </div>
         <div class="panel-body">
+            <div id="cust-import-banner" style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-bottom:12px;background:var(--bg-muted);border-radius:var(--radius-sm);border:1px dashed var(--border);">
+                <span style="font-size:13px;">📋 批量导入客户？</span>
+                <a href="/api/trade/customers/template" download class="btn-xs" style="text-decoration:none;">📥 下载 CSV 模板</a>
+                <span style="font-size:12px;color:var(--text-muted);">填好后上传 →</span>
+                <input type="file" id="cust-bulk-file" accept=".csv" style="display:none;" onchange="bulkImportCustomers()">
+                <button class="btn-xs primary" onclick="$('cust-bulk-file').click()">📤 上传导入</button>
+            </div>
             <table class="data-table" id="customers-table">
                 <thead><tr>
                     <th style="width:30px;"><input type="checkbox" id="select-all-customers" onchange="toggleSelectAllCustomers(this)" title="全选"></th>
@@ -1814,7 +1827,7 @@ async function renderCustomersViewInto(container) {
                 <tbody id="customers-tbody"></tbody>
             </table>
             <div id="customers-loading" class="loading-row hidden"><div class="spinner"></div>加载中...</div>
-            <div id="customers-empty" class="empty-state hidden"><div class="empty-icon">👤</div><h2>暂无客户</h2><p>点击「添加客户」开始管理外贸客户</p></div>
+            <div id="customers-empty" class="empty-state hidden"><div class="empty-icon">👤</div><h2>暂无客户</h2><p>点击「添加客户」逐个添加，或下载模板批量导入</p></div>
         </div>`;
     await loadCustomersData();
 }
@@ -1859,6 +1872,9 @@ function renderCustomersTable(data) {
         const tier = ex1['tier'] || '';
         const tierLabel = tier || '--';
         const tierColor = tier === 'A' ? 'var(--accent-green)' : tier === 'B' ? 'var(--accent)' : tier === 'C' ? 'var(--accent-red)' : 'var(--text-muted)';
+        const buyerType = ex1['buyer_type'] || '';
+        const mainCategory = ex1['main_category'] || '';
+        const matchScore = ex1['match_score'] || 0;
         const country = ex1['country'] || '';
         const contact = c.contact || '';
         const title = ex2['title'] || '';
@@ -1866,13 +1882,16 @@ function renderCustomersTable(data) {
         const phone = ex2['phone'] || ex2['whatsapp'] || '';
         const note = (c.note || '').slice(0, 40);
         const updated = (c.updated_at || c.created_at || '').slice(0, 10);
-        const subLine = [title, country, email, phone].filter(Boolean).join(' · ');
+        const subLine = [title, mainCategory, country, email, phone].filter(Boolean).join(' · ');
+        const matchStars = matchScore > 0 ? '★'.repeat(matchScore) + '☆'.repeat(5 - matchScore) : '';
         return `<tr style="cursor:pointer;" onclick="showCustomerDetail(${c.id})">
             <td style="width:30px;" onclick="event.stopPropagation()"><input type="checkbox" class="cust-checkbox" value="${c.id}" onchange="updateBatchDeleteBtn()"></td>
             <td style="padding:8px 10px;">
                 <div style="font-weight:600;font-size:13px;color:var(--text-primary);">${esc(c.name)}${contact ? '<span style="font-weight:400;color:var(--text-muted);margin-left:6px;">' + esc(contact) + '</span>' : ''}</div>
-                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;display:flex;align-items:center;gap:8px;">
+                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <span style="color:${tierColor};font-weight:600;">● ${tierLabel} 级</span>
+                    ${buyerType ? '<span style="background:var(--bg-muted);padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(buyerType) + '</span>' : ''}
+                    ${matchStars ? '<span style="color:var(--accent);font-size:10px;">' + matchStars + '</span>' : ''}
                     ${subLine ? '<span>' + esc(subLine) + '</span>' : ''}
                     ${note ? '<span style="color:var(--text-muted);">📝 ' + esc(note) + '</span>' : ''}
                     <span style="color:var(--text-muted);margin-left:auto;font-size:10px;white-space:nowrap;">${esc(updated)}</span>
@@ -1936,6 +1955,9 @@ async function showCustomerDetail(cid) {
     const extra1 = _parseExtra1(c);
     const extra2 = _parseExtra2(c);
     const tier = extra1['tier'] || '';
+    const buyerType = extra1['buyer_type'] || '';
+    const mainCategory = extra1['main_category'] || '';
+    const matchScore = extra1['match_score'] || 0;
     const country = extra1['country'] || '';
     const linkedin = extra1['linkedin_url'] || '';
     const website = extra1['company_website'] || '';
@@ -1944,6 +1966,7 @@ async function showCustomerDetail(cid) {
     const phone = extra2['phone'] || '';
     const whatsapp = extra2['whatsapp'] || '';
     const backupEmail = extra2['backup_email'] || '';
+    const followUpNote = extra2['follow_up_note'] || '';
 
     const libs = c._libraries || await (async () => {
         const result = await api('GET', `/api/trade/customers/${cid}/libraries`) || [];
@@ -1989,7 +2012,18 @@ async function showCustomerDetail(cid) {
                     <option value="B" ${tier==='B'?'selected':''}>B 级</option>
                     <option value="C" ${tier==='C'?'selected':''}>C 级</option>
                 </select></div>
+                <div class="panel-field"><label for="detail-buyer-type">买家类型</label><select id="detail-buyer-type">
+                    <option value="" ${!buyerType?'selected':''}>未设置</option>
+                    ${['品牌商','分销商','代理商','安装商','维保商','同行','其他'].map(t => `<option value="${t}" ${buyerType===t?'selected':''}>${t}</option>`).join('')}
+                </select></div>
                 <div class="panel-field"><label for="detail-country">国家</label><input type="text" value="${esc(country)}" id="detail-country"></div>
+            </div>
+            <div class="panel-field-row">
+                <div class="panel-field"><label for="detail-main-category">主营品类</label><input type="text" value="${esc(mainCategory)}" id="detail-main-category"></div>
+                <div class="panel-field"><label for="detail-match-score">匹配度</label><select id="detail-match-score">
+                    <option value="0" ${matchScore==0?'selected':''}>未评分</option>
+                    ${[1,2,3,4,5].map(s => `<option value="${s}" ${matchScore==s?'selected':''}>${s} - ${s===1?'低':s===3?'中':s===5?'高':''}</option>`).join('')}
+                </select></div>
             </div>
             <div class="panel-field-row">
                 <div class="panel-field"><label for="detail-email">邮箱</label><input type="text" value="${esc(email)}" id="detail-email"></div>
@@ -2007,6 +2041,7 @@ async function showCustomerDetail(cid) {
                 <div class="panel-field"><label for="detail-contact">联系方式</label><input type="text" value="${esc(c.contact||'')}" id="detail-contact"></div>
             </div>
             <div class="panel-field"><label for="detail-note">备注</label><textarea id="detail-note">${esc(c.note||'')}</textarea></div>
+            <div class="panel-field"><label for="detail-follow-up-note">AI 跟进建议</label><textarea id="detail-follow-up-note">${esc(followUpNote)}</textarea></div>
             <button class="btn btn-primary" onclick="saveCustomerDetail(${c.id})" style="width:100%;">💾 保存修改</button>
         </div>
         <div class="panel-section">
@@ -2064,6 +2099,9 @@ async function saveCustomerDetail(cid) {
     const note = $('detail-note')?.value?.trim()||'';
     const country = $('detail-country')?.value?.trim()||'';
     const tier = $('detail-tier')?.value||'';
+    const buyerType = $('detail-buyer-type')?.value||'';
+    const mainCategory = $('detail-main-category')?.value?.trim()||'';
+    const matchScore = parseInt($('detail-match-score')?.value) || 0;
     const linkedin = $('detail-linkedin')?.value?.trim()||'';
     const title = $('detail-title')?.value?.trim()||'';
     const email = $('detail-email')?.value?.trim()||'';
@@ -2071,9 +2109,10 @@ async function saveCustomerDetail(cid) {
     const whatsapp = $('detail-whatsapp')?.value?.trim()||'';
     const website = $('detail-website')?.value?.trim()||'';
     const backupEmail = $('detail-backup-email')?.value?.trim()||'';
+    const followUpNote = $('detail-follow-up-note')?.value?.trim()||'';
 
     await api('PUT', `/api/trade/customers/${cid}`, {name, contact, note, country, tier, linkedin_url: linkedin,
-        title, email, phone, whatsapp, company_website: website, backup_email: backupEmail});
+        title, email, phone, whatsapp, company_website: website, backup_email: backupEmail, buyer_type: buyerType, follow_up_note: followUpNote, main_category: mainCategory, match_score: matchScore});
     toast('已保存');
     closeCustomerDetail();
     await loadCustomersData();
@@ -2254,12 +2293,16 @@ function showCustomerEditModal(cid) {
         $('cust-linkedin').value = extra1['linkedin_url']||'';
         $('cust-website').value = extra1['company_website']||'';
         $('cust-tier').value = extra1['tier']||'';
+        $('cust-buyer-type').value = extra1['buyer_type']||'';
+        $('cust-main-category').value = extra1['main_category']||'';
+        $('cust-match-score').value = extra1['match_score']||0;
         $('cust-backup-email').value = extra2['backup_email']||'';
+        $('cust-follow-up-note').value = extra2['follow_up_note']||'';
         $('cust-note').value = c.note||'';
     } else {
         $('customer-modal-title').textContent = '添加客户';
         $('cust-edit-id').value = '';
-        ['cust-name','cust-contact','cust-title','cust-country','cust-email','cust-phone','cust-whatsapp','cust-linkedin','cust-website','cust-tier','cust-backup-email','cust-note'].forEach(id => $(id).value='');
+        ['cust-name','cust-contact','cust-title','cust-country','cust-email','cust-phone','cust-whatsapp','cust-linkedin','cust-website','cust-tier','cust-buyer-type','cust-main-category','cust-match-score','cust-backup-email','cust-note','cust-follow-up-note'].forEach(id => $(id).value='');
     }
     showModal('customer-modal');
 }
@@ -2272,6 +2315,9 @@ async function saveCustomer() {
     const note = $('cust-note').value.trim();
     const country = $('cust-country').value.trim();
     const tier = $('cust-tier').value;
+    const buyerType = $('cust-buyer-type').value;
+    const mainCategory = $('cust-main-category').value.trim();
+    const matchScore = parseInt($('cust-match-score').value) || 0;
     const linkedin = $('cust-linkedin').value.trim();
     const title = $('cust-title').value.trim();
     const email = $('cust-email').value.trim();
@@ -2279,9 +2325,10 @@ async function saveCustomer() {
     const whatsapp = $('cust-whatsapp').value.trim();
     const website = $('cust-website').value.trim();
     const backupEmail = $('cust-backup-email').value.trim();
+    const followUpNote = $('cust-follow-up-note').value.trim();
 
     const body = {name, contact, note, country, tier, linkedin_url: linkedin,
-        title, email, phone, whatsapp, company_website: website, backup_email: backupEmail};
+        title, email, phone, whatsapp, company_website: website, backup_email: backupEmail, buyer_type: buyerType, follow_up_note: followUpNote, main_category: mainCategory, match_score: matchScore};
     if (editId) {
         await api('PUT', `/api/trade/customers/${editId}`, body);
     } else {
@@ -2291,6 +2338,37 @@ async function saveCustomer() {
     await loadCustomersData();
     if (currentView === 'customers') renderCustomersTable(allCustomers);
     toast(editId ? '客户已更新' : '客户已添加');
+}
+
+// ── 批量导入 ───────────────────────────────────────────
+async function bulkImportCustomers() {
+    const fileInput = document.getElementById('cust-bulk-file');
+    if (!fileInput || !fileInput.files.length) return;
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    const btn = fileInput.nextElementSibling;
+    btn.disabled = true; btn.textContent = '导入中...';
+
+    try {
+        const resp = await fetch('/api/trade/customers/bulk', {
+            method: 'POST',
+            headers: { 'X-Hermes-Session-Token': TOKEN, 'X-Company-ID': String(currentCompanyId) },
+            body: formData,
+        });
+        const result = await resp.json();
+        if (resp.ok) {
+            toast(`导入完成：新增 ${result.created} 条，跳过 ${result.skipped} 条（重复或空行）`);
+            await loadCustomersData();
+            if (currentView === 'customers') renderCustomersTable(allCustomers);
+        } else {
+            toast(result.detail || '导入失败');
+        }
+    } catch (e) {
+        toast('导入失败: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '📤 上传导入';
+    fileInput.value = '';
 }
 
 // ═════════════════════ TASKS VIEW ═════════════════════

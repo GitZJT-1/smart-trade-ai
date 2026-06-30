@@ -78,6 +78,10 @@ class CustomerCreate(BaseModel):
     whatsapp: str = Field("", description="WhatsApp")
     wechat: str = Field("", description="微信")
     source: str = Field("", description="客户来源 (manual/agent/import)")
+    buyer_type: str = Field("", description="买家类型 (品牌商/分销商/代理商/安装商/维保商/同行)")
+    follow_up_note: str = Field("", description="AI 跟进建议")
+    main_category: str = Field("", description="主营品类 (客户主营产品/行业)")
+    match_score: int = Field(0, description="匹配度评分 (0-5)")
 
 
 class CustomerUpdate(BaseModel):
@@ -95,6 +99,10 @@ class CustomerUpdate(BaseModel):
     phone: str | None = Field(None, description="电话")
     whatsapp: str | None = Field(None, description="WhatsApp")
     wechat: str | None = Field(None, description="微信")
+    buyer_type: str | None = Field(None, description="买家类型 (品牌商/分销商/代理商/安装商/维保商/同行)")
+    follow_up_note: str | None = Field(None, description="AI 跟进建议")
+    main_category: str | None = Field(None, description="主营品类 (客户主营产品/行业)")
+    match_score: int | None = Field(None, description="匹配度评分 (0-5)")
 
 
 # ── Order ─────────────────────────────────────────────────────────────────────

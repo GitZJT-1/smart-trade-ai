@@ -110,7 +110,7 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 205 tests across 8 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade).
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. Test files: test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade.
 
 ## Pre-install Check
 
@@ -222,7 +222,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 17 skill definitions (pure data — triggers, aliases, formats)
+        ├─ trade/skill_registry.py 19 skill definitions (pure data — triggers, aliases, formats)
         └─ trade/post_install.py Skill installation + CLI commands (update/backup)
 ```
 

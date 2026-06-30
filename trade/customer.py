@@ -28,6 +28,10 @@ def create(
     whatsapp: str = "",
     wechat: str = "",
     source: str = "",
+    buyer_type: str = "",
+    follow_up_note: str = "",
+    main_category: str = "",
+    match_score: int = 0,
 ) -> dict:
     """创建一条归属于指定公司的客户记录。返回新行的字典表示。"""
     extra1 = json.dumps({
@@ -36,6 +40,9 @@ def create(
         "linkedin_url": linkedin_url,
         "company_website": company_website,
         "social_media": social_media or {},
+        "buyer_type": buyer_type,
+        "main_category": main_category,
+        "match_score": match_score,
     }, ensure_ascii=False)
     extra2 = json.dumps({
         "title": title,
@@ -45,6 +52,7 @@ def create(
         "whatsapp": whatsapp,
         "wechat": wechat,
         "source": source,
+        "follow_up_note": follow_up_note,
     }, ensure_ascii=False)
 
     conn = get_connection()
@@ -97,11 +105,11 @@ def update(
     """更新客户字段（单事务，部分失败统一回滚）。
 
     基础字段: name, contact, note
-    extra1 字段: country, tier, linkedin_url, company_website, social_media
-    extra2 字段: email, backup_email, phone, whatsapp, wechat, source, last_contact_at
+    extra1 字段: country, tier, linkedin_url, company_website, social_media, buyer_type, main_category, match_score
+    extra2 字段: title, email, backup_email, phone, whatsapp, wechat, source, last_contact_at, follow_up_note
     """
-    extra1_keys = {"country", "tier", "linkedin_url", "company_website", "social_media"}
-    extra2_keys = {"title", "email", "backup_email", "phone", "whatsapp", "wechat", "source", "last_contact_at"}
+    extra1_keys = {"country", "tier", "linkedin_url", "company_website", "social_media", "buyer_type", "main_category", "match_score"}
+    extra2_keys = {"title", "email", "backup_email", "phone", "whatsapp", "wechat", "source", "last_contact_at", "follow_up_note"}
     basic_allowed = {"name", "contact", "note"}
 
     extra1_updates = {k: v for k, v in kwargs.items() if k in extra1_keys and v is not None}
@@ -327,7 +335,8 @@ def bulk_save(
         customers: 客户字典列表，每个可含:
             name (必填), contact, note, country, tier, linkedin_url,
             company_website, social_media (dict), email, backup_email,
-            phone, whatsapp, wechat, source
+            phone, whatsapp, wechat, source, buyer_type, follow_up_note,
+            main_category, match_score
         library_id: 如果从文档库扫描提取，自动关联此文档库
 
     Returns:
@@ -367,6 +376,10 @@ def bulk_save(
             whatsapp=cust.get("whatsapp", ""),
             wechat=cust.get("wechat", ""),
             source=cust.get("source", "agent"),
+            buyer_type=cust.get("buyer_type", ""),
+            follow_up_note=cust.get("follow_up_note", ""),
+            main_category=cust.get("main_category", ""),
+            match_score=cust.get("match_score", 0),
         )
 
         # 如果指定了文档库，自动关联

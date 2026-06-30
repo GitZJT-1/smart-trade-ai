@@ -4,14 +4,17 @@ Trade AI Assistant — 客户管理 API 路由。
 端点：
   GET    /customers                              — 列出当前公司的客户
   POST   /customers                              — 创建客户
-  POST   /customers/bulk                         — 批量导入（CSV 文件上传）
   GET    /customers/template                     — 下载 CSV 导入模板
+  POST   /customers/bulk                         — 批量导入（CSV 文件上传）
   GET    /customers/{customer_id}                 — 获取客户详情
   PUT    /customers/{customer_id}                 — 更新客户
   DELETE /customers/{customer_id}                 — 删除客户
   POST   /customers/{customer_id}/libraries/{id}  — 关联文档库
   DELETE /customers/{customer_id}/libraries/{id}  — 取消关联
   GET    /customers/{customer_id}/libraries       — 列出关联的文档库
+
+注意：/customers/template 和 /customers/bulk 必须在 /customers/{customer_id}
+之前注册，否则 FastAPI 会把 "template" 当作 customer_id 解析导致 422。
 """
 
 from __future__ import annotations
@@ -58,46 +61,9 @@ def create_customer(
     )
 
 
-@router.get("/customers/{customer_id}")
-def get_customer(
-    customer_id: int,
-    cid: int = Depends(require_company),
-):
-    """获取客户详情（必须属于当前公司）。"""
-    cust = customer_module.get(customer_id, company_id=cid)
-    if not cust:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return cust
-
-
-@router.put("/customers/{customer_id}")
-def update_customer(
-    customer_id: int,
-    payload: CustomerUpdate,
-    cid: int = Depends(require_company),
-):
-    """更新客户字段（必须属于当前公司）。"""
-    kwargs = payload.model_dump(exclude_none=True)
-    result = customer_module.update(customer_id, company_id=cid, **kwargs)
-    if not result:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return result
-
-
-@router.delete("/customers/{customer_id}")
-def delete_customer(
-    customer_id: int,
-    cid: int = Depends(require_company),
-):
-    """删除客户（必须属于当前公司）。"""
-    if not customer_module.delete(customer_id, company_id=cid):
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return {"ok": True}
-
-
 # ── CSV 列名 → customer 字段映射（批量导入）──────────────────────────────
+# 必须定义在路由装饰器之前
 
-# 用户 CSV 表头 → 内部字段名
 _CSV_FIELD_MAP = {
     "name": "name",
     "contact": "contact",
@@ -138,6 +104,8 @@ def _find_static_dir() -> Path:
     # 开发目录
     return Path(__file__).resolve().parent.parent.parent / "static"
 
+
+# ── 模板下载 + 批量导入（必须在 {customer_id} 路由之前注册）─────────────
 
 @router.get("/customers/template")
 def download_customer_template():
@@ -199,6 +167,45 @@ async def bulk_import_customers(
 
     result = customer_module.bulk_save(company_id=cid, customers=customers)
     return result
+
+
+# ── 客户详情 / 更新 / 删除（{customer_id} 通配路由必须在字面路由之后）─
+
+@router.get("/customers/{customer_id}")
+def get_customer(
+    customer_id: int,
+    cid: int = Depends(require_company),
+):
+    """获取客户详情（必须属于当前公司）。"""
+    cust = customer_module.get(customer_id, company_id=cid)
+    if not cust:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return cust
+
+
+@router.put("/customers/{customer_id}")
+def update_customer(
+    customer_id: int,
+    payload: CustomerUpdate,
+    cid: int = Depends(require_company),
+):
+    """更新客户字段（必须属于当前公司）。"""
+    kwargs = payload.model_dump(exclude_none=True)
+    result = customer_module.update(customer_id, company_id=cid, **kwargs)
+    if not result:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return result
+
+
+@router.delete("/customers/{customer_id}")
+def delete_customer(
+    customer_id: int,
+    cid: int = Depends(require_company),
+):
+    """删除客户（必须属于当前公司）。"""
+    if not customer_module.delete(customer_id, company_id=cid):
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return {"ok": True}
 
 
 # ── 客户 ↔ 文档库关联 ────────────────────────────────────────────────────

@@ -234,8 +234,12 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
     # 已激活：验签 + 检查是否在有效期内
     if data.get("activated") and data.get("expires_at"):
         if not _verify_license(data):
-            # 签名无效 → license_data 被篡改，要求重新激活
-            return False, "许可证数据异常，请使用激活码重新激活。"
+            # 签名无效 → 尝试从原始激活码自恢复（升级后签名格式可能不匹配）
+            if data.get("code") and _recover_signature_from_code(data):
+                # 自恢复成功，重新加载数据
+                data = _get_license_data(company_id)
+            else:
+                return False, "许可证数据异常，请使用激活码重新激活。"
         expires = datetime.fromisoformat(data["expires_at"]).replace(tzinfo=UTC)
         if now < expires:
             return True, ""
@@ -368,6 +372,29 @@ def _verify_license(data: dict) -> bool:
     except (InvalidSignature, ValueError, TypeError):
         # 签名不匹配 / base64 解码失败 / payload 构造失败 → 篡改证据或数据损坏
         return False
+
+
+def _recover_signature_from_code(data: dict) -> bool:
+    """升级后签名格式不匹配时，从原始激活码重新提取签名。
+
+    激活码在 activate() 时已验证过（_decode_activation_code 包含验签），
+    因此只需重新解码并提取签名，无需重复验签。
+    返回 True 表示已成功恢复并持久化。
+    """
+    code = data.get("code")
+    if not code:
+        return False
+    try:
+        decoded = _decode_activation_code(code)
+    except Exception:
+        return False
+    # 重新持久化签名
+    data["signature"] = base64.urlsafe_b64encode(decoded["signature"]).decode()
+    try:
+        _save_license_data(data)
+    except Exception:
+        return False
+    return True
 
 
 # ── 激活码验证 ────────────────────────────────────────────────────────────────

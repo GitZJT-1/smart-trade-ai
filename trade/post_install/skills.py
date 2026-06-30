@@ -106,7 +106,7 @@ def _copy_skills(src: Path, dst_base: Path, progress_callback=None) -> list[str]
     for skill_dir in sorted(src.iterdir()):
         if not skill_dir.is_dir():
             continue
-        if not (skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")):
+        if not (skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"):
             continue
         skill_file = skill_dir / "SKILL.md"
         if not skill_file.is_file():
@@ -285,9 +285,9 @@ def update_skills() -> None:
 
     for skill_dir in sorted(package_skills.iterdir()):
         if not skill_dir.is_dir() or not (
-            skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")
+            skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"
         ):
-            continue  # 只处理 b2b- 和 auto- 前缀的 skill 目录
+            continue  # 只处理 b2b-、auto-、chat-memory skill 目录
 
         skill_name = skill_dir.name
 
@@ -296,7 +296,7 @@ def update_skills() -> None:
             ".." in skill_name
             or "/" in skill_name
             or "\\" in skill_name
-            or not (skill_name.startswith("b2b-") or skill_name.startswith("auto-"))
+            or not (skill_name.startswith("b2b-") or skill_name.startswith("auto-") or skill_name == "chat-memory")
         ):
             print(f"  ✗ {skill_name} (invalid name, skipped)", file=sys.stderr)
             failed += 1

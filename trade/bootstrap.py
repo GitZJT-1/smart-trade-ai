@@ -186,7 +186,7 @@ def sync_b2b_skills():
         synced = 0
         for skill_dir in sorted(_project_skills.iterdir()):
             if not skill_dir.is_dir() or not (
-                skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-")
+                skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"
             ):
                 continue
             src = skill_dir / "SKILL.md"

@@ -140,7 +140,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 17 skill definitions (pure data — triggers, aliases, formats)
+        ├─ trade/skill_registry.py 19 skill definitions (pure data — triggers, aliases, formats)
         └─ trade/post_install.py Skill installation + CLI commands (update/backup)
 ```
 

@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Added
+- **客户模型增强**：新增 4 个分类维度 — `buyer_type`（买家类型）、`main_category`（主营品类）、`match_score`（匹配度 0-5）、`follow_up_note`（AI 跟进建议）。存储在现有 `extra1`/`extra2` JSON 列中，零 schema 变更，旧数据自动兼容
+- **CSV 批量导入客户**：`POST /api/trade/customers/bulk`（上传 CSV → 列名确定性映射 → 写入） + `GET /api/trade/customers/template`（下载模板文件）。杜绝 LLM 自由解析 Excel 的误差
 - **TradeWin 文档库对话框**：新增 `LibraryDialog`，列出当前公司所有文档库（名称/根目录/说明）；侧边栏「📁 文档库」导航从错连 CompanyDialog 改为正确弹出 LibraryDialog
 - **update_trade 单元测试**：`tests/test_upgrade.py::TestUpdateTrade` 新增 4 个用例（成功流程 / pip 失败 / git stash 失败 / 运行目录缺失），覆盖 7 步更新编排逻辑，测试总数 201 → 205
 

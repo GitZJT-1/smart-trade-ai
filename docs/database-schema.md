@@ -61,8 +61,8 @@
 | note | TEXT | 备注 / 跟进项目 |
 | created_at | TEXT | 创建时间 |
 | updated_at | TEXT | 更新时间 |
-| extra1 | TEXT (JSON) | {"country":"", "tier":"A/B/C", "linkedin_url":"", "company_website":"", "social_media":{}} |
-| extra2 | TEXT (JSON) | {"title":"", "email":"", "backup_email":"", "phone":"", "whatsapp":"", "source":"", "last_contact_at":""} |
+| extra1 | TEXT (JSON) | {"country":"", "tier":"A/B/C", "linkedin_url":"", "company_website":"", "social_media":{}, "buyer_type":"", "main_category":"", "match_score":0} |
+| extra2 | TEXT (JSON) | {"title":"", "email":"", "backup_email":"", "phone":"", "whatsapp":"", "wechat":"", "source":"", "last_contact_at":"", "follow_up_note":""} |
 | extra3 | TEXT (JSON) | 备用扩展 |
 
 ### 5. customer_libraries — 客户↔文档库关联

@@ -17,7 +17,7 @@ dependencies = [
   "python-multipart>=0.0.9,<1.0",
   # Explicit — needed for SKILL.md frontmatter parsing and version checks
   "pyyaml>=6.0,<7.0",
-  "packaging>=23.0,<25.0",
+  "packaging>=23.0,<27.0",
   # Hermes Agent — AI engine, tools, memory, skills.
   # Pin to exact git tag for deterministic installs.
   "hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git@v2026.6.19",

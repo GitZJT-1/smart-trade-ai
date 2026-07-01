@@ -851,6 +851,33 @@ function _clearRuntimeCaches() {
     } catch(_) { /* sessionStorage 在隐私模式下可能抛错，忽略 */ }
 }
 
+// ── 重启前状态保存 / 恢复（避免 hard reload 丢失阅读位置）──────────
+
+function _saveReloadState() {
+    try {
+        const state = {
+            view: currentView || 'chat',
+            scrollY: window.scrollY || document.documentElement.scrollTop || 0,
+            chatCtx: currentView === 'chat' ? (currentChatContext || '') : '',
+            chatName: currentView === 'chat' ? (currentChatName || '') : '',
+            ts: Date.now(),
+        };
+        sessionStorage.setItem('_trade_reload_state', JSON.stringify(state));
+    } catch(_) {}
+}
+
+function _restoreReloadState() {
+    try {
+        const raw = sessionStorage.getItem('_trade_reload_state');
+        if (!raw) return null;
+        sessionStorage.removeItem('_trade_reload_state');
+        const state = JSON.parse(raw);
+        // 超过 5 分钟的旧状态丢弃（可能是残留）
+        if (Date.now() - state.ts > 300000) return null;
+        return state;
+    } catch(_) { return null; }
+}
+
 // 通过 /api/status 的 started_at 时间戳检测进程是否已重启，然后 hard-reload
 // 不依赖 DOWN→UP 序列：新进程启动快时 DOWN 瞬间无法捕捉
 async function _waitForRestartAndReload(onTimeout) {
@@ -878,6 +905,7 @@ async function _waitForRestartAndReload(onTimeout) {
                 // 检测到重启：started_at 从旧值变为新值（-1→数值也算）
                 if (cur > 0 && cur !== oldStartedAt) {
                     console.log('[重启] 第 ' + attempts + ' 次 — 检测到新进程 (started_at=' + cur + ')，刷新页面');
+                    _saveReloadState();  // 保存当前浏览位置，reload 后恢复
                     _clearRuntimeCaches();
                     try { sessionStorage.removeItem('_upgrade_in_progress'); } catch(_) {}
                     location.href = '/trade?_=' + Date.now();
@@ -3192,12 +3220,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentCompanyId = companies[0].id;
     }
 
+    // 检测重启前保存的浏览状态（避免 hard reload 丢失阅读位置）
+    const reloadState = _restoreReloadState();
+
     if (currentCompanyId) {
         saveState();
-        // 更新下拉框显示当前选中的公司名
         const sel = $('company-select');
         if (sel) sel.value = currentCompanyId;
-        navToView('chat', 'daily', '今日简报');
+        // 恢复之前的视图或默认打开今日简报
+        const restoreView = reloadState?.view || 'chat';
+        const restoreCtx = reloadState?.chatCtx || 'daily';
+        const restoreName = reloadState?.chatName || '今日简报';
+        navToView(restoreView, restoreCtx, restoreName);
+        // 恢复滚动位置（等 DOM 渲染完成后）
+        if (reloadState?.scrollY > 0) {
+            setTimeout(() => { window.scrollTo({ top: reloadState.scrollY, behavior: 'instant' }); }, 200);
+        }
         startCronPolling();
         startVersionCheck();
     } else {

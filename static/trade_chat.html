@@ -1081,11 +1081,13 @@ function navToView(view, chatCtx, chatName) {
 
         switch (view) {
             case 'chat':
-                // 不在此处重置 currentLibraryId / currentCustomerId
-                // 调用方（如 showConversationDetail）可能在 navToView 之前已经设置了这些值
-                // 先设置 currentChatContainer 让 loadChatHistory 能正常工作
                 currentChatContainer = container;
                 renderChatViewInto(container, chatCtx, chatName);
+                // 绑定滚动监听，用户上翻历史消息时显示回到底部浮标
+                setTimeout(() => {
+                    const msg = container.querySelector('#chat-messages');
+                    if (msg) _ensureScrollHint(msg);
+                }, 300);
                 break;
             case 'customers':
                 renderCustomersViewInto(container);
@@ -1365,42 +1367,56 @@ async function loadCronStatus(isPoll = false) {
     }
     if (completed.length) {
         const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-        if (nearBottom) {
-            container.scrollTop = container.scrollHeight;
-        } else {
-            _showScrollHint(container);
-        }
+        if (nearBottom) container.scrollTop = container.scrollHeight;
     }
 }
 
-// ── 新内容浮标（用户不在底部时提示）───────────────────
-function _showScrollHint(container) {
-    // 已存在则不重复创建
-    if (document.getElementById('scroll-hint')) return;
-    const hint = document.createElement('div');
-    hint.id = 'scroll-hint';
-    hint.title = '点击滚动到最新内容';
-    hint.innerHTML = '▼';
-    hint.style.cssText = 'position:absolute;right:16px;bottom:80px;width:36px;height:36px;'
-        + 'background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;'
-        + 'cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:10;transition:transform 0.15s;animation:pulseHint 2s infinite;';
-    hint.onmouseenter = () => hint.style.transform = 'scale(1.1)';
-    hint.onmouseleave = () => hint.style.transform = 'scale(1)';
-    hint.onclick = () => {
-        container.scrollTop = container.scrollHeight;
-        hint.remove();
-    };
-    // 挂到 container 的父级（#chat-messages 所在的滚动容器）
+// ── 滚动到底部浮标（用户不在底部时始终显示）─────────
+
+function _ensureScrollHint(container) {
+    // 为当前活跃的聊天容器绑定滚动监听，自动显示/隐藏到底部浮标
+    if (container._scrollHintBound) return;
+    container._scrollHintBound = true;
     container.style.position = 'relative';
-    container.appendChild(hint);
-    // 用户自己滚到底部时自动消失
-    const _check = () => {
-        if (!document.getElementById('scroll-hint')) return;
-        if (container.scrollHeight - container.scrollTop - container.clientHeight < 120) {
-            hint.remove();
+
+    // 创建浮标（全局唯一，跟随活跃容器）
+    const _getHint = () => {
+        let h = document.getElementById('scroll-hint');
+        if (!h) {
+            h = document.createElement('div');
+            h.id = 'scroll-hint';
+            h.title = '回到底部';
+            h.innerHTML = '▼';
+            h.style.cssText = 'position:absolute;right:16px;bottom:80px;width:36px;height:36px;'
+                + 'background:var(--primary);color:#fff;border-radius:50%;display:none;align-items:center;justify-content:center;'
+                + 'cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:10;transition:transform 0.15s;animation:pulseHint 2s infinite;';
+            h.onmouseenter = () => h.style.transform = 'scale(1.1)';
+            h.onmouseleave = () => h.style.transform = 'scale(1)';
+            h.onclick = () => {
+                const ct = currentChatContainer;
+                const msg = ct?.querySelector('#chat-messages');
+                if (msg) msg.scrollTop = msg.scrollHeight;
+                h.style.display = 'none';
+            };
+        }
+        return h;
+    };
+
+    const _update = () => {
+        const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+        const hint = _getHint();
+        if (nearBottom) {
+            hint.style.display = 'none';
+        } else {
+            // 确保浮标挂在当前活跃容器上
+            if (hint.parentElement !== container) container.appendChild(hint);
+            hint.style.display = 'flex';
         }
     };
-    container.addEventListener('scroll', _check, { once: false });
+
+    container.addEventListener('scroll', _update, { passive: true });
+    // 初始检测
+    _update();
 }
 
 function onChatLibraryChange(libId) {

@@ -143,6 +143,44 @@ def _rename_template_placeholders(base: Path, slug: str) -> None:
                 p.rename(p.parent / slug)
 
 
+# ── 桌面路径获取 ──────────────────────────────────────────────────────────
+
+def _get_desktop_path() -> Path:
+    """获取当前用户的实际桌面路径（处理 OneDrive 重定向等场景）。
+
+    Windows 上使用 SHGetFolderPathW API 获取真实桌面路径，
+    macOS/Linux 回退到 ~/Desktop。
+    """
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+            # CSIDL_DESKTOPDIRECTORY = 16，获取物理桌面路径（含 OneDrive 重定向）
+            ctypes.windll.shell32.SHGetFolderPathW(None, 16, None, 0, buf)
+            desktop = buf.value.strip()
+            if desktop and Path(desktop).is_dir():
+                return Path(desktop)
+        except Exception:
+            pass
+        # API 调用失败时回退到 USERPROFILE\Desktop
+        fallback = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
+        if fallback.is_dir():
+            return fallback
+        return Path.home()
+
+    # macOS / Linux
+    desktop = Path.home() / "Desktop"
+    if desktop.is_dir():
+        return desktop
+    # macOS 中文语言环境
+    desktop_cn = Path.home() / "桌面"
+    if desktop_cn.is_dir():
+        return desktop_cn
+    return Path.home()
+
+
 # ── 桌面工作目录创建 ──────────────────────────────────────────────────────
 
 def _setup_work_directory(
@@ -171,12 +209,7 @@ def _setup_work_directory(
             import tempfile
             base = Path(tempfile.mkdtemp(prefix="trade-work-"))
     else:
-        # 生产环境：默认放在桌面
-        base = Path.home() / "Desktop"
-        if not base.is_dir():
-            base = Path.home() / "桌面"  # macOS 中文桌面路径
-        if not base.is_dir():
-            base = Path.home()  # 桌面都不存在时回退到 home
+        base = _get_desktop_path()
 
     # 确定目录名（用户指定优先，否则用公司名）
     dir_name = (suggested_name.strip() if suggested_name.strip()

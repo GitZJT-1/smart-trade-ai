@@ -394,6 +394,7 @@ body {
     animation: modalIn 0.25s var(--ease-out);
 }
 @keyframes modalIn { from { transform: scale(0.95) translateY(8px); opacity: 0; } }
+@keyframes pulseHint { 0%,100% { box-shadow: 0 2px 8px rgba(0,0,0,0.2); } 50% { box-shadow: 0 2px 20px var(--primary); } }
 .modal.wide { width: 640px; }
 .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.01em; }
 .modal-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
@@ -1362,11 +1363,44 @@ async function loadCronStatus(isPoll = false) {
         container.appendChild(msgDiv);
         _shownCronOutputs.add(t.name);
     }
-    // 仅当用户已在底部（阅读最新内容）时才自动滚动，避免打断阅读旧内容
     if (completed.length) {
         const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-        if (nearBottom) container.scrollTop = container.scrollHeight;
+        if (nearBottom) {
+            container.scrollTop = container.scrollHeight;
+        } else {
+            _showScrollHint(container);
+        }
     }
+}
+
+// ── 新内容浮标（用户不在底部时提示）───────────────────
+function _showScrollHint(container) {
+    // 已存在则不重复创建
+    if (document.getElementById('scroll-hint')) return;
+    const hint = document.createElement('div');
+    hint.id = 'scroll-hint';
+    hint.title = '点击滚动到最新内容';
+    hint.innerHTML = '▼';
+    hint.style.cssText = 'position:absolute;right:16px;bottom:80px;width:36px;height:36px;'
+        + 'background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+        + 'cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:10;transition:transform 0.15s;animation:pulseHint 2s infinite;';
+    hint.onmouseenter = () => hint.style.transform = 'scale(1.1)';
+    hint.onmouseleave = () => hint.style.transform = 'scale(1)';
+    hint.onclick = () => {
+        container.scrollTop = container.scrollHeight;
+        hint.remove();
+    };
+    // 挂到 container 的父级（#chat-messages 所在的滚动容器）
+    container.style.position = 'relative';
+    container.appendChild(hint);
+    // 用户自己滚到底部时自动消失
+    const _check = () => {
+        if (!document.getElementById('scroll-hint')) return;
+        if (container.scrollHeight - container.scrollTop - container.clientHeight < 120) {
+            hint.remove();
+        }
+    };
+    container.addEventListener('scroll', _check, { once: false });
 }
 
 function onChatLibraryChange(libId) {

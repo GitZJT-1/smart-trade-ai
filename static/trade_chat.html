@@ -1362,7 +1362,11 @@ async function loadCronStatus(isPoll = false) {
         container.appendChild(msgDiv);
         _shownCronOutputs.add(t.name);
     }
-    if (completed.length) container.scrollTop = container.scrollHeight;
+    // 仅当用户已在底部（阅读最新内容）时才自动滚动，避免打断阅读旧内容
+    if (completed.length) {
+        const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+        if (nearBottom) container.scrollTop = container.scrollHeight;
+    }
 }
 
 function onChatLibraryChange(libId) {

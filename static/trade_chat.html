@@ -1083,11 +1083,6 @@ function navToView(view, chatCtx, chatName) {
             case 'chat':
                 currentChatContainer = container;
                 renderChatViewInto(container, chatCtx, chatName);
-                // 绑定滚动监听，用户上翻历史消息时显示回到底部浮标
-                setTimeout(() => {
-                    const msg = container.querySelector('#chat-messages');
-                    if (msg) _ensureScrollHint(msg);
-                }, 300);
                 break;
             case 'customers':
                 renderCustomersViewInto(container);
@@ -1104,7 +1099,14 @@ function navToView(view, chatCtx, chatName) {
 
     viewCache[cacheKey].element.style.display = 'flex';
     // 记录当前活跃的 chat 容器
-    if (view === 'chat') currentChatContainer = viewCache[cacheKey].element;
+    if (view === 'chat') {
+        currentChatContainer = viewCache[cacheKey].element;
+        // 绑定滚动监听——每次激活聊天视图都重新挂载浮标
+        setTimeout(() => {
+            const msg = currentChatContainer?.querySelector('#chat-messages');
+            if (msg) _ensureScrollHint(msg);
+        }, 300);
+    }
 }
 
 // ═════════════════════ CHAT VIEW ═════════════════════
@@ -1373,10 +1375,12 @@ async function loadCronStatus(isPoll = false) {
 
 // ── 滚动到底部浮标（用户不在底部时始终显示）─────────
 
+let _lastHintContainer = null;
+
 function _ensureScrollHint(container) {
-    // 为当前活跃的聊天容器绑定滚动监听，自动显示/隐藏到底部浮标
-    if (container._scrollHintBound) return;
-    container._scrollHintBound = true;
+    // 同一个容器不重复绑定 scroll 监听
+    if (container === _lastHintContainer) return;
+    _lastHintContainer = container;
     container.style.position = 'relative';
 
     // 创建浮标（全局唯一，跟随活跃容器）
@@ -1408,14 +1412,16 @@ function _ensureScrollHint(container) {
         if (nearBottom) {
             hint.style.display = 'none';
         } else {
-            // 确保浮标挂在当前活跃容器上
-            if (hint.parentElement !== container) container.appendChild(hint);
+            if (hint.parentElement !== container) {
+                // 切换视图时把浮标移到新容器
+                if (hint.parentElement) hint.remove();
+                container.appendChild(hint);
+            }
             hint.style.display = 'flex';
         }
     };
 
     container.addEventListener('scroll', _update, { passive: true });
-    // 初始检测
     _update();
 }
 

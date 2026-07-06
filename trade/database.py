@@ -107,8 +107,8 @@ CREATE TABLE IF NOT EXISTS customers (
     note        TEXT    DEFAULT '',
     created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
     updated_at  TEXT    DEFAULT (datetime('now', 'localtime')),
-    extra1      TEXT    DEFAULT '{}',  -- spare: {"country":"", "website":"", "linkedin_url":""}
-    extra2      TEXT    DEFAULT '{}',  -- spare: {"customer_type":"", "tier":"", "source":""}
+    extra1      TEXT    DEFAULT '{}',  -- spare: {"country":"","tier":"","linkedin_url":"","company_website":"","social_media":{},"buyer_type":"","main_category":"","match_score":0}
+    extra2      TEXT    DEFAULT '{}',  -- spare: {"title":"","email":"","backup_email":"","phone":"","whatsapp":"","wechat":"","source":"","follow_up_note":""}
     extra3      TEXT    DEFAULT '{}'   -- spare: reserved for future use
 );
 

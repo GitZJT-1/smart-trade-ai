@@ -87,8 +87,9 @@ Tests use temporary databases (monkeypatch `_get_db_path`), no production data i
 ## Architecture
 
 ```
-static/trade_chat.html          Chat SPA — single-file vanilla JS (~2900 lines), served at /trade
+static/trade_chat.html          Chat SPA — single-file vanilla JS (~3300 lines), served at /trade
         │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
+        │  trade-customer-template.csv  CSV import template with UTF-8 BOM (Excel-compatible)
         ▼
 server.py                       Thin entry point (5 lines) — calls bootstrap.setup() + app.main()
 tradewin.py                     Desktop app — same backend in daemon thread + pywebview window
@@ -104,7 +105,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
   │                             All sub-routers share Depends(require_session)
   ├── trade/api/companies.py     /companies/*     Multi-company CRUD
   ├── trade/api/libraries.py     /libraries/*     Document library CRUD + file upload
-  ├── trade/api/customers.py     /customers/*     Customer CRUD + library linking
+  ├── trade/api/customers.py     /customers/*     Customer CRUD + CSV bulk import + template download (UTF-8 BOM)
   ├── trade/api/orders.py        /orders/*        Order CRUD (3-layer context query)
   ├── trade/api/conversations.py /conversations/* Chat log CRUD
   ├── trade/api/chat.py          /chat (sync) + /chat/stream (SSE with tool progress)
@@ -121,9 +122,11 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └─ trade/skill_router.py  Keyword-based skill auto-detection + query augmentation
         │
         ├─ trade/database.py    SQLite connection + schema (data/trade.db)
-        │     ├─ trade/company.py       Multi-company CRUD + ~/.trade/ data dir management
+        │     ├─ trade/company/        Multi-company CRUD + ~/.trade/ data dir management
+        │     │     ├── crud.py        Company CRUD operations
+        │     │     └── workdir.py     Cross-platform working directory (SHGetFolderPathW on Windows)
         │     ├─ trade/library.py       Document library CRUD
-        │     ├─ trade/customer.py      Customer CRUD + library associations
+        │     ├─ trade/customer.py      Customer CRUD + CSV parsing (4 classification fields: tier, buyer_type, main_category, match_score)
         │     ├─ trade/order.py         Order CRUD (3-layer context query)
         │     └─ trade/chat_memory.py   Conversation log + Hindsight bridge
         │           └─ trade/memory.py  Hindsight long-term memory client
@@ -151,7 +154,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
 3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
-4. **Hermes version check** — `0.13.0 <= version < 0.16.0` (see COMPATIBILITY.md)
+4. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
 5. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
 6. **Database init** — creates tables, migrates schema, spare columns
 7. **License check** — validates license, warns if expired
@@ -163,11 +166,11 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 ## Key Design Decisions
 
-1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.5.29.2` in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`.
+1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.7.1` (0.18.0) in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`. Version range: `0.13.0 <= version < 0.19.0`.
 
 2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
 
-3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~2900 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
+3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~3300 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
 
 4. **Dual chat endpoints**: `/chat` is synchronous (thread pool + 600s timeout); `/chat/stream` uses SSE to emit `tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done` events for real-time tool progress in the UI.
 
@@ -199,7 +202,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 17. **Test conftest isolation**: `tests/conftest.py` sets `TRADE_HOME` env var to a temp directory before any imports, ensuring tests never touch real user data.
 
-18. **License system**: Ed25519 non-asymmetric signatures — public key built into code, private key held by author only. Activation codes embed machine-id hash + expiry date + Ed25519 signature. 30-day free trial, machine-bound activation (soft-delete on company removal, audit logs at `~/.trade/audit/`).
+18. **License system**: Ed25519 non-asymmetric signatures — public key built into code, private key held by author only. Activation codes embed machine-id hash + expiry date + Ed25519 signature. 30-day free trial, machine-bound activation (soft-delete on company removal, audit logs at `~/.trade/audit/`). After upgrades, `_recover_signature_from_code()` auto-recovers the signature from the stored activation code if validation fails due to signature format mismatch.
 
 19. **Desktop app (tradewin.py)**: PyWebView native window wrapping the same FastAPI backend in a daemon thread. No external browser needed. `[desktop]` optional dependency group includes `pywebview` + `pyinstaller`. Bootstrap and app modules support PyInstaller `_MEIPASS` for bundled static files.
 
@@ -208,10 +211,19 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
     - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive same-skill sends brief hint instead of full injection_prompt (~1500 tokens).
     - Rollback tag: `pre-token-optimization`.
 
+21. **Customer classification fields** (2026-07-01): 4 new fields stored in `extra1`/`extra2` spare columns — `tier` (客户分级 A/B/C), `buyer_type` (品牌商/经销商/零售商), `main_category` (主营产品品类), `match_score` (1-5匹配评分). CSV bulk import via `POST /customers/bulk` with downloadable UTF-8 BOM template at `GET /customers/template`. **Route ordering**: `/customers/template` and `/customers/bulk` must be registered before `/customers/{customer_id}` — otherwise FastAPI treats `"template"` as a `customer_id` and returns 422.
+
+22. **License self-recovery** (2026-07-01): `_recover_signature_from_code()` in `trade/license.py` — when signature validation fails after an upgrade (signature format mismatch), automatically recovers the signature from the original activation code stored in `license_data.json`. The activation code was already validated at activation time, so only re-extraction is needed.
+
+23. **Frontend UX improvements** (2026-07-02):
+    - **Floating back-to-bottom**: A floating button appears when the user scrolls away from the bottom of the chat area, preserved across view switches.
+    - **Cron floating arrow**: New cron output no longer force-scrolls; instead shows a floating arrow indicator when new content arrives while user is reading older output.
+    - **Browse state preservation**: Chat scroll position and cron output position are saved to localStorage on hard reload, preventing loss of reading context after restart.
+
 ## Hermes Coupling Points
 
 Trade depends on these Hermes internals (watch on Hermes upgrades):
-- `run_agent.AIAgent` — the AI agent class (imported dynamically in chat endpoints)
+- `run_agent.AIAgent` — the AI agent class (imported dynamically in chat endpoints; as of Hermes 0.17+, is a forwarder from `agent.agent_init.init_agent` but re-export remains stable)
 - `hermes_cli.config.load_config` — reads `~/.hermes/config.yaml`
 - `hermes_cli.config.DEFAULT_CONFIG` — v0.14+ `config["model"]` 是扁平字符串 `"provider:model"`，v0.13 前是嵌套 dict `{"provider":"...","default":"..."}`
 - `hermes_cli.auth.PROVIDER_REGISTRY` — available LLM providers
@@ -232,7 +244,7 @@ Sync happens at three points:
 - `trade-skills-update` CLI — same GitHub fetch logic
 - UI "更新 Skills" button — calls `POST /api/trade/skills/update` (same update logic)
 
-`trade/skill_registry.py` is the **pure-data registry** of all 19 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md` or `skills/auto-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`.
+`trade/skill_registry.py` is the **pure-data registry** of all 19 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md` or `skills/auto-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`. Note: `chat-memory` is a special skill without `b2b-` or `auto-` prefix; the skill filter in `post_install/skills.py` includes both prefixed patterns plus `chat-memory`.
 
 ## Runtime Data Layout
 
@@ -255,13 +267,13 @@ Sync happens at three points:
 
 ## Frontend Architecture (static/trade_chat.html)
 
-The SPA uses vanilla JS with a custom view-caching router (~2900 lines of vanilla JS + embedded CSS):
+The SPA uses vanilla JS with a custom view-caching router (~3300 lines of vanilla JS + embedded CSS):
 - **`navToView(view, chatCtx, chatName)`** — switches between chat/customers/tasks/history views. Creates DOM once, caches in `viewCache` object, hides/shows on switch. Non-cached children (except `#guidance-bar`) are removed on each switch.
 - **`api(method, path, body)`** — central fetch wrapper. Adds `X-Hermes-Session-Token` + `X-Company-ID` headers. 120s AbortController timeout. Handles 401/402/404/409 with toast. Returns parsed JSON or null.
 - **`$ (id)`** — shorthand for `document.getElementById(id)`.
 - **Guidance bar** — `#guidance-bar` is a fixed-height banner (flex-shrink:0, max-height:20vh, scrollable) at the top of `#main-content`. Shows current task guidance + progress bar + today's cron task list. Preserved across view switches (skipped in cleanup loop).
 - **Modals** — a mix of static hidden divs (company-modal, customer-modal, library-modal) toggled via `showModal(id)`/`hideModal(id)`, and dynamically-created backdrops (order-modal, customer-detail-panel, custom-template-modal) that must clean up old instances before creating new ones to avoid duplicate IDs.
-- **Chat** — SSE streaming via `EventSource`-like fetch reader. Tool progress events (`tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done`) rendered inline. Markdown via marked.js + DOMPurify.
+- **Chat** — SSE streaming via `EventSource`-like fetch reader. Tool progress events (`tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done`) rendered inline. Markdown via marked.js + DOMPurify. Floating "back to bottom" button appears when scrolled away from latest messages; cron tab uses floating arrow indicator for new content instead of force-scrolling. Scroll/cron positions preserved in localStorage across hard reloads.
 
 ## Chat Memory
 

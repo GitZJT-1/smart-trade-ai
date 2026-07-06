@@ -109,7 +109,7 @@ def _parse_frontmatter(content: str) -> tuple[dict, str]:
         return {}, content
 
 
-def _load_injection_prompt(skill_name: str) -> str | None:
+def load_injection_prompt(skill_name: str) -> str | None:
     """从 SKILL.md frontmatter 加载 injection_prompt（mtime 缓存）。
 
     优先级：
@@ -352,7 +352,7 @@ def augment_query(
     name = skill["name"]
 
     # 优先从 SKILL.md frontmatter 加载 injection_prompt，失败时降级到硬编码 augment_prompt
-    augment = _load_injection_prompt(name)
+    augment = load_injection_prompt(name)
     # SKILL.md 中没有 injection_prompt 字段时，使用 skill_registry 中预定义的默认 prompt
     if augment is None:
         augment = skill.get("augment_prompt", "")

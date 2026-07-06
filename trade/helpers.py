@@ -464,7 +464,7 @@ def build_query(
             )
         else:
             # 首轮或切换 skill → 完整注入
-            augment = _skill_router._load_injection_prompt(matched_name)
+            augment = _skill_router.load_injection_prompt(matched_name)
             if augment is None:
                 augment = matched_skill.get("augment_prompt", "")
             if augment:

@@ -1675,7 +1675,7 @@ async function clearChat() {
 }
 
 // ═════════════════════ CHAT MESSAGES ═════════════════════
-function addMsg(role, content, files, save) {
+function addMsg(role, content, files, save, convId) {
     const ct = currentChatContainer;
     if (!ct) return;
     const container = ct.querySelector('#chat-messages');
@@ -1722,8 +1722,8 @@ function addMsg(role, content, files, save) {
         div.style.position = 'relative';
         div.appendChild(copyBtn);
 
-        // 评分按钮 — 仅当前这条 AI 回复有 conversation_id 时显示
-        const convIdForRating = _currentConvId;
+        // 评分按钮 — 仅传入 convId 时显示（避免全局变量竞态）
+        const convIdForRating = convId;
         if (convIdForRating) {
             const ratingDiv = document.createElement('div');
             ratingDiv.className = 'msg-rating';
@@ -1831,6 +1831,7 @@ async function sendMsg() {
     const toolEls = {};
     let progressDiv = null;
     let responseText = '';
+    let responseConvId = null;
     _currentConvId = null;
 
     function ensureProgress() {
@@ -1885,7 +1886,7 @@ async function sendMsg() {
                     case 'thinking':
                         if (!progDiv.querySelector('.thinking-msg')) { const t=document.createElement('div'); t.className='thinking-msg'; t.style.cssText='font-size:12px;color:var(--text-muted);padding:4px 0;'; t.textContent='💭 '+(data.message||'思考中...'); progDiv.appendChild(t); }
                         break;
-                    case 'response': responseText = data.text||''; _currentConvId = data.conversation_id || null; break;
+                    case 'response': responseText = data.text||''; responseConvId = data.conversation_id || null; _currentConvId = data.conversation_id || null; break;
                     case 'error': progDiv.innerHTML=`<div class="msg-avatar" style="background:var(--accent-red);color:#fff;">⚠</div><div class="msg-body" style="color:var(--accent-red);">${esc(data.message)}</div>`; sendBtn.disabled = false; return;
                     }
                     eventType='';dataStr='';
@@ -1893,14 +1894,16 @@ async function sendMsg() {
             }
         }
         progDiv.remove();
-        if (responseText) addMsg('assistant', responseText, null);
-        else addMsg('assistant', '⚠️ Agent 未返回有效回复。', null);
+        if (responseText) addMsg('assistant', responseText, null, true, responseConvId);
+        else addMsg('assistant', '⚠️ Agent 未返回有效回复。', null, true, null);
     } catch(e) {
         progDiv.remove();
+        _currentConvId = null;
         if (e.name==='AbortError') addMsg('assistant','🛑 已停止生成。',null);
         else addMsg('assistant',`网络错误：${e.message}`,null);
     } finally {
         clearInterval(elapsedTimer);
+        _currentConvId = null;
         if (stopBtn) { stopBtn.classList.add('hidden'); stopBtn.onclick = null; }
     }
     sendBtn.disabled = false;

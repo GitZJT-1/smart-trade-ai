@@ -138,35 +138,22 @@ def add_rating(
 ) -> dict | None:
     """为对话记录添加评分（1-5）和可选的文字反馈。
 
-    写入 conversations.extra2 JSON 字段的 rating / feedback / rated_at。
+    使用 json_set 原子 UPDATE 避免读-改-写竞态条件。
     返回更新后的行字典，找不到记录时返回 None。
     """
+    rated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT extra2 FROM conversations WHERE id = ? AND company_id = ?",
-            (conversation_id, company_id),
-        ).fetchone()
-        if row is None:
-            return None
-
-        current_extra2 = {}
-        if row["extra2"]:
-            try:
-                current_extra2 = json.loads(row["extra2"])
-            except (json.JSONDecodeError, TypeError):
-                current_extra2 = {}
-
-        current_extra2["rating"] = rating
-        current_extra2["feedback"] = feedback
-        current_extra2["rated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        conn.execute(
-            "UPDATE conversations SET extra2 = ? WHERE id = ? AND company_id = ?",
-            (json.dumps(current_extra2, ensure_ascii=False),
-             conversation_id, company_id),
+        cur = conn.execute(
+            "UPDATE conversations SET extra2 = json_set("
+            "  COALESCE(NULLIF(extra2, ''), '{}'),"
+            "  '$.rating', ?, '$.feedback', ?, '$.rated_at', ?"
+            ") WHERE id = ? AND company_id = ?",
+            (rating, feedback, rated_at, conversation_id, company_id),
         )
         conn.commit()
+        if cur.rowcount == 0:
+            return None
         return get(company_id, conversation_id)
     finally:
         conn.close()
@@ -335,7 +322,7 @@ def search_history(
 
 def _row_to_dict(row) -> dict:
     """将 SQLite 行对象转换为字典，同时将 files_read JSON 字段反序列化。"""
-    return {
+    result = {
         "id": row["id"],
         "company_id": row["company_id"],
         "library_id": row["library_id"],
@@ -344,6 +331,17 @@ def _row_to_dict(row) -> dict:
         "files_read": json.loads(row["files_read"]) if row["files_read"] else [],
         "created_at": row["created_at"],
     }
+    # 安全解析 extra 列 — 仅当列存在于结果集中时才处理（get_recent 等函数不 SELECT 这些列）
+    _row_keys = row.keys()
+    for col in ("extra1", "extra2", "extra3"):
+        if col not in _row_keys:
+            continue
+        try:
+            raw = row[col] if row[col] else "{}"
+            result[col] = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        except (json.JSONDecodeError, TypeError, KeyError, IndexError):
+            result[col] = {}
+    return result
 
 
 # ── CLI 冒烟测试 ───────────────────────────────────────────────────────

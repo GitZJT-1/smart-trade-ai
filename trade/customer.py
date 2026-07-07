@@ -73,8 +73,8 @@ def create(
                 if _site_check and (_ex1.get("company_website", "") or "").strip().lower() == _site_check:
                     _warn = "website_already_exists"
                     break
-        except Exception:
-            # 去重检查失败时静默跳过，不影响客户创建
+        except (json.JSONDecodeError, TypeError):
+            # JSON 解析失败时静默跳过，不影响客户创建
             pass
 
     conn = get_connection()
@@ -496,7 +496,7 @@ def compute_data_completeness(cust: dict) -> dict:
 
     for field, weight in field_weights.items():
         value = extra1.get(field) if field in extra1 else extra2.get(field)
-        if value and (isinstance(value, (str, int, float)) or isinstance(value, dict)):
+        if value is not None and value != "" and (isinstance(value, (str, int, float)) or isinstance(value, dict)):
             if isinstance(value, str) and not value.strip():
                 missing_fields.append(field)
                 continue
@@ -530,14 +530,6 @@ def find_duplicates(company_id: int) -> list[dict]:
         重复组列表 [{reason, detail, customers:[{id,name,contact,extra1,extra2}]}, ...]
     """
     import re as _re
-
-    def _json_load(raw):
-        if not raw or not isinstance(raw, str):
-            return {}
-        try:
-            return json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            return {}
 
     all_custs = list_by_company(company_id)
     if len(all_custs) < 2:
@@ -607,8 +599,8 @@ def health_audit(company_id: int) -> dict:
 
     all_custs = list_by_company(company_id)
     now = _dt.now()
-    ninety_days_ago = (now - _td(days=90)).strftime("%Y-%m-%d %H:%M:%S")
-    thirty_days_ago = (now - _td(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    ninety_days_ago_dt = now - _td(days=90)
+    thirty_days_ago_dt = now - _td(days=30)
 
     from trade.order import list_by_customer as _list_orders
 
@@ -623,20 +615,26 @@ def health_audit(company_id: int) -> dict:
 
         last_contact = (extra2.get("last_contact_at") or cust.get("updated_at") or "").strip()
 
+        # 解析 last_contact 为 datetime 对象（前10位为 YYYY-MM-DD）
+        last_contact_dt = None
+        days_since = None
+        if last_contact:
+            try:
+                last_contact_dt = _dt.strptime(last_contact[:10], "%Y-%m-%d")
+                days_since = (now - last_contact_dt).days
+            except (ValueError, IndexError):
+                last_contact_dt = None
+
         # 关联订单
         orders = _list_orders(cust["id"], company_id=company_id)
 
         # 1. 僵尸客户：90 天以上无联系且无活跃订单（报价中/已下单/已出货）
         active_orders = [o for o in orders if o["status"] in ("报价中", "已下单", "已出货")]
-        if last_contact and last_contact < ninety_days_ago and not active_orders:
-            try:
-                days_since = (_dt.now() - _dt.strptime(last_contact[:10], "%Y-%m-%d")).days
-            except ValueError:
-                days_since = 90
+        if last_contact_dt and last_contact_dt < ninety_days_ago_dt and not active_orders:
             stale_customers.append({
                 "id": cust["id"], "name": cust["name"],
                 "last_contact_at": last_contact,
-                "days_since_contact": days_since,
+                "days_since_contact": days_since or 90,
             })
 
         # 2. 高价值未转化：A 级客户但无任何订单
@@ -656,16 +654,12 @@ def health_audit(company_id: int) -> dict:
                 "missing_fields": score_result["missing_fields"],
             })
 
-        # 4. 需跟进：30-90 天内未联系
-        if last_contact and thirty_days_ago > last_contact >= ninety_days_ago:
-            try:
-                days_since = (_dt.now() - _dt.strptime(last_contact[:10], "%Y-%m-%d")).days
-            except ValueError:
-                days_since = 30
+        # 4. 需跟进：30-90 天内未联系（ninety_days_ago < thirty_days_ago）
+        if last_contact_dt and ninety_days_ago_dt <= last_contact_dt < thirty_days_ago_dt:
             need_followup.append({
                 "id": cust["id"], "name": cust["name"],
                 "last_contact_at": last_contact,
-                "days_since_contact": days_since,
+                "days_since_contact": days_since or 30,
             })
 
     return {

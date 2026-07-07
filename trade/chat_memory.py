@@ -9,6 +9,7 @@ Trade AI Assistant — 聊天记忆 / 对话记录。
 
 import json
 import logging
+from datetime import datetime
 
 from trade.database import get_connection
 
@@ -125,6 +126,48 @@ def delete(company_id: int, conversation_id: int) -> bool:
         )
         conn.commit()
         return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def add_rating(
+    company_id: int,
+    conversation_id: int,
+    rating: int,
+    feedback: str = "",
+) -> dict | None:
+    """为对话记录添加评分（1-5）和可选的文字反馈。
+
+    写入 conversations.extra2 JSON 字段的 rating / feedback / rated_at。
+    返回更新后的行字典，找不到记录时返回 None。
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT extra2 FROM conversations WHERE id = ? AND company_id = ?",
+            (conversation_id, company_id),
+        ).fetchone()
+        if row is None:
+            return None
+
+        current_extra2 = {}
+        if row["extra2"]:
+            try:
+                current_extra2 = json.loads(row["extra2"])
+            except (json.JSONDecodeError, TypeError):
+                current_extra2 = {}
+
+        current_extra2["rating"] = rating
+        current_extra2["feedback"] = feedback
+        current_extra2["rated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        conn.execute(
+            "UPDATE conversations SET extra2 = ? WHERE id = ? AND company_id = ?",
+            (json.dumps(current_extra2, ensure_ascii=False),
+             conversation_id, company_id),
+        )
+        conn.commit()
+        return get(company_id, conversation_id)
     finally:
         conn.close()
 

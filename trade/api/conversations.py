@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from trade import chat_memory
 from trade import library as library_module
 from trade.api.deps import require_company
-from trade.api.models import ConversationSave, ConversationUpdate
+from trade.api.models import ConversationRate, ConversationSave, ConversationUpdate
 
 router = APIRouter(tags=["conversations"])
 
@@ -86,3 +86,18 @@ def delete_conversation(
     if not chat_memory.delete(x_company_id, conversation_id):
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {"ok": True}
+
+
+@router.post("/conversations/{conversation_id}/rate")
+def rate_conversation(
+    conversation_id: int,
+    payload: ConversationRate,
+    x_company_id: int = Depends(require_company),
+):
+    """为对话记录评分（1-5）+ 可选反馈。"""
+    result = chat_memory.add_rating(
+        x_company_id, conversation_id, payload.rating, payload.feedback or "",
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"ok": True, "conversation": result}

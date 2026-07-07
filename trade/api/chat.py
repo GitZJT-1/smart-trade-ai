@@ -247,24 +247,30 @@ async def trade_chat_stream(
                     time.sleep(2 ** attempt)
                     continue
 
-                _emit_threadsafe("response", {
-                    "text": result or "Agent 返回了空响应。",
-                    "elapsed_sec": round(elapsed, 1),
-                })
-
                 lib_name = ""
                 if payload.library_id:
                     lib = library_module.get(payload.library_id, company_id=cid)
                     if lib:
                         lib_name = lib["name"]
+
+                # 先保存对话，再发送响应 —— 确保前端能拿到 conversation_id 做评分
+                conv_id = None
                 try:
-                    chat_memory.save_with_context(
+                    conv = chat_memory.save_with_context(
                         company_id=cid, library_id=payload.library_id,
                         query=query, response=result or "",
                         library_name=lib_name,
                     )
+                    if conv:
+                        conv_id = conv.get("id")
                 except Exception:
                     _log.exception("save_with_context failed in stream")
+
+                _emit_threadsafe("response", {
+                    "text": result or "Agent 返回了空响应。",
+                    "elapsed_sec": round(elapsed, 1),
+                    "conversation_id": conv_id,
+                })
                 return result
             except ImportError:
                 _emit_threadsafe("error", {"message": "AI Agent 模块未加载。"})

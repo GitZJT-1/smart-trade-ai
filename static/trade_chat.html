@@ -672,6 +672,7 @@ let currentChatContext = 'daily'; // daily | lead | platform | social | linkedin
 let currentChatName = '今日简报';
 let currentLibraryId = null;
 let currentCustomerId = null;
+let _currentConvId = null;       // 当前 AI 回复的 conversation_id，用于评分
 let editingCustomerData = null; // for customer detail panel
 
 // ═════════════════════ PERSISTENCE ═════════════════════
@@ -1720,6 +1721,27 @@ function addMsg(role, content, files, save) {
         };
         div.style.position = 'relative';
         div.appendChild(copyBtn);
+
+        // 评分按钮 — 仅当前这条 AI 回复有 conversation_id 时显示
+        const convIdForRating = _currentConvId;
+        if (convIdForRating) {
+            const ratingDiv = document.createElement('div');
+            ratingDiv.className = 'msg-rating';
+            ratingDiv.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);';
+            ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">评价此回复：</span>'
+                + '<button class="rating-btn" data-r="👍" style="border:1px solid #D1D5DB;border-radius:4px;padding:2px 8px;font-size:13px;cursor:pointer;background:#fff;">👍</button>'
+                + '<button class="rating-btn" data-r="👎" style="border:1px solid #D1D5DB;border-radius:4px;padding:2px 8px;font-size:13px;cursor:pointer;background:#fff;">👎</button>';
+            body.appendChild(ratingDiv);
+
+            ratingDiv.querySelectorAll('.rating-btn').forEach(function(btn) {
+                btn.addEventListener('click', async function(e) {
+                    e.stopPropagation();
+                    var rVal = this.dataset.r === '👍' ? 4 : 2;
+                    await api('POST', '/api/trade/conversations/' + convIdForRating + '/rate', { rating: rVal, feedback: '' });
+                    ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--accent-green);">✅ 感谢反馈</span>';
+                });
+            });
+        }
     }
 
     container.appendChild(div);
@@ -1809,6 +1831,7 @@ async function sendMsg() {
     const toolEls = {};
     let progressDiv = null;
     let responseText = '';
+    _currentConvId = null;
 
     function ensureProgress() {
         if (!progressDiv) { progressDiv = document.createElement('div'); progressDiv.className = 'tool-progress'; progDiv.appendChild(progressDiv); }
@@ -1862,7 +1885,7 @@ async function sendMsg() {
                     case 'thinking':
                         if (!progDiv.querySelector('.thinking-msg')) { const t=document.createElement('div'); t.className='thinking-msg'; t.style.cssText='font-size:12px;color:var(--text-muted);padding:4px 0;'; t.textContent='💭 '+(data.message||'思考中...'); progDiv.appendChild(t); }
                         break;
-                    case 'response': responseText = data.text||''; break;
+                    case 'response': responseText = data.text||''; _currentConvId = data.conversation_id || null; break;
                     case 'error': progDiv.innerHTML=`<div class="msg-avatar" style="background:var(--accent-red);color:#fff;">⚠</div><div class="msg-body" style="color:var(--accent-red);">${esc(data.message)}</div>`; sendBtn.disabled = false; return;
                     }
                     eventType='';dataStr='';

@@ -390,37 +390,23 @@ def build_query(
                 "**所有数据操作（记忆读取、客户查询、文档搜索）必须限定在上述公司范围内。**"
             )
 
-    # 2. Customer context (injected before library context) — 客户信息放在文档上下文之前
+    # 1.6 品牌安全护栏 — 所有对外内容生成都需遵守
+    if company_slug:
+        brand_safety = _prompts.get_brand_safety(company_slug)
+        if brand_safety:
+            system_prompt += f"\n\n{brand_safety}"
+
+    # 2. Customer context — AI 客户简报（身份 + 联系方式 + 历史 + 订单 + 数据完整度）
     customer_context = ""
     if customer_id:
-        # 有客户 ID 时查询客户信息并注入 prompt，让 AI 知道当前对话的客户身份
-        cust = _cust.get(customer_id, company_id=company_id)
-        if cust:
-            # 构造客户上下文：公司名 + 联系人 + 职位 + 跟进项目 + 联系方式
-            c_name = cust['name'].replace('\n', ' ').replace('\r', '')
-            parts = [f"\n[上下文] 用户正在与客户「{c_name}」"]
-            # 解析 extra2 JSON 字段获取扩展信息
-            extra2 = _json_loads(cust.get("extra2", "{}"))
-            title = (extra2.get("title", "") or cust.get("title", "")).replace('\n', ' ').replace('\r', '')
-            contact_name = (cust.get("contact", "")).replace('\n', ' ').replace('\r', '')
-            email = (extra2.get("email", "")).replace('\n', ' ').replace('\r', '')
-            phone = (extra2.get("phone", "") or extra2.get("whatsapp", "")).replace('\n', ' ').replace('\r', '')
-            note = (cust.get("note", "")).replace('\n', ' ').replace('\r', '')
-            if contact_name:
-                parts.append(f"联系人：「{contact_name}」")
-            if title:
-                parts.append(f"职位：「{title}」")
-            if note:
-                parts.append(f"跟进内容：「{note}」")
-            contacts = [x for x in [email, phone] if x]
-            if contacts:
-                parts.append(f"联系方式：「{' / '.join(contacts)}」")
-            customer_context = "，".join(parts) + "。"
-            # 注入该客户关联的文档库信息
-            linked_libs = _cust.get_libraries(customer_id, company_id=company_id)
-            if linked_libs:
-                lib_names = "、".join(l["name"] for l in linked_libs)
-                customer_context += f"关联文档库：{lib_names}。"
+        briefing = _cust.build_briefing(customer_id, company_id=company_id)
+        if briefing:
+            customer_context = briefing
+        # 追加关联文档库信息
+        linked_libs = _cust.get_libraries(customer_id, company_id=company_id)
+        if linked_libs:
+            lib_names = "、".join(l["name"] for l in linked_libs)
+            customer_context += f"\n关联文档库：{lib_names}。"
 
     # 3. Order context — 按 3 层优先级搜索订单并注入
     order_context = ""

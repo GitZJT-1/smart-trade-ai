@@ -105,6 +105,22 @@ class CustomerUpdate(BaseModel):
     match_score: int | None = Field(None, description="匹配度评分 (0-5)")
 
 
+# ── Conversation Rating ────────────────────────────────────────────────────────
+
+class ConversationRate(BaseModel):
+    rating: int = Field(..., ge=1, le=5, description="评分 1-5")
+    feedback: str | None = Field(None, description="可选反馈文字")
+
+
+# ── Customer Duplicates ────────────────────────────────────────────────────────
+
+
+class CustomerDuplicateGroup(BaseModel):
+    reason: str = Field(..., description="重复判定原因（email_match / website_match）")
+    detail: str = Field("", description="匹配的具体值")
+    customers: list[dict] = Field(..., description="重复客户列表")
+
+
 # ── Order ─────────────────────────────────────────────────────────────────────
 
 

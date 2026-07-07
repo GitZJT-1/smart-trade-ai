@@ -187,6 +187,30 @@ def write_system_prompt(content: str) -> None:
     _FILE_CACHE.pop(cache_key, None)
 
 
+def _brand_safety_path(slug: str) -> Path:
+    """返回公司级品牌安全护栏文件路径。"""
+    return _get_trade_home() / "companies" / slug / "brand_safety.md"
+
+
+def get_brand_safety(company_slug: str | None = None) -> str:
+    """加载品牌安全护栏文本。
+
+    优先级：
+      1. ~/.trade/companies/{slug}/brand_safety.md（公司级自定义）
+      2. 代码内置 BRAND_SAFETY_BLOCK（全局默认）
+
+    利用现有 mtime 缓存机制，文件修改后下次请求自动生效。
+    """
+    from trade.prompt import BRAND_SAFETY_BLOCK
+
+    if company_slug:
+        path = _brand_safety_path(company_slug)
+        content = _load_file(path)
+        if content:
+            return content
+    return BRAND_SAFETY_BLOCK
+
+
 def resolve_system_prompt(
     company_slug: str | None = None,
     db_identity: str | None = None,

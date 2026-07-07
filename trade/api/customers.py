@@ -169,6 +169,12 @@ async def bulk_import_customers(
     return result
 
 
+@router.get("/customers/duplicates")
+def get_customer_duplicates(cid: int = Depends(require_company)):
+    """查找当前公司内可能的重复客户（按 email / website 匹配）。"""
+    return customer_module.find_duplicates(cid)
+
+
 # ── 客户详情 / 更新 / 删除（{customer_id} 通配路由必须在字面路由之后）─
 
 @router.get("/customers/{customer_id}")

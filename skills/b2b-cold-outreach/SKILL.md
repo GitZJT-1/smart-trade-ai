@@ -18,7 +18,7 @@ triggers:
   - outreach
 category: 销售转化
 version: 1.0.0
-author: Roger Lau
+author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-cold-outreach 技能。用于**撰写 B2B 冷 outreach 邮件**（产品推广信、开发信、跟进信），基于公司产品数据和历史报价，结合目标市场情报生成个性化邮件。
 

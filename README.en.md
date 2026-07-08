@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 19 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 20 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 17 Professional Skills
+## 20 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -198,7 +198,9 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Social Media Marketing | Generate Facebook / Instagram / TikTok / YouTube content calendars |
 | LinkedIn Operations | Profile optimization + content strategy + InMail templates |
 | Customs Data | Analyze import/export data, identify high-value buyers |
-| Client Development | Generate cold emails and follow-up sequences, including price/payment/delivery negotiation |
+| Lead Generation | Google Maps + LinkedIn + Facebook multi-channel customer discovery, one-click save |
+| Cold Outreach | Product promotion emails / cold emails / follow-ups based on company product data |
+| Email Intelligence | 120+ platform email registration check (holehe), social profile discovery |
 | Client Management | A/B/C grading, detail panel, document library linking |
 | Document Analysis | Read local PDF / Word / Excel / PPT files, AI auto-parses |
 | Business Doc Generation | One-click quotes, proforma invoices, contracts (DOCX / XLSX / PPTX) |
@@ -210,6 +212,8 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Trade Operations | 11 post-deal scenarios: payment reminders / claims / exhibitions / factory audits / logistics / after-sales / satisfaction surveys / annual reviews |
 | Trade Compliance | Cultural taboo check / abbreviation standards / Incoterms 2020 / translation review / bidding / e-commerce listing |
 | Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
+| Auto Customer Dev | One-click end-to-end pipeline: search → vet → score → email → save → log |
+| Auto SMTP Email | Preview-then-send via SMTP, HTML templates + CC + attachments + rate-limited bulk sending |
 
 ---
 
@@ -243,8 +247,8 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      17 skill registry (pure data)
-└── ... + 17 business modules
+├── skill_registry.py      20 skill registry (pure data)
+└── ... + 20 business modules
 
 skills/                    17 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)

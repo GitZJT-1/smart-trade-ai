@@ -1,7 +1,7 @@
 """
 Trade AI Assistant — B2B Skills 安装器。
 
-将项目内置的 19 个 skill 从 Python 包目录复制到 Hermes runtime skills 目录：
+将项目内置的 20 个 skill 从 Python 包目录复制到 Hermes runtime skills 目录：
   {package}/skills/b2b-*/SKILL.md → ~/.hermes/skills/b2b-*/SKILL.md
 
 Hermes Agent 从 ~/.hermes/skills/ 自动发现 skill 定义并注入到 AI 提示词中。

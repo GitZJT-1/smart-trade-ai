@@ -149,6 +149,8 @@ skills/
 │   └── SKILL.md
 ├── b2b-lead-generation/   # 客户开发
 │   └── SKILL.md
+├── b2b-cold-outreach/     # 冷 outreach 邮件
+│   └── SKILL.md
 ├── b2b-document/          # 文档分析
 │   └── SKILL.md
 ├── b2b-doc-generation/    # 文档生成
@@ -169,7 +171,17 @@ skills/
 │   └── SKILL.md
 ├── b2b-daily-automation/  # 日常自动化
 │   └── SKILL.md
-└── chat-memory/           # 聊天记忆（特殊 skill，不使用 b2b- 前缀）
+├── b2b-trade-ops/         # 外贸履约 & 售后
+│   └── SKILL.md
+├── b2b-trade-compliance/  # 合规 & 规范校验
+│   └── SKILL.md
+├── b2b-skill-generator/   # Skill 生成器
+│   └── SKILL.md
+├── auto-trade-customer-development/  # 全自动客户开发编排
+│   └── SKILL.md
+├── auto-smtp-email/       # SMTP 邮件发送
+│   └── SKILL.md
+└── chat-memory/           # 聊天记忆（特殊 skill，无前缀）
     └── SKILL.md
 ```
 
@@ -236,13 +248,14 @@ injection_prompt: |
 
 ---
 
-## 6. 现有 15 个 Skills 的触发词快速参考
+## 6. 现有 20 个 Skills 的触发词快速参考
 
 | Skill | 典型触发词 |
 |-------|-----------|
 | b2b-osint | 背景调查、背调、whois、尽职调查 |
 | b2b-platform | 平台诊断、优化、店铺、独立站 |
 | b2b-lead-generation | 开发信、客户开发、cold email、领英开发 |
+| b2b-cold-outreach | 开发信、产品推广信、推广邮件、跟进信 |
 | b2b-document | 分析文档、PDF、报价单分析 |
 | b2b-doc-generation | 生成报价单、生成合同、做一份 |
 | b2b-email-intel | 邮箱查一下、邮箱注册、邮箱背调 |
@@ -253,5 +266,9 @@ injection_prompt: |
 | b2b-onboarding | 新手上路、引导、设置 |
 | b2b-customer-mgmt | 客户管理、CRM、客户信息 |
 | b2b-daily-automation | 定时任务、自动化、简报、日报 |
+| b2b-trade-ops | 催款、索赔、展会、验厂、物流异常 |
+| b2b-trade-compliance | 文化禁忌、Incoterms、翻译二审、投标 |
 | chat-memory | 之前说过、上周聊的、历史记录、帮我查 |
 | b2b-skill-generator | 生成skill、创建技能、新建能力、做个skill |
+| auto-trade-customer-development | 全自动客户开发、一键开发客户、端到端 |
+| auto-smtp-email | 发邮件、SMTP发送、群发邮件、开发信发送 |

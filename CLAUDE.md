@@ -45,7 +45,7 @@ python server.py --no-gateway       # skip auto-launching Hermes Gateway
 
 # Install (editable) + install B2B skills into Hermes
 pip install -e ".[dev]"
-install-trade-skills                # copy 19 skills from package to ~/.hermes/skills/
+install-trade-skills                # copy 20 skills from package to ~/.hermes/skills/
 
 # CLI entry points (from pyproject.toml console scripts)
 trade                               # shortcut for python server.py
@@ -222,7 +222,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 19 skill definitions (pure data — triggers, aliases, formats)
+        ├─ trade/skill_registry.py 20 skill definitions (pure data — triggers, aliases, formats)
         └─ trade/post_install.py Skill installation + CLI commands (update/backup)
 ```
 
@@ -233,7 +233,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
 3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
-4. **Hermes version check** — `0.13.0 <= version < 0.17.0` (see COMPATIBILITY.md)
+4. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
 5. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
 6. **Database init** — creates tables, migrates schema, spare columns
 7. **License check** — validates license, warns if expired
@@ -245,7 +245,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 ## Key Design Decisions
 
-1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.5.29.2` in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`.
+1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.7.1` in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`.
 
 2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
 
@@ -341,7 +341,7 @@ Sync happens at three points:
 - `trade-skills-update` CLI — same GitHub fetch logic
 - UI "更新 Skills" button — calls `POST /api/trade/skills/update` (same update logic)
 
-`trade/skill_registry.py` is the **pure-data registry** of all 19 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md` 或 `skills/auto-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`.
+`trade/skill_registry.py` is the **pure-data registry** of all 20 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md` 或 `skills/auto-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`.
 
 ## Runtime Data Layout
 
@@ -351,7 +351,7 @@ Sync happens at three points:
 ~/.hermes/skills/               Skills installed by install-trade-skills
   ├── b2b-document/
   ├── b2b-platform/
-  └── ... (15 b2b-* skills)
+  └── ... (17 b2b-* skills)
 ~/.trade/                       User data created on first company init
   ├── config.yaml
   ├── prompts/system.md

@@ -34,6 +34,18 @@ _WINDOW_SECONDS = 60.0
 _chat_timestamps: dict[int, list[float]] = {}  # company_id → [timestamps]
 _rate_limit_lock = threading.Lock()
 
+# 定期清理：每小时扫描一次，删除无活跃时间戳的 company entry，防止内存泄漏
+def _cleanup_rate_limit_dicts():
+    while True:
+        time.sleep(3600)
+        with _rate_limit_lock:
+            stale = [cid for cid, stamps in _chat_timestamps.items() if not stamps]
+            for cid in stale:
+                del _chat_timestamps[cid]
+
+_cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
+_cleanup_thread.start()
+
 # 进程内 skill 缓存：记录每个 company 上次使用的 skill 名称，用于跳过重复注入
 _last_skill_per_company: dict[int, str] = {}
 _skill_cache_lock = threading.Lock()
@@ -52,6 +64,25 @@ def _check_chat_rate_limit(company_id: int) -> bool:
         stamps.append(now)
         _chat_timestamps[company_id] = stamps
         return True
+
+
+def _extract_and_cache_skill(cid: int, full_query: str, skill_hint: str | None) -> str | None:
+    """从 build_query 输出中提取当前匹配的 skill 名称并缓存。
+
+    同步和流式端点共享此逻辑，避免重复 ~10 行 regex 提取代码。
+    OSINT 场景：skill_hint 中有 "## 当前技能：{name}"
+    非 OSINT 场景：full_query 中有 "## 技能触发：{name}"
+    """
+    import re as _re
+    _skill_match = (
+        _re.search(r'##\s*当前技能[：:]\s*(\S+)', skill_hint or '') or
+        _re.search(r'##\s*技能触发[：:]\s*(\S+)', full_query)
+    )
+    current_skill = _skill_match.group(1) if _skill_match else None
+    with _skill_cache_lock:
+        if current_skill:
+            _last_skill_per_company[cid] = current_skill
+    return current_skill
 
 # ── 同步聊天 ──────────────────────────────────────────────────────────────
 
@@ -83,17 +114,7 @@ async def trade_chat(
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
-    # OSINT 场景：skill_hint 中有 "## 当前技能：{name}"
-    # 非 OSINT 场景：full_query 中有 "## 技能触发：{name}"
-    import re as _re
-    _skill_match = (
-        _re.search(r'##\s*当前技能[：:]\s*(\S+)', skill_hint or '') or
-        _re.search(r'##\s*技能触发[：:]\s*(\S+)', full_query)
-    )
-    current_skill = _skill_match.group(1) if _skill_match else None
-    with _skill_cache_lock:
-        if current_skill:
-            _last_skill_per_company[cid] = current_skill
+    _extract_and_cache_skill(cid, full_query, skill_hint)
 
     _MAX_AGENT_RETRIES = 1  # 最多重试 1 次（共 2 次尝试），避免 Token 费用翻倍
 
@@ -119,9 +140,9 @@ async def trade_chat(
                     time.sleep(2 ** attempt)
                     continue
                 return f"⚠️ {e}"
-            except Exception:
-                last_error = f"Agent call failed (attempt {attempt + 1})"
-                _log.exception(last_error)
+            except Exception as e:
+                last_error = str(e) or f"Agent call failed (attempt {attempt + 1})"
+                _log.exception("Agent call failed (attempt %d/%d)", attempt + 1, _MAX_AGENT_RETRIES)
                 if attempt < _MAX_AGENT_RETRIES:
                     time.sleep(2 ** attempt)
                     continue
@@ -183,15 +204,7 @@ async def trade_chat_stream(
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
-    import re as _re2
-    _skill_match = (
-        _re2.search(r'##\s*当前技能[：:]\s*(\S+)', skill_hint or '') or
-        _re2.search(r'##\s*技能触发[：:]\s*(\S+)', full_query)
-    )
-    current_skill = _skill_match.group(1) if _skill_match else None
-    with _skill_cache_lock:
-        if current_skill:
-            _last_skill_per_company[cid] = current_skill
+    _extract_and_cache_skill(cid, full_query, skill_hint)
 
     loop = asyncio.get_running_loop()
     event_queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
@@ -224,10 +237,15 @@ async def trade_chat_stream(
         })
 
     _MAX_AGENT_RETRIES = 2
+    cancel_event = threading.Event()  # 客户端断连时置位，阻止重试继续浪费 token
 
     def _run_agent() -> str | None:
         last_error = ""
         for attempt in range(_MAX_AGENT_RETRIES + 1):
+            # 客户端已断连，立即停止重试循环
+            if cancel_event.is_set():
+                _log.info("Agent cancelled by client disconnect, attempt %d", attempt + 1)
+                return None
             try:
                 if attempt == 0:
                     _emit_threadsafe("thinking", {"message": "正在分析问题..."})
@@ -243,6 +261,8 @@ async def trade_chat_stream(
                 elapsed = time.time() - start
 
                 if not result and attempt < _MAX_AGENT_RETRIES:
+                    if cancel_event.is_set():
+                        return None
                     _log.warning("Agent returned empty in stream, retry %d/%d", attempt + 1, _MAX_AGENT_RETRIES)
                     time.sleep(2 ** attempt)
                     continue
@@ -277,16 +297,16 @@ async def trade_chat_stream(
                 return None
             except RuntimeError as e:
                 last_error = str(e)
-                if attempt < _MAX_AGENT_RETRIES:
+                if attempt < _MAX_AGENT_RETRIES and not cancel_event.is_set():
                     _log.warning("Agent RuntimeError in stream, retry %d/%d: %s", attempt + 1, _MAX_AGENT_RETRIES, e)
                     time.sleep(2 ** attempt)
                     continue
                 _emit_threadsafe("error", {"message": last_error})
                 return None
-            except Exception:
-                last_error = f"Agent stream failed (attempt {attempt + 1})"
-                _log.exception(last_error)
-                if attempt < _MAX_AGENT_RETRIES:
+            except Exception as e:
+                last_error = str(e) or f"Agent stream failed (attempt {attempt + 1})"
+                _log.exception("Agent stream failed (attempt %d/%d)", attempt + 1, _MAX_AGENT_RETRIES)
+                if attempt < _MAX_AGENT_RETRIES and not cancel_event.is_set():
                     time.sleep(2 ** attempt)
                     continue
                 _emit_threadsafe("error", {"message": f"⚠️ {last_error}"})
@@ -322,7 +342,10 @@ async def trade_chat_stream(
                 if ev_type in ("response", "error"):
                     break
         finally:
-            # 客户端断连或异常 → 尝试取消 agent 任务
+            # 客户端断连或异常 → 先发取消信号让 Agent 线程尽快退出重试循环，
+            # 减少 token 浪费。线程池中的 agent.chat() 无法被中断，
+            # 但重试和后续 emit 会被跳过。
+            cancel_event.set()
             if not agent_task.done():
                 agent_task.cancel()
                 try:

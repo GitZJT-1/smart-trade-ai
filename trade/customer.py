@@ -32,8 +32,13 @@ def create(
     follow_up_note: str = "",
     main_category: str = "",
     match_score: int = 0,
+    _skip_dedup: bool = False,
 ) -> dict:
-    """创建一条归属于指定公司的客户记录。返回新行的字典表示。"""
+    """创建一条归属于指定公司的客户记录。返回新行的字典表示。
+
+    _skip_dedup 内部参数：bulk_save() 等调用方已在外部做过去重时传入 True，
+    跳过本函数内的 O(n) 软去重扫描，避免 N+1 性能退化。
+    """
     extra1 = json.dumps({
         "country": country,
         "tier": tier,
@@ -55,30 +60,33 @@ def create(
         "follow_up_note": follow_up_note,
     }, ensure_ascii=False)
 
-    # 软去重检查：email / website 已被其他客户使用时发出警告，不阻止创建
-    _warn = None
-    if email or company_website:
-        try:
-            _email_check = (email or "").strip().lower()
-            _site_check = (company_website or "").strip().lower()
-            for c in list_by_company(company_id):
-                try:
-                    _ex2 = json.loads(c.get("extra2", "{}")) if c.get("extra2") else {}
-                    _ex1 = json.loads(c.get("extra1", "{}")) if c.get("extra1") else {}
-                except (json.JSONDecodeError, TypeError):
-                    continue
-                if _email_check and (_ex2.get("email", "") or "").strip().lower() == _email_check:
-                    _warn = "email_already_exists"
-                    break
-                if _site_check and (_ex1.get("company_website", "") or "").strip().lower() == _site_check:
-                    _warn = "website_already_exists"
-                    break
-        except (json.JSONDecodeError, TypeError):
-            # JSON 解析失败时静默跳过，不影响客户创建
-            pass
-
     conn = get_connection()
     try:
+        # 软去重检查：在同一连接内用 SQL json_extract 做原子查询，
+        # 消除之前 list_by_company() 跨连接的 TOCTOU 竞态窗口
+        _warn = None
+        if not _skip_dedup and (email or company_website):
+            _email_check = (email or "").strip().lower()
+            _site_check = (company_website or "").strip().lower()
+            if _email_check:
+                dup = conn.execute(
+                    "SELECT 1 FROM customers WHERE company_id = ? "
+                    "AND LOWER(COALESCE(json_extract(extra2, '$.email'), '')) = ? "
+                    "LIMIT 1",
+                    (company_id, _email_check),
+                ).fetchone()
+                if dup:
+                    _warn = "email_already_exists"
+            if not _warn and _site_check:
+                dup = conn.execute(
+                    "SELECT 1 FROM customers WHERE company_id = ? "
+                    "AND LOWER(COALESCE(json_extract(extra1, '$.company_website'), '')) = ? "
+                    "LIMIT 1",
+                    (company_id, _site_check),
+                ).fetchone()
+                if dup:
+                    _warn = "website_already_exists"
+
         cur = conn.execute(
             "INSERT INTO customers (company_id, name, contact, note, extra1, extra2) VALUES (?, ?, ?, ?, ?, ?)",
             (company_id, name, contact, note, extra1, extra2),
@@ -438,6 +446,7 @@ def bulk_save(
             follow_up_note=cust.get("follow_up_note", ""),
             main_category=cust.get("main_category", ""),
             match_score=cust.get("match_score", 0),
+            _skip_dedup=True,
         )
 
         # 如果指定了文档库，自动关联
@@ -496,6 +505,10 @@ def compute_data_completeness(cust: dict) -> dict:
 
     for field, weight in field_weights.items():
         value = extra1.get(field) if field in extra1 else extra2.get(field)
+        # match_score 默认值 0 表示「未评分」，等同于未填写
+        if field == "match_score" and isinstance(value, (int, float)) and value == 0:
+            missing_fields.append(field)
+            continue
         if value is not None and value != "" and (isinstance(value, (str, int, float)) or isinstance(value, dict)):
             if isinstance(value, str) and not value.strip():
                 missing_fields.append(field)
@@ -536,7 +549,6 @@ def find_duplicates(company_id: int) -> list[dict]:
         return []
 
     groups = []
-    used_ids = set()
 
     # Rule 1: 相同 email
     email_map: dict[str, list[int]] = {}
@@ -554,9 +566,10 @@ def find_duplicates(company_id: int) -> list[dict]:
                 "detail": email,
                 "customers": group,
             })
-            used_ids.update(ids)
 
     # Rule 2: 相同 company_website（标准化域名）
+    # 独立于 email 匹配，不共享 used_ids — 同一客户可能同时匹配 email 和 website，
+    # 这是正确的多重证据，不应丢失任一维度的重复检测信息
     site_map: dict[str, list[int]] = {}
     for c in all_custs:
         extra1 = _json_load(c.get("extra1", "{}"))
@@ -567,15 +580,13 @@ def find_duplicates(company_id: int) -> list[dict]:
                 site_map.setdefault(site, []).append(c["id"])
 
     for site, ids in site_map.items():
-        if len(ids) > 1 and not all(i in used_ids for i in ids):
-            group = [c for c in all_custs if c["id"] in ids and c["id"] not in used_ids]
-            if len(group) > 1:
-                groups.append({
-                    "reason": "website_match",
-                    "detail": site,
-                    "customers": group,
-                })
-                used_ids.update(c["id"] for c in group)
+        if len(ids) > 1:
+            group = [c for c in all_custs if c["id"] in ids]
+            groups.append({
+                "reason": "website_match",
+                "detail": site,
+                "customers": group,
+            })
 
     return groups
 

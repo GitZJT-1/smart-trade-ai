@@ -125,9 +125,11 @@ def update(order_id: int, *, company_id: int | None = None, **kwargs) -> dict | 
 
     conn = get_connection()
     try:
+        conn.execute("BEGIN")
         # 如果更新了 customer_id 且提供了 company_id，校验新客户归属
         if "customer_id" in updates and company_id is not None:
             if not _customer_in_company(conn, updates["customer_id"], company_id):
+                conn.rollback()
                 return None
 
         set_clause = ", ".join(f"{k} = ?" for k in updates)
@@ -139,8 +141,14 @@ def update(order_id: int, *, company_id: int | None = None, **kwargs) -> dict | 
             values.append(order_id)
             sql = f"UPDATE orders SET {set_clause}, updated_at = datetime('now','localtime') WHERE id = ?"
         n = conn.execute(sql, values).rowcount
+        if n == 0:
+            conn.rollback()
+            return None
         conn.commit()
-        return get(order_id, company_id=company_id) if n > 0 else None
+        return get(order_id, company_id=company_id)
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

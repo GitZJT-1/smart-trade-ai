@@ -5,58 +5,22 @@
 ## [Unreleased]
 
 ### Added
-- **客户模型增强**：新增 4 个分类维度 — `buyer_type`（买家类型）、`main_category`（主营品类）、`match_score`（匹配度 0-5）、`follow_up_note`（AI 跟进建议）。存储在现有 `extra1`/`extra2` JSON 列中，零 schema 变更，旧数据自动兼容
-- **CSV 批量导入客户**：`POST /api/trade/customers/bulk`（上传 CSV → 列名确定性映射 → 写入） + `GET /api/trade/customers/template`（下载模板文件）。杜绝 LLM 自由解析 Excel 的误差
-- **TradeWin 文档库对话框**：新增 `LibraryDialog`，列出当前公司所有文档库（名称/根目录/说明）；侧边栏「📁 文档库」导航从错连 CompanyDialog 改为正确弹出 LibraryDialog
-- **update_trade 单元测试**：`tests/test_upgrade.py::TestUpdateTrade` 新增 4 个用例（成功流程 / pip 失败 / git stash 失败 / 运行目录缺失），覆盖 7 步更新编排逻辑，测试总数 201 → 205
+- **b2b-cold-outreach 技能（第 20 个）**：B2B 冷 outreach 邮件撰写 — 开发信/推广信/跟进信，基于产品数据+历史报价+目标市场情报生成个性化邮件，含语言自动匹配、反营销腔自检、A/B 变体、3-5 个主题行
+- **品牌安全护栏**：`BRAND_SAFETY_BLOCK` 禁止贬损语言、编造证书、高压销售话术、擅自降价；支持公司级 `brand_safety.md` 自定义覆盖；注入到所有对外内容生成的 system prompt
+- **客户去重**：`create()` 软去重警告（email/website 不阻止创建）；`bulk_save()` 三维去重（名称+email+website）；`find_duplicates()` 独立维度检测（email 精确匹配 + website 域名标准化）
+- **客户数据完整度评分**：`compute_data_completeness()` — 16 个字段加权（email/phone/website 权重 3×），0-100 分，列出缺失字段
+- **AI 客户简报**：`build_briefing()` — 5 段式简报（身份→联系方式→历史→订单→完整度），注入到聊天上下文供 Agent 感知客户全貌
+- **客户健康审计**：`GET /cron/health` — 僵尸客户（90 天无联系无订单）/ 高价值未转化（A 级无订单）/ 数据不完整 / 需跟进，供早安简报调用
+- **对话评分**：`POST /conversations/{id}/rate` + 前端 👍👎，`add_rating()` 用 `json_set` 原子 UPDATE 避免竞态
+- **SSE 返回 conversation_id**：`response` 事件附带 `conversation_id`，前端可立即评分无需等待下一次请求
 
 ### Changed
-- **TradeWin ChatView 流式渲染性能**：SSE `response` 事件改用 `QTextCursor` 锚点增量更新，取代原 `toHtml()/setHtml()` 全文重排，长回答下从 O(n²) 降到 O(n)
-- **TradeWin CustomerDialog 空列表表头污染修复**：空列表时改用 `Qt.NoItemFlags` 占位行，不再 `setHeaderLabels(["暂无客户数据"])` 破坏 4 列结构
+- **客户创建去重性能优化**：从 `list_by_company()` 跨连接 O(n) 扫描改为同连接 SQL `json_extract` 原子查询，消除 TOCTOU 竞态
+- **bulk_save 去重性能优化**：`create()` 增加 `_skip_dedup` 内部参数，`bulk_save()` 传入跳过重复检查，消除 O(n²)
 
 ### Fixed
-- **TradeWin dialogs.py 重复 import**：删除冗余的第二个 `from tradewin.api import (...)` 块
-- **TradeWin 文档库导航错连 CompanyDialog**：侧边栏索引 2 标注「文档库」却弹出公司管理对话框，已改为 LibraryDialog
-
-### Changed
-- **OSINT Phase 1 搜索决策树**：从固定 5 轮 STOP RULE 升级为状态驱动的 A/B/C/D 四分支决策，避免无效搜索浪费 token
-- **OSINT 输出格式增强**：公司概况表格新增「来源」列，新增「引用验证」章节（3 级可信度），新增「数据合规」声明
-- **b2b-doc-generation 引用来源清单**：开发信/提案生成时输出引用来源表和 4 级可信度标注
-- **list_all() 默认过滤软删除公司**：`is_active=1` 才会出现在公司选择器，已删除公司不再误显
-- **OrderCreate/Update 加 ge=0 约束**：quantity/unit_price/total_amount 不允许负数
-- **order.get_libraries 加 company_id 校验**：JOIN orders 表验证租户隔离，防跨公司读取
-- **/api/status 改用 run_in_executor**：urlopen 不再阻塞 uvicorn 事件循环（最长 5s）
-- **post_install.py 全部加 timeout**：git pull 120s / pip install 600s / schtasks/launchctl/systemctl 30s，防与 _capture_lock 联动死锁
-- **Hermes 兼容版本范围扩大**：`0.13.0 <= version < 0.17.0`（v0.16.0 已验证无 breaking change）
-- **系统升级流程重构**：`_perform_restart()` 统一重启逻辑（含 Gateway 协同 + 三层 PID 安全校验）；`/system/update` 通过 BackgroundTasks 调度重启，响应先送达前端
-- **升级重启顺序修复**：`_perform_restart()` 先启动新进程再杀旧进程（之前先杀自己导致新进程启动代码无法执行）
-- **升级端口重试**：新进程 uvicorn.run 增加重试循环（最多 10 秒），等旧进程释放端口
-- **升级只使用运行目录**：删除 `_guess_running_project_dir()` 和 `_force_sync_from_source()`，`update_trade()` 始终以 `~/.trade/foreign-trade-assistant/` 为唯一工作目录
-- **GitHub API 缓存**：`_latest_version_cache`（TTL 600s）防止版本轮询触发 API 限流
-- **`_capture_output` 捕获 SystemExit**：`sys.exit()` 不再穿透导致 FastAPI 500
-- **升级失败标记补全**：新增 `pip install failed`、`git stash 也失败`、`Database check failed` 标记
-- **Windows 重启兼容**：`_perform_restart` 使用 `creationflags=0x00000200` 避免子进程继承控制台
-- **前端版本检查缓存禁用**：`checkVersion()` 加 `cache: 'no-store'` + cache-bust 参数，避免浏览器缓存返回旧版本
-- **前端重启等待机制**：`_waitForRestartAndReload()` 先等服务 DOWN 再等 UP；`_clearRuntimeCaches()` 清 viewCache + sessionStorage（保留 trade_cid）；重载带 cache-bust 参数
-- **Skill 总数 15→17**：全仓库 .md 文档同步更新（README/CLAUDE/AGENTS/docs/业务概览/使用说明书），能力表格新增 trade-ops 和 trade-compliance
-- **Hermes 安装源全局修正**：所有文档和脚本中 `chefroger/hermes-agent` → `NousResearch/hermes-agent`（与 pyproject.toml 一致）；pre_install_check 源检查逻辑反转
-
-### Added
-- **b2b-trade-ops 技能**：覆盖 11 个履约场景（催款/索赔/展会/验厂/节日/样品/物流/售后/满意度/年度总结），每场景含邮件模板 + Quality Gate Checklist
-- **b2b-trade-compliance 技能**：覆盖文化禁忌速查/46 个外贸缩写全称/11 个 Incoterms 2020 速查/翻译二审/投标检查/跨境电商违禁词
-- **Accuracy Protocol (R0-R7)**：文档分析防幻觉体系——完整读取禁止截断、结构保真、数字溯源、置信度标注（[确切]/[计算]/[推断]/[不确定]）、冲突标记、缺失报告、验证重读
-- **General Information Sourcing Rules**：用户粘贴/web搜索/浏览器抓取/数据库四类来源统一溯源规范，每claim必附来源URL
-- **b2b-lead-generation Quality Gate Checklist**：8 个销售场景的发送前 60 秒自检清单
-- **Token 成本优化**：非首轮对话自动使用 `TRADE_SYSTEM_PROMPT_MINIMAL` 精简版 prompt（节约 ~2100 tokens/次）
-- **Skill 注入缓存**：连续使用同一 skill 时跳过完整 injection_prompt 注入（节约 ~1500 tokens/次）
-- **回滚标签**：`pre-token-optimization` 指向优化前版本，影响质量时可快速回退
-- **GitHub Pages 项目介绍页**：docs/index.md 面向零基础用户的安装指南，Windows 步骤放首位
-
-### Fixed
-- **trade-restore 在新机首次恢复时跳过 companies/ 目录**：`if companies_dst.exists()` 守卫导致空目标不复制，改为 `dirs_exist_ok=True`
-- **cron/today 空 task_time 永远判 missed**：`"" <= current_time` 恒为 True，改为 `bool(task_time) and task_time <= current_time`
-- **providers 端点 pconfig.display_name 不存在**：`ProviderConfig` 只有 `name` 属性，导致 `/models/providers` 静默失败返回空列表
-- **CI 测试兼容 fastapi 0.137**：`include_router` 改为 `_IncludedRouter` 包装，测试新增 `_flatten_routes()` 递归展开
+- **find_duplicates 网站匹配误判**：跨规则共享 `used_ids` 导致 email 组中的客户在 website 匹配时被过滤，移除跨规则共享逻辑
+- **compute_data_completeness match_score=0 误判**：默认值 0 被当作已填写，现特殊处理为未评分
 
 ## [0.6.1] — 2026-06-11
 

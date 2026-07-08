@@ -18,9 +18,21 @@ from trade.order import search_orders
 
 
 def _json_loads(raw):
-    """安全解析 JSON 字符串，失败时返回空字典。"""
+    """安全解析 JSON 字符串，失败时返回空字典。
+
+    对于非字符串非字典的意外输入类型（如 int/list），返回 {} 并记录 warning，
+    帮助调用方发现类型错误而非静默吞掉。
+    """
     if not raw or not isinstance(raw, str):
-        return {} if not isinstance(raw, dict) else raw
+        if isinstance(raw, dict):
+            return raw
+        # 非空非字符串非字典 → 可能上游传错了类型
+        if raw is not None and raw != "":
+            import logging
+            logging.getLogger(__name__).warning(
+                "_json_loads received unexpected type %s, returning {}", type(raw).__name__
+            )
+        return {}
     try:
         return json.loads(raw)
     except (json.JSONDecodeError, TypeError):

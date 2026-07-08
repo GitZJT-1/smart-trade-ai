@@ -153,7 +153,7 @@ trade
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 19 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 20 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
@@ -229,7 +229,7 @@ python server.py
 
 ---
 
-## 19 项专业能力
+## 20 项专业能力
 
 | 场景 | 能力 |
 |------|------|
@@ -238,6 +238,7 @@ python server.py
 | LinkedIn 运营 | Profile 优化 + 内容策略 + InMail 模板 |
 | 海关数据 | 分析进出口数据，筛选高价值采购商 |
 | 客户开发 | 根据目标市场+产品生成开发信和跟进序列，含价格/付款/交期谈判 |
+| 冷 Outreach 邮件 | 撰写个性化开发信/推广信/跟进信，语言匹配+反垃圾规则+产品参数速查 |
 | 客户管理 | 多维度分级（等级/买家类型/主营品类/匹配度）、详情面板、文档库关联、CSV 批量导入 |
 | 客户背调 | 6 层验证：邮箱平台检测→WHOIS→企业邮箱验证→制裁名单→技术栈→LinkedIn |
 | 邮箱情报 | 120+ 平台邮箱注册检测，识别企业 vs 个人邮箱 |

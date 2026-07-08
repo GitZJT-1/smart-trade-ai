@@ -88,7 +88,7 @@
 | files_read | TEXT (JSON) | [{"file":"...","pages":[1,2]}] |
 | created_at | TEXT | 创建时间 |
 | extra1 | TEXT (JSON) | {"tokens_used":0, "model":"", "duration_ms":0} |
-| extra2 | TEXT (JSON) | {"rating":null, "feedback":""} |
+| extra2 | TEXT (JSON) | {"rating":null, "feedback":"", "rated_at":""} |
 | extra3 | TEXT (JSON) | {"tools_used":[], "iterations":0} |
 
 ### 7. orders — 订单

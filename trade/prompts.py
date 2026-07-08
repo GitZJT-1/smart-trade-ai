@@ -134,18 +134,24 @@ def get_system_prompt(company_slug: str | None = None) -> str:
 
 
 def get_agent_identity(company_id: int) -> str:
-    """根据 company_id 获取 identity 文本（用于 helpers.build_query）。
+    """[已废弃] 根据 company_id 获取 identity 文本。
 
-    兼容模式：
-    - 文件存在 → 读文件
-    - 文件不存在、DB 有值 → 由调用方通过 DB 处理
-    - 都没有 → 空字符串
+    此函数始终返回空字符串 — 实际 identity 解析由
+    resolve_system_prompt() 统一处理，路径优先级为：
+      1. 公司 identity 文件
+      2. DB agent_identity_md
+      3. 全局 system.md
+      4. 代码 fallback
 
-    注意：此函数专注于从文件加载，不处理 DB。
-          DB 缓存逻辑由调用方（helpers.py 或 company.py）处理。
+    请改用 get_agent_identity_by_slug(company_slug) 或直接调用
+    resolve_system_prompt(company_slug, db_identity)。
     """
-    # company_id → slug 的转换需要查 DB，这里仅处理文件路径逻辑
-    # 实际 company_slug 由调用方传入，此处直接返回空字符串让调用方决策
+    import warnings
+    warnings.warn(
+        "get_agent_identity() is deprecated; use "
+        "get_agent_identity_by_slug() or resolve_system_prompt() instead.",
+        DeprecationWarning, stacklevel=2,
+    )
     return ""
 
 

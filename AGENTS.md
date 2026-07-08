@@ -1,292 +1,89 @@
-# AGENTS.md
+# Repository Guidelines
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales teams. A FastAPI server wrapping **Hermes Agent** with multi-company document libraries, customers, chat memory, skill routing, and a single-page chat UI. Also ships as a desktop app (tradewin) via PyWebView.
 
-## Project Overview
+## Project Structure & Module Organization
 
-Foreign Trade Assistant — a B2B Q&A application for trade/manufacturing sales teams. A FastAPI server wrapping **Hermes Agent** (AI engine from `NousResearch/hermes-agent`) with a custom business layer (multi-company document libraries, customers, chat memory, skill routing) and a single-page chat UI. Also ships as a desktop app (tradewin) via PyWebView.
+```
+static/trade_chat.html        Vanilla JS SPA (~3300 lines), served at /trade
+server.py / tradewin.py       Entry points (web server / desktop app)
+trade/                        Core Python package
+  ├── api/                    FastAPI routers (companies, customers, orders, chat, cron, …)
+  ├── database.py             SQLite schema + connection
+  ├── customer.py             Customer CRUD, dedup, completeness scoring, briefing, health audit
+  ├── chat_memory.py          Conversation log + rating + Hindsight bridge
+  ├── skill_registry.py       20 skill definitions (triggers, aliases, augment prompts)
+  ├── prompt.py               System prompts (full, minimal, OSINT, brand safety)
+  ├── prompts.py              Prompt resolution chain (file → DB → code fallback)
+  ├── helpers.py              Query builder with skill routing + brand safety injection
+  ├── license.py              Ed25519 license validation + self-recovery
+  └── osint/                  6-layer B2B due-diligence pipeline
+skills/                       Skill markdown files (version controlled)
+tests/                        8 test files, ~245 tests
+```
 
-## Commands
+## Build, Test, and Development Commands
 
 ```bash
-# Start server (also auto-starts Hermes Gateway for cron scheduling)
-python server.py                    # default http://127.0.0.1:9119/trade
-python server.py --port 8080 --host 0.0.0.0  # custom port & bind
-python server.py --no-browser       # don't open browser on startup
-python server.py --no-gateway       # skip auto-launching Hermes Gateway
-
-# Install (editable) + install B2B skills into Hermes
+# Install (editable) + skills
 pip install -e ".[dev]"
-install-trade-skills                # copy 19 skills from package to ~/.hermes/skills/
+install-trade-skills
 
-# CLI entry points (from pyproject.toml console scripts)
-trade                               # shortcut for python server.py
-trade-skills-update                 # fetch latest SKILL.md from GitHub main branch
-trade-update                        # git pull + pip install + skills + db
-trade-backup                        # backup ~/.trade/ data to tar.gz
-trade-restore <file.tar.gz>         # restore from backup
-tradewin                            # desktop app (FastAPI + pywebview window)
+# Start server
+python server.py                          # http://127.0.0.1:9119/trade
+python server.py --no-gateway             # skip Hermes Gateway auto-launch
+tradewin                                  # desktop app (requires pip install -e ".[desktop]")
 
-# License management
-python -m trade.license generate <申请码> <到期日期>   # 作者生成激活码
-python -m trade.license status                          # 查看当前许可证状态
+# CLI tools
+trade-skills-update                       # fetch latest SKILL.md from GitHub
+trade-update                              # git pull + pip install + skills + db
+trade-backup                              # backup ~/.trade/ to tar.gz
 
-# Pre-install compatibility check
-python pre_install_check.py
+# Testing
+python -m pytest tests/ -v                # all tests (asyncio_mode=auto)
+python -m pytest tests/test_customer_dedup.py -v  # single file
 
-# Initialize/check database (creates tables + spare columns if missing)
-python -m trade.database
+# Lint
+ruff check .                              # rules: E/F/W/I/B/C4/UP/N
+ruff check --fix .                        # auto-fix
+
+# Coverage
+coverage run -m pytest tests/ -v && coverage report
 ```
 
-`HERMES_YOLO_MODE=true` is set programmatically by `trade/bootstrap.py` — no manual env setup needed. Without YOLO mode, the AI agent would prompt for human approval on every tool call.
+## Coding Style & Naming Conventions
 
-### Desktop App (tradewin)
+- **Python**: Chinese docstrings on every function; every `if`-branch commented with business logic; sections delimited by `# ====` banner comments.
+- **Frontend**: Vanilla JS, no build tools. `$ (id)` shorthand, `api(method, path, body)` central fetch wrapper with 120s timeout, view-caching router via `navToView()`.
+- **Linting**: Ruff with select `E/F/W/I/B/C4/UP/N`; ignores `E501/E402/B904/N806/E741/F601`.
+- **Database**: Spare columns pattern (`extra1/extra2/extra3`) for schema flexibility; all tables use `datetime('now', 'localtime')` for timestamps.
 
-```bash
-# Install desktop dependencies
-pip install -e ".[desktop]"
+## Testing Guidelines
 
-# Run desktop app (FastAPI backend thread + pywebview window, no external browser needed)
-tradewin                              # via console_script
-python tradewin.py                    # direct invocation
+- Framework: **pytest** with `asyncio_mode=auto`. 8 test files, ~245 tests.
+- Isolation: `tests/conftest.py` sets `TRADE_HOME` to a temp directory before imports — no real data touched.
+- Database: monkeypatch `_get_db_path` for temporary SQLite databases.
+- Newly added: `tests/test_customer_dedup.py` — tests for dedup, `compute_data_completeness()`, `build_briefing()`, `health_audit()`.
+- Run: `python -m pytest tests/ -v`
 
-# Package as standalone .exe
-pyinstaller tradewin.spec             # (if spec file exists)
-```
+## Key Design Points (Recent Changes)
 
-`tradewin.py` launches the full Trade server in a daemon thread, waits for it to be ready, then opens a native WebView window pointed at the chat UI. Supports Windows and macOS. `trade/bootstrap.py` and `trade/app.py` include PyInstaller `_MEIPASS` path resolution for bundled static assets.
+1. **20 skills** (was 19): added `b2b-cold-outreach` for B2B cold outreach emails (development letters, promotion, follow-up).
+2. **Brand Safety Guardrails**: `BRAND_SAFETY_BLOCK` in `trade/prompt.py` prohibits derogatory language, fabricated certifications, hype claims, and competitor attacks. Loaded per-company via `get_brand_safety()` or falls back to code default. Injected into system prompt in `build_query()`.
+3. **Customer Dedup & Health** (Close.com blog optimizations):
+   - Soft dedup warnings on `create()` for email/website duplicates (doesn't block).
+   - `bulk_save()` 3-dimensional dedup: name + email + website.
+   - `find_duplicates()` — email exact match + website domain-normalized match.
+   - `compute_data_completeness()` — weighted 0–100 score across 16 fields.
+   - `build_briefing()` — AI customer briefing with identity, contacts, history, orders, completeness.
+   - `health_audit()` — detects stale customers, high-value unconverted, and incomplete data.
+4. **Conversation Rating**: `POST /conversations/{id}/rate` (1–5 + feedback), stored via `json_set` atomic UPDATE to avoid race conditions. SSE stream returns `conversation_id` in response event for immediate frontend rating.
+5. **New API endpoints**: `GET /customers/duplicates`, `GET /cron/health`.
 
-## Testing & Linting
+## Commit & Pull Request Guidelines
 
-```bash
-# Run all tests (asyncio_mode=auto, configured in pyproject.toml [tool.pytest.ini_options])
-python -m pytest tests/ -v
-
-# Run a single test file
-python -m pytest tests/test_business.py -v
-python -m pytest tests/test_api.py -v
-python -m pytest tests/test_database.py -v
-python -m pytest tests/test_chat_smoke.py -v
-python -m pytest tests/test_osint.py -v
-python -m pytest tests/test_license.py -v
-
-# Run a single test
-python -m pytest tests/test_business.py::test_function_name -v
-
-# Lint (rules: E/F/W/I/B/C4/UP/N in pyproject.toml; E501/E402/B904/N806/E741/F601 ignored)
-ruff check .
-ruff check --fix .                 # auto-fix
-
-# Test coverage
-coverage run -m pytest tests/ -v
-coverage report
-```
-
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. 205 tests across 7 files (test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade).
-
-## Architecture
-
-```
-static/trade_chat.html          Chat SPA — single-file vanilla JS (~3300 lines), served at /trade
-        │                         Zero build tools. Injects __TRADE_SESSION_TOKEN__ placeholder.
-        │  trade-customer-template.csv  CSV import template with UTF-8 BOM (Excel-compatible)
-        ▼
-server.py                       Thin entry point (5 lines) — calls bootstrap.setup() + app.main()
-tradewin.py                     Desktop app — same backend in daemon thread + pywebview window
-  ├── trade/bootstrap.py        Startup sequence: log filter, sys.path, subcommand dispatch,
-  │                             Hermes version check, .env load, YOLO mode, skills sync
-  ├── trade/app.py              FastAPI app factory + CORS + license check + system endpoints
-  │   ├── /trade                Injects session token into SPA HTML
-  │   ├── /api/trade/*          Mounts trade.api router (session-token protected)
-  │   └── /api/status           Health check
-        │
-        ▼
-trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
-  │                             All sub-routers share Depends(require_session)
-  ├── trade/api/companies.py     /companies/*     Multi-company CRUD
-  ├── trade/api/libraries.py     /libraries/*     Document library CRUD + file upload
-  ├── trade/api/customers.py     /customers/*     Customer CRUD + CSV bulk import + template download (UTF-8 BOM)
-  ├── trade/api/orders.py        /orders/*        Order CRUD (3-layer context query)
-  ├── trade/api/conversations.py /conversations/* Chat log CRUD
-  ├── trade/api/chat.py          /chat (sync) + /chat/stream (SSE with tool progress)
-  ├── trade/api/memory.py        /memory/*        Hindsight long-term memory + LLM providers
-  ├── trade/api/onboarding.py    /onboarding/*    First-run wizard
-  ├── trade/api/cron.py          /cron/*          Scheduled task automation
-  ├── trade/api/deps.py          Session token validation + _require_company()
-  ├── trade/api/models.py        Pydantic request/response models
-  └── trade/api/license.py       License validation endpoints
-        │
-        ├─ trade/helpers.py     Provider check, agent kwargs, query builder
-        │     ├─ trade/prompts.py     System prompt loader (file → DB → code fallback)
-        │     │     └─ trade/prompt.py   TRADE_SYSTEM_PROMPT (B2B agent personality)
-        │     └─ trade/skill_router.py  Keyword-based skill auto-detection + query augmentation
-        │
-        ├─ trade/database.py    SQLite connection + schema (data/trade.db)
-        │     ├─ trade/company/        Multi-company CRUD + ~/.trade/ data dir management
-        │     │     ├── crud.py        Company CRUD operations
-        │     │     └── workdir.py     Cross-platform working directory (SHGetFolderPathW on Windows)
-        │     ├─ trade/library.py       Document library CRUD
-        │     ├─ trade/customer.py      Customer CRUD + CSV parsing (4 classification fields: tier, buyer_type, main_category, match_score)
-        │     ├─ trade/order.py         Order CRUD (3-layer context query)
-        │     └─ trade/chat_memory.py   Conversation log + Hindsight bridge
-        │           └─ trade/memory.py  Hindsight long-term memory client
-        │
-        ├─ trade/onboarding.py  First-run wizard (create company + agent identity in one step)
-        ├─ trade/osint/         B2B due-diligence (6-layer subpackage)
-        │     ├── orchestrator.py  osint_full_check() main entry
-        │     ├── whois.py         Layer 2: WHOIS domain lookup
-        │     ├── email_verify.py  Layer 3: corporate vs personal email
-        │     ├── sanctions.py     Layer 4: OFAC/UN/EU sanctions screening
-        │     ├── tech_stack.py    Layer 5: tech stack detection
-        │     ├── linkedin_verify.py Layer 6: LinkedIn verification
-        │     ├── scoring.py       Risk score + recommendation
-        │     └── constants.py     Shared constants
-        ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
-        ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 19 skill definitions (pure data — triggers, aliases, formats)
-        └─ trade/post_install.py Skill installation + CLI commands (update/backup)
-```
-
-## Server Startup Sequence
-
-`trade/bootstrap.py` + `trade/app.py` run a specific, order-dependent startup sequence:
-
-1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
-2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
-3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
-4. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
-5. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
-6. **Database init** — creates tables, migrates schema, spare columns
-7. **License check** — validates license, warns if expired
-8. **Session token generation** — random url-safe token injected into HTML and validated by deps.py
-9. **Route mounting** — license endpoints → system endpoints (update/backup/restart, no session token required) → trade router
-10. **Gateway auto-launch** — spawns `hermes gateway run` as detached subprocess for cron scheduling (unless `--no-gateway`)
-11. **PID file** — writes `~/.trade/data/trade.pid`, cleaned up on exit for restart support
-12. **Start uvicorn** — binds to `127.0.0.1:9119` by default
-
-## Key Design Decisions
-
-1. **Hermes Agent is an external dependency** (not vendored). Version pinned to `v2026.7.1` (0.18.0) in `pyproject.toml`. Compatibility matrix in `COMPATIBILITY.md`. Version range: `0.13.0 <= version < 0.19.0`.
-
-2. **Session token pattern**: Server generates a random `X-Hermes-Session-Token` on startup, injects it into served HTML. The SPA uses this for API auth — same pattern as Hermes dashboard. `trade/api/deps.py:require_session()` validates it on every protected route.
-
-3. **Single-file SPA frontend**: `static/trade_chat.html` is a ~3300 line vanilla JS application with embedded CSS — no build tools, no framework. Communicates via `__TRADE_SESSION_TOKEN__` placeholder injection. Uses marked.js + DOMPurify for markdown rendering.
-
-4. **Dual chat endpoints**: `/chat` is synchronous (thread pool + 600s timeout); `/chat/stream` uses SSE to emit `tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done` events for real-time tool progress in the UI.
-
-5. **Multi-company isolation via `X-Company-ID` header + session binding**. Every business-data endpoint requires `X-Company-ID`. On first request, the session token is bound to that company — subsequent requests with a different company ID return 403. Use `POST /api/trade/companies/{id}/switch` to explicitly switch. `list_all()` returns only id/name/slug/is_active (PII redacted) for the company selector.
-
-6. **Document libraries = filesystem directories**. Each library has a `root_path` pointing to a real directory. The AI agent uses `read_file` / `list_dir` tools to analyze files.
-
-7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 19 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
-
-   The 19 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`, `b2b-skill-generator`, `b2b-trade-ops`, `b2b-trade-compliance`, `auto-trade-customer-development`, `auto-smtp-email`.
-
-8. **Prompt resolution chain** (trade/prompts.py): Company identity file (~/.trade/companies/{slug}/agent_identity.md) → DB agent_identity_md field → global system.md → code fallback (TRADE_SYSTEM_PROMPT). Files are mtime-cached for performance.
-
-9. **Hindsight is optional**. `trade/memory.py` gracefully degrades to no-ops if `hindsight_client` is not installed. Also writes to Hermes native memory (~/.hermes/memories/MEMORY.md) which always works.
-
-10. **Spare columns pattern**: All DB tables have `extra1/extra2/extra3` TEXT columns (storing JSON) for future schema extensions without ALTER TABLE. `_add_spare_columns()` is idempotent across all tables.
-
-11. **Onboarding flow**: `POST /api/trade/onboarding/first-company` atomically creates a company + configures agent identity. Protected by an in-memory flag that checks DB for existing active companies.
-
-12. **Hermes Gateway auto-launch**: On startup, `server.py` checks if `hermes gateway run` is already listening on port 8642. If not, it spawns it as a detached subprocess (independent lifecycle — Gateway survives Trade restart). This enables cron scheduling for automated tasks.
-
-13. **Skills sync on startup**: `server.py` fetches latest SKILL.md from GitHub main branch on every startup. Falls back to local hash comparison if offline. Skills are never deleted (user may have added their own).
-
-14. **Data templates**: `.trade-template/` contains structured templates for companies (agent identity, products, competitors, certifications, marketing strategy, sales playbook), clients (profiles, contacts, orders, quotes, requirements), and libraries.
-
-15. **OSINT subpackage**: `trade/osint/` is a 6-layer due-diligence pipeline (email registration → WHOIS → email verification → sanctions → tech stack → LinkedIn verification), coordinated by `orchestrator.py`. All functions are pure (no DB, no filesystem). `trade/email_intel.py` is a separate module using `holehe` CLI under subprocess for 120+ platform email registration checks.
-
-16. **Orders API**: `trade/api/orders.py` + `trade/order.py` provide 3-layer context query (company scope, customer scope, order details). Each order links to a customer, which belongs to a company — ensuring correct data isolation.
-
-17. **Test conftest isolation**: `tests/conftest.py` sets `TRADE_HOME` env var to a temp directory before any imports, ensuring tests never touch real user data.
-
-18. **License system**: Ed25519 non-asymmetric signatures — public key built into code, private key held by author only. Activation codes embed machine-id hash + expiry date + Ed25519 signature. 30-day free trial, machine-bound activation (soft-delete on company removal, audit logs at `~/.trade/audit/`). After upgrades, `_recover_signature_from_code()` auto-recovers the signature from the stored activation code if validation fails due to signature format mismatch.
-
-19. **Desktop app (tradewin.py)**: PyWebView native window wrapping the same FastAPI backend in a daemon thread. No external browser needed. `[desktop]` optional dependency group includes `pywebview` + `pyinstaller`. Bootstrap and app modules support PyInstaller `_MEIPASS` for bundled static files.
-
-20. **Token cost optimization** (2026-06-12): Two mechanisms to reduce repeated token spending for MiniMax M3 pay-per-token model:
-    - **System prompt tiering**: `build_query()` checks `conversations` table — first message in a company session gets full `TRADE_SYSTEM_PROMPT`, subsequent messages get `TRADE_SYSTEM_PROMPT_MINIMAL` (~400 vs ~2500 tokens).
-    - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive same-skill sends brief hint instead of full injection_prompt (~1500 tokens).
-    - Rollback tag: `pre-token-optimization`.
-
-21. **Customer classification fields** (2026-07-01): 4 new fields stored in `extra1`/`extra2` spare columns — `tier` (客户分级 A/B/C), `buyer_type` (品牌商/经销商/零售商), `main_category` (主营产品品类), `match_score` (1-5匹配评分). CSV bulk import via `POST /customers/bulk` with downloadable UTF-8 BOM template at `GET /customers/template`. **Route ordering**: `/customers/template` and `/customers/bulk` must be registered before `/customers/{customer_id}` — otherwise FastAPI treats `"template"` as a `customer_id` and returns 422.
-
-22. **License self-recovery** (2026-07-01): `_recover_signature_from_code()` in `trade/license.py` — when signature validation fails after an upgrade (signature format mismatch), automatically recovers the signature from the original activation code stored in `license_data.json`. The activation code was already validated at activation time, so only re-extraction is needed.
-
-23. **Frontend UX improvements** (2026-07-02):
-    - **Floating back-to-bottom**: A floating button appears when the user scrolls away from the bottom of the chat area, preserved across view switches.
-    - **Cron floating arrow**: New cron output no longer force-scrolls; instead shows a floating arrow indicator when new content arrives while user is reading older output.
-    - **Browse state preservation**: Chat scroll position and cron output position are saved to localStorage on hard reload, preventing loss of reading context after restart.
-
-## Hermes Coupling Points
-
-Trade depends on these Hermes internals (watch on Hermes upgrades):
-- `run_agent.AIAgent` — the AI agent class (imported dynamically in chat endpoints; as of Hermes 0.17+, is a forwarder from `agent.agent_init.init_agent` but re-export remains stable)
-- `hermes_cli.config.load_config` — reads `~/.hermes/config.yaml`
-- `hermes_cli.config.DEFAULT_CONFIG` — v0.14+ `config["model"]` 是扁平字符串 `"provider:model"`，v0.13 前是嵌套 dict `{"provider":"...","default":"..."}`
-- `hermes_cli.auth.PROVIDER_REGISTRY` — available LLM providers
-- `hermes_cli.env_loader.load_hermes_dotenv` — loads `~/.hermes/.env`
-- `hermes_cli.models._PROVIDER_MODELS` — provider-to-models mapping (v0.14 替换 name_to_models)
-- `hermes_constants.get_hermes_home` — resolves `~/.hermes` path
-- Cognee knowledge graph (tools `cognee_remember` / `cognee_recall` referenced in system prompt)
-- `hermes gateway run` — spawned as detached subprocess for cron scheduling (port 8642)
-
-## Skills Sync Mechanism
-
-Skills live in two places:
-1. **Source of truth**: `skills/b2b-*/SKILL.md` in the project directory (version controlled)
-2. **Runtime**: `~/.hermes/skills/b2b-*/SKILL.md` (what Hermes actually loads)
-
-Sync happens at three points:
-- `trade/bootstrap.py` startup — fetches latest from GitHub main, falls back to local hash comparison
-- `trade-skills-update` CLI — same GitHub fetch logic
-- UI "更新 Skills" button — calls `POST /api/trade/skills/update` (same update logic)
-
-`trade/skill_registry.py` is the **pure-data registry** of all 19 skills (triggers, aliases, input/output formats). Adding a new skill requires: (1) create `skills/b2b-{name}/SKILL.md` or `skills/auto-{name}/SKILL.md`, (2) add an entry to `_SKILLS` in `skill_registry.py`. Note: `chat-memory` is a special skill without `b2b-` or `auto-` prefix; the skill filter in `post_install/skills.py` includes both prefixed patterns plus `chat-memory`.
-
-## Runtime Data Layout
-
-详见 [Trade数据目录结构设计.md](Trade数据目录结构设计.md)。
-
-```
-~/.hermes/skills/               Skills installed by install-trade-skills
-  ├── b2b-document/
-  ├── b2b-platform/
-  └── ... (15 b2b-* skills)
-~/.trade/                       User data created on first company init
-  ├── config.yaml
-  ├── prompts/system.md
-  └── companies/{slug}/
-      ├── agent-identity.md
-      ├── company-profile.md
-      ├── products.md
-      └── ...
-```
-
-## Frontend Architecture (static/trade_chat.html)
-
-The SPA uses vanilla JS with a custom view-caching router (~3300 lines of vanilla JS + embedded CSS):
-- **`navToView(view, chatCtx, chatName)`** — switches between chat/customers/tasks/history views. Creates DOM once, caches in `viewCache` object, hides/shows on switch. Non-cached children (except `#guidance-bar`) are removed on each switch.
-- **`api(method, path, body)`** — central fetch wrapper. Adds `X-Hermes-Session-Token` + `X-Company-ID` headers. 120s AbortController timeout. Handles 401/402/404/409 with toast. Returns parsed JSON or null.
-- **`$ (id)`** — shorthand for `document.getElementById(id)`.
-- **Guidance bar** — `#guidance-bar` is a fixed-height banner (flex-shrink:0, max-height:20vh, scrollable) at the top of `#main-content`. Shows current task guidance + progress bar + today's cron task list. Preserved across view switches (skipped in cleanup loop).
-- **Modals** — a mix of static hidden divs (company-modal, customer-modal, library-modal) toggled via `showModal(id)`/`hideModal(id)`, and dynamically-created backdrops (order-modal, customer-detail-panel, custom-template-modal) that must clean up old instances before creating new ones to avoid duplicate IDs.
-- **Chat** — SSE streaming via `EventSource`-like fetch reader. Tool progress events (`tool_start`, `tool_complete`, `thinking`, `response`, `error`, `done`) rendered inline. Markdown via marked.js + DOMPurify. Floating "back to bottom" button appears when scrolled away from latest messages; cron tab uses floating arrow indicator for new content instead of force-scrolling. Scroll/cron positions preserved in localStorage across hard reloads.
-
-## Chat Memory
-
-Every chat message (query + response) is persisted to SQLite `conversations` table with `created_at` auto-populated via `datetime('now', 'localtime')` default. Both `/chat` and `/chat/stream` call `chat_memory.save_with_context()` after agent response, which also optionally syncs to Hindsight long-term memory and Hermes native memory.
-
-## GBrain Configuration (configured by /setup-gbrain)
-- Mode: local-stdio
-- Engine: pglite
-- Config file: ~/.gbrain/config.json (mode 0600)
-- Setup date: 2026-06-10
-- MCP registered: yes
-- Artifacts sync: artifacts-only
-- Current repo policy: read-write
+- **Commits**: Chinese-language conventional commits (`feat:`, `fix:`, `chore:`, `docs:`, `style:`). Keep scoped and atomic.
+- **PRs**: Link related issues; include before/after test results; screenshots for UI changes. Ensure `ruff check .` and `python -m pytest tests/ -v` pass.
 
 ## Code Annotation Standards
 

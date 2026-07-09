@@ -19,13 +19,22 @@ logger = logging.getLogger(__name__)
 _last_purge_date: str = ""
 
 
-def purge_old_conversations(company_id: int, days: int = 180) -> int:
+def purge_old_conversations(company_id: int, days: int = 365, min_total: int = 30000) -> int:
     """删除指定公司 N 天前的对话记录，返回删除行数。
 
+    仅在总对话数超过 min_total 时才执行清理——避免对小数据集的过度裁剪。
     每家公司独立清理，不影响其他公司的数据保留策略。
     """
     conn = get_connection()
     try:
+        # 先检查总量，小于阈值不清理
+        total = conn.execute(
+            "SELECT COUNT(*) FROM conversations WHERE company_id = ?",
+            (company_id,),
+        ).fetchone()[0]
+        if total < min_total:
+            return 0
+
         cur = conn.execute(
             "DELETE FROM conversations "
             "WHERE company_id = ? AND created_at < datetime('now', 'localtime', ?)",
@@ -255,7 +264,7 @@ def save_with_context(
         if _last_purge_date != _today:
             _last_purge_date = _today
             try:
-                purge_old_conversations(company_id, days=180)
+                purge_old_conversations(company_id, days=365, min_total=30000)
             except Exception:
                 logger.debug("Conversation purge skipped", exc_info=True)
 

@@ -237,8 +237,11 @@ def unlink_library_from_customer(
     cid: int = Depends(require_company),
 ):
     """取消文档库与客户的关联。"""
-    if not customer_module.unlink_library(customer_id, library_id, company_id=cid):
-        raise HTTPException(status_code=404, detail="Link not found")
+    try:
+        if not customer_module.unlink_library(customer_id, library_id, company_id=cid):
+            raise HTTPException(status_code=404, detail="Link not found")
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return {"ok": True}
 
 

@@ -182,6 +182,22 @@ _EXPLICIT_SCORE = 9999  # 显式调用（如 "用 b2b-osint"）获得绝对最�
 _BOUNDARY_WEIGHT = 3   # 词边界匹配（如独立词"背景调查"）
 _SUBSTRING_WEIGHT = 1  # 宽松子串匹配（如"做一下背景调查再联系"）
 
+# ── 预编译触发词正则（模块加载时一次性构建，避免每次 query 重复 re.compile）──
+# 结构：[(skill_idx, skill_name, [(trigger_text, boundary_re, substring_re), ...]), ...]
+_PRECOMPILED: list[tuple[int, str, list[tuple[str, re.Pattern, re.Pattern]]]] = []
+for _idx, _skill in enumerate(_SKILLS):
+    _triggers = _skill.get("triggers", [])
+    if _triggers:
+        _patterns: list[tuple[str, re.Pattern, re.Pattern]] = []
+        for _kw in _triggers:
+            _esc = re.escape(_kw)
+            _patterns.append((
+                _kw,
+                re.compile(r'\b' + _esc + r'\b', re.IGNORECASE),
+                re.compile(_esc, re.IGNORECASE),
+            ))
+        _PRECOMPILED.append((_idx, _skill["name"], _patterns))
+
 
 def _score_skills(query: str) -> list[dict]:
     """对每个注册 skill 逐触发词计算匹配得分，返回排序后的评分列表。
@@ -223,32 +239,24 @@ def _score_skills(query: str) -> list[dict]:
                     "substring_hits": 0,
                 }]
 
-    # ── 策略 2：逐触发词评分 ──
+    # ── 策略 2：逐触发词评分（使用预编译正则 _PRECOMPILED，无 re.compile 开销）──
     normed = _norm(query)
     results = []
 
-    for idx, skill in enumerate(_SKILLS):
-        triggers = skill.get("triggers", [])
-        # 跳过无触发词的 skill（如 chat-memory）
-        if not triggers:
-            continue
-
+    for idx, skill_name, patterns in _PRECOMPILED:
         total_score = 0
         triggers_matched: list[str] = []
         boundary_hits = 0
         substring_hits = 0
 
-        for kw in triggers:
-            escaped = re.escape(kw)
+        for kw, boundary_re, substring_re in patterns:
             # 优先尝试词边界匹配（精确度更高）
-            boundary_re = re.compile(r'\b' + escaped + r'\b', re.IGNORECASE)
             if boundary_re.search(normed):
                 total_score += _BOUNDARY_WEIGHT
                 boundary_hits += 1
                 triggers_matched.append(kw)
                 continue  # 词边界命中后不再尝试子串（避免重复计数）
             # 宽松子串匹配
-            substring_re = re.compile(escaped, re.IGNORECASE)
             if substring_re.search(normed):
                 total_score += _SUBSTRING_WEIGHT
                 substring_hits += 1
@@ -256,7 +264,7 @@ def _score_skills(query: str) -> list[dict]:
 
         if total_score > 0:
             results.append({
-                "skill_name": skill["name"],
+                "skill_name": skill_name,
                 "score": total_score,
                 "triggers_matched": triggers_matched,
                 "word_boundary_hits": boundary_hits,

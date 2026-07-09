@@ -34,14 +34,28 @@ _WINDOW_SECONDS = 60.0
 _chat_timestamps: dict[int, list[float]] = {}  # company_id → [timestamps]
 _rate_limit_lock = threading.Lock()
 
-# 定期清理：每小时扫描一次，删除无活跃时间戳的 company entry，防止内存泄漏
+# 定期清理：每小时扫描一次，删除超过 1 小时无活跃时间戳的 company entry，
+# 防止 _chat_timestamps 和 _last_skill_per_company 无界增长导致内存泄漏。
+# 阈值 3600s 远大于限流窗口 60s，不会误清活跃公司。
+_STALE_THRESHOLD = 3600.0
+
 def _cleanup_rate_limit_dicts():
     while True:
         time.sleep(3600)
+        now = time.time()
         with _rate_limit_lock:
-            stale = [cid for cid, stamps in _chat_timestamps.items() if not stamps]
+            stale = [
+                cid for cid, stamps in _chat_timestamps.items()
+                if not stamps or all(now - t > _STALE_THRESHOLD for t in stamps)
+            ]
             for cid in stale:
                 del _chat_timestamps[cid]
+        # 同时清理 skill 缓存中超过阈值的 company entry
+        with _skill_cache_lock:
+            # 只能清理在 _chat_timestamps 中也被清理的条目，
+            # 确保活跃公司的 skill 缓存不会被误删
+            for cid in stale:
+                _last_skill_per_company.pop(cid, None)
 
 _cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
 _cleanup_thread.start()
@@ -116,7 +130,7 @@ async def trade_chat(
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
     _extract_and_cache_skill(cid, full_query, skill_hint)
 
-    _MAX_AGENT_RETRIES = 1  # 最多重试 1 次（共 2 次尝试），避免 Token 费用翻倍
+    _MAX_AGENT_RETRIES = 2  # 最多重试 2 次（共 3 次尝试），与 SSE 流式端点保持一致
 
     def _call_agent():
         last_error = ""

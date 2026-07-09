@@ -260,14 +260,18 @@ def unlink_library(
     library_id: int,
     company_id: int,
 ) -> bool:
-    """按公司作用域移除客户与文档库的关联关系。"""
+    """按公司作用域移除客户与文档库的关联关系。
+
+    Raises:
+        ValueError: 客户在指定公司下不存在（区别于关联不存在的场景）
+    """
     conn = get_connection()
     try:
         # Verify ownership before unlinking
         cust = get(customer_id, company_id=company_id)
         if not cust:
-            # 客户在指定公司下不存在，视为操作不存在，返回 False
-            return False
+            # 客户在指定公司下不存在，抛异常以便调用方区分错误类型
+            raise ValueError(f"Customer {customer_id} not found under company {company_id}")
         cur = conn.execute(
             "DELETE FROM customer_libraries WHERE customer_id = ? AND library_id = ?",
             (customer_id, library_id),
@@ -469,7 +473,7 @@ def bulk_save(
 
 # ── 数据完整度评分 ────────────────────────────────────────────────────────────
 
-def compute_data_completeness(cust: dict) -> dict:
+def compute_data_completeness(cust: dict, *, _extra1: dict | None = None, _extra2: dict | None = None) -> dict:
     """计算客户数据完整度评分。
 
     基于 extra1 + extra2 中 16 个字段的加权计算：
@@ -477,19 +481,27 @@ def compute_data_completeness(cust: dict) -> dict:
     - 中权重 (2)：linkedin_url, whatsapp, buyer_type — 重要辅助信息
     - 低权重 (1)：其余字段
 
+    _extra1 / _extra2 可选预解析参数：调用方如 health_audit() 已解析过 JSON 时传入，
+    避免重复 json.loads 开销。未传入时从 cust dict 中按需解析。
+
     Returns:
         {"score": int (0-100), "missing_fields": [str], "filled_count": int, "total_fields": int}
     """
-    raw_extra1 = cust.get("extra1", "{}")
-    raw_extra2 = cust.get("extra2", "{}")
-    try:
-        extra1 = json.loads(raw_extra1) if isinstance(raw_extra1, str) else (raw_extra1 or {})
-    except (json.JSONDecodeError, TypeError):
-        extra1 = {}
-    try:
-        extra2 = json.loads(raw_extra2) if isinstance(raw_extra2, str) else (raw_extra2 or {})
-    except (json.JSONDecodeError, TypeError):
-        extra2 = {}
+    if _extra1 is not None and _extra2 is not None:
+        # 调用方已预解析，直接使用，跳过 JSON 解析开销
+        extra1 = _extra1
+        extra2 = _extra2
+    else:
+        raw_extra1 = cust.get("extra1", "{}")
+        raw_extra2 = cust.get("extra2", "{}")
+        try:
+            extra1 = json.loads(raw_extra1) if isinstance(raw_extra1, str) else (raw_extra1 or {})
+        except (json.JSONDecodeError, TypeError):
+            extra1 = {}
+        try:
+            extra2 = json.loads(raw_extra2) if isinstance(raw_extra2, str) else (raw_extra2 or {})
+        except (json.JSONDecodeError, TypeError):
+            extra2 = {}
 
     # 字段权重：关键联系信息权重更高
     field_weights = {
@@ -674,7 +686,8 @@ def health_audit(company_id: int) -> dict:
             })
 
         # 3. 数据不完整：完整度 < 40%
-        score_result = compute_data_completeness(cust)
+        # 传入已解析的 extra1/extra2 避免 compute_data_completeness 内重复 json.loads
+        score_result = compute_data_completeness(cust, _extra1=extra1, _extra2=extra2)
         if score_result["score"] < 40:
             incomplete_data.append({
                 "id": cust["id"], "name": cust["name"],

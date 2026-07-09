@@ -256,7 +256,7 @@ def save_with_context(
         except Exception as exc:
             logger.debug("Memory retain skipped: %s", exc)
 
-    # 每天运行一次对话清理，删除 180 天前的旧记录
+    # 每天运行一次对话清理，删除 365 天前的旧记录（仅当总量超过 30000 条时触发）
     if company_id:
         global _last_purge_date
         from datetime import date as _date

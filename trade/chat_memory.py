@@ -15,6 +15,31 @@ from trade.database import get_connection
 
 logger = logging.getLogger(__name__)
 
+# 对话清理节流：同一天内最多运行一次，避免每次保存都扫描全表
+_last_purge_date: str = ""
+
+
+def purge_old_conversations(company_id: int, days: int = 180) -> int:
+    """删除指定公司 N 天前的对话记录，返回删除行数。
+
+    每家公司独立清理，不影响其他公司的数据保留策略。
+    """
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "DELETE FROM conversations "
+            "WHERE company_id = ? AND created_at < datetime('now', 'localtime', ?)",
+            (company_id, f"-{days} days"),
+        )
+        conn.commit()
+        deleted = cur.rowcount
+        if deleted:
+            logger.info("Purged %d conversations older than %d days for company %d",
+                        deleted, days, company_id)
+        return deleted
+    finally:
+        conn.close()
+
 
 def save(
     company_id: int,
@@ -221,6 +246,18 @@ def save_with_context(
             pass  # trade.memory 模块未安装，跳过记忆保留
         except Exception as exc:
             logger.debug("Memory retain skipped: %s", exc)
+
+    # 每天运行一次对话清理，删除 180 天前的旧记录
+    if company_id:
+        global _last_purge_date
+        from datetime import date as _date
+        _today = _date.today().isoformat()
+        if _last_purge_date != _today:
+            _last_purge_date = _today
+            try:
+                purge_old_conversations(company_id, days=180)
+            except Exception:
+                logger.debug("Conversation purge skipped", exc_info=True)
 
     return result
 

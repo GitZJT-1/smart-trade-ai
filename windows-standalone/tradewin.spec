@@ -49,6 +49,8 @@ a = Analysis(
         'hermes_constants', 'run_agent',
         # LLM Provider SDKs — required, not optional
         'openai', 'anthropic',
+        # OCR — Python wrapper (tesseract.exe must be installed separately on Windows)
+        'pytesseract',
         'asyncio', 'sqlite3', 'json', 'csv', 'io', 're', 'hashlib',
     ],
     hookspath=[],

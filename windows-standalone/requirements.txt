@@ -5,3 +5,5 @@ pyinstaller>=6.0,<7.0
 hermes-agent
 # Explicit: setup.py write_hermes_config() uses yaml
 pyyaml>=6.0,<7.0
+# OCR — Tesseract Python wrapper (system binary tesseract.exe required separately)
+pytesseract>=0.3.10

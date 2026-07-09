@@ -246,9 +246,76 @@ def print_info(msg: str):
 # Main check logic
 # ─────────────────────────────────────────────────────────────────────────────
 
+def check_architecture() -> str | None:
+    """Check for architecture mismatch on Apple Silicon.
+
+    Returns a warning string if there's a potential issue, or None if all clear.
+    """
+    import platform
+    import subprocess
+
+    sys_machine = platform.machine()
+    py_machine = platform.machine()  # same call — Python reports the runtime arch
+
+    # Only warn on macOS
+    if sys.platform != "darwin":
+        return None
+
+    # Get hardware architecture from uname (not Python's emulated view)
+    try:
+        result = subprocess.run(
+            ["uname", "-m"], capture_output=True, text=True, timeout=5,
+        )
+        hw_arch = result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        hw_arch = ""
+
+    # If hardware is arm64 (M-series) but Python is x86_64 (Rosetta)
+    if hw_arch == "arm64" and py_machine == "x86_64":
+        return (
+            f"Architecture mismatch detected: hardware is {hw_arch} (Apple Silicon) "
+            f"but Python is {py_machine} (Rosetta).\n"
+            "This may cause Hermes dependencies (pydantic-core, psutil, etc.) "
+            "to fail with Mach-O architecture errors.\n\n"
+            "Fix: Install native arm64 Python via Homebrew:\n"
+            "  brew install python@3.12\n"
+            "  # If Homebrew itself is under Rosetta, reinstall it:\n"
+            "  # /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n"
+            "Then re-run this check with the native Python."
+        )
+
+    # If hardware is x86_64 AND we're on macOS — could be Intel Mac or Rosetta M-series
+    if hw_arch == "x86_64" and sys_machine == "x86_64":
+        # Check if we're actually on an M-series Mac under Rosetta
+        try:
+            result = subprocess.run(
+                ["sysctl", "-n", "hw.optional.arm64"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.stdout.strip() == "1":
+                return (
+                    "You are running on an Apple Silicon Mac under Rosetta emulation.\n"
+                    "Hermes dependencies may fail when compiled as x86_64 binaries.\n\n"
+                    "Fix: Use native arm64 Python:\n"
+                    "  arch -arm64 /bin/bash  # start an arm64 shell\n"
+                    "  brew install python@3.12  # native arm64 Python\n"
+                    "Then re-run this check."
+                )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+
+    return None
+
+
 def run_check() -> int:
     """Run all checks. Returns exit code (0=ok, 1=not installed, 2=incompatible)."""
     print_header()
+
+    # Step 0: architecture check (warn but don't block install)
+    arch_warning = check_architecture()
+    if arch_warning:
+        print_warn(arch_warning)
+        print()
 
     installed_version = get_installed_hermes_version()
 

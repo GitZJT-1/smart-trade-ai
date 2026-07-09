@@ -50,6 +50,26 @@ if [ -z "$PYTHON" ]; then
     exit 1
 fi
 
+# ── 架构检测（Apple Silicon 兼容性）────────────────────────────────────────
+ARCH=$(uname -m)
+PY_ARCH=$("$PYTHON" -c "import platform; print(platform.machine())")
+if [ "$ARCH" = "arm64" ] && [ "$PY_ARCH" = "x86_64" ]; then
+    log_warn "检测到架构不匹配：CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。"
+    log_warn "这会导致 Hermes 依赖（pydantic-core, psutil 等）出现 Mach-O 架构错误。"
+    echo ""
+    echo "  修复方法：安装原生 arm64 Python"
+    echo "    brew install python@3.12"
+    echo "  如果 Homebrew 也在 Rosetta 下："
+    echo "    /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    echo ""
+fi
+
+# 也检查另一种情况：CPU 是 x86_64 但 Python 是 arm64（几乎不会发生，但做个防护）
+if [ "$ARCH" = "x86_64" ] && [ "$PY_ARCH" = "arm64" ]; then
+    log_warn "检测到架构不匹配：CPU 是 x86_64 (Intel)，但 Python 是 arm64。"
+    log_warn "请使用与 CPU 匹配的 Python 版本。"
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 创建 venv（所有后续安装都在 venv 内，不碰系统 Python）
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,7 +254,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
         <key>TRADE_HOME</key>
         <string>$TRADE_HOME</string>
         <key>PATH</key>
-        <string>$VENV_DIR/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>$VENV_DIR/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
     </dict>
 </dict>
 </plist>

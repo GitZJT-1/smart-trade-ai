@@ -100,6 +100,17 @@ def check_provider() -> str | None:
     if not has_key:
         # 所有已知的 API Key 环境变量均未设置，无法调用 LLM
         return "未检测到 API Key。请在 ~/.hermes/.env 中设置，或运行 trade setup 重新配置。"
+
+    # 检查 openai SDK 是否可导入（Hermes 的核心依赖）
+    try:
+        import openai  # noqa: F401
+    except ImportError:
+        return (
+            "OpenAI Python SDK 未安装。Trade 通过 Hermes Agent 间接依赖此包。\n"
+            "请运行: pip install openai==2.24.0\n"
+            "或重新安装 Hermes: cd ~/.hermes/hermes-agent && pip install -e ."
+        )
+
     return None
 
 

@@ -476,6 +476,114 @@ body {
 
 /* ── Selection ───────────────────────────────────────────────────────── */
 ::selection { background: rgba(59,130,246,0.2); color: inherit; }
+
+/* ── Onboarding Guide ──────────────────────────────────────────────────── */
+.onboarding-panel {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 40px; background: var(--bg-main);
+}
+.onboarding-card {
+    background: var(--bg-card); border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg); padding: 48px 52px;
+    max-width: 600px; width: 100%;
+    animation: msgIn 0.4s var(--ease-out);
+}
+.onboarding-icon { font-size: 56px; text-align: center; margin-bottom: 16px; }
+.onboarding-title {
+    font-size: 22px; font-weight: 700; text-align: center;
+    color: var(--text-primary); margin-bottom: 12px;
+    letter-spacing: -0.01em;
+}
+.onboarding-subtitle {
+    text-align: center; color: var(--text-secondary); font-size: 15px;
+    line-height: 1.7; margin-bottom: 24px;
+}
+.onboarding-features {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 28px; padding: 16px; background: var(--bg-input);
+    border-radius: var(--radius); border: 1px solid var(--border-light);
+}
+.onb-feature {
+    font-size: 14px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 8px;
+}
+.onb-feature span { font-size: 18px; }
+.onboarding-card .btn-lg {
+    width: 100%; padding: 14px 24px; font-size: 16px;
+}
+.onboarding-skip {
+    text-align: right; margin-top: 12px;
+}
+.onboarding-skip a {
+    font-size: 12px; color: var(--text-muted); text-decoration: none;
+    cursor: pointer;
+}
+.onboarding-skip a:hover { color: var(--text-secondary); text-decoration: underline; }
+
+/* Step indicator */
+.onboarding-step-indicator {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 20px; font-size: 13px;
+}
+.onb-step { color: var(--text-muted); }
+.onb-step.done { color: var(--accent-green); font-weight: 600; }
+.onb-step.active { color: var(--primary); font-weight: 600; }
+.onb-step-arrow { color: var(--text-muted); }
+
+/* Step 2 input */
+.onboarding-input-row {
+    display: flex; gap: 10px; margin-bottom: 16px;
+}
+.onboarding-text-input {
+    flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 15px; font-family: inherit;
+    background: var(--bg-input); outline: none;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.onboarding-text-input:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);
+}
+.onboarding-text-input:disabled {
+    opacity: 0.6; background: var(--border-light);
+}
+
+/* Results area */
+#onboarding-results-area {
+    margin-top: 16px;
+    max-height: 50vh; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg-card);
+}
+.onboarding-progress { padding: 12px 16px; }
+.onboarding-response {
+    padding: 16px 20px; font-size: 14px; line-height: 1.7;
+}
+.onboarding-response p { margin: 0 0 8px 0; }
+.onboarding-response p:last-child { margin-bottom: 0; }
+.onboarding-response table {
+    width: 100%; border-collapse: collapse; margin: 8px 0;
+    border: 1px solid var(--border); font-size: 13px;
+}
+.onboarding-response th, .onboarding-response td {
+    padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border);
+}
+.onboarding-response th { background: var(--bg-input); font-weight: 600; }
+.onboarding-response code {
+    background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;
+}
+.onb-error {
+    padding: 16px; color: var(--accent-red); font-size: 14px;
+    text-align: center;
+}
+.onb-info {
+    padding: 16px; color: var(--text-muted); font-size: 14px;
+    text-align: center;
+}
+#onboarding-actions {
+    display: flex; gap: 10px; margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+}
+#onboarding-actions .btn { flex: 1; }
 </style>
 </head>
 <body>
@@ -674,6 +782,14 @@ let currentLibraryId = null;
 let currentCustomerId = null;
 let _currentConvId = null;       // 当前 AI 回复的 conversation_id，用于评分
 let editingCustomerData = null; // for customer detail panel
+let _onboardingStep = 1;          // 1 = welcome card, 2 = OSINT input + results
+let _onboardingInputText = '';    // user-entered company name/website
+let _onboardingOsinResponse = ''; // accumulated AI response text
+let _onboardingStreamCtl = null;  // AbortController for SSE stream
+
+function isOnboardingCompleted() {
+    try { return sessionStorage.getItem('_onboarding_completed') === '1'; } catch(_) { return false; }
+}
 
 // ═════════════════════ PERSISTENCE ═════════════════════
 function saveState() {
@@ -1039,6 +1155,11 @@ const viewCache = {};
 let currentChatContainer = null;
 
 function navToView(view, chatCtx, chatName) {
+    // 新手引导进行中时阻止导航
+    if (!isOnboardingCompleted() && document.getElementById('onboarding-panel')) {
+        toast('请先完成新手引导');
+        return;
+    }
     // 未选择公司时，所有菜单点击都显示固定提示页
     if (!currentCompanyId) {
         renderNoCompanyPage();
@@ -3152,6 +3273,180 @@ function showConversationDetail(cid) {
     requestAnimationFrame(tryLoad);
 }
 
+// ═════════════════════ ONBOARDING GUIDE ═════════════════════
+
+function showOnboardingGuide() {
+    for (const key in viewCache) {
+        viewCache[key].element.remove();
+        delete viewCache[key];
+    }
+    _onboardingStep = 1;
+    _onboardingInputText = '';
+    _onboardingOsinResponse = '';
+    _onboardingStreamCtl = null;
+    $('main-content').innerHTML = `<div id="onboarding-panel" class="onboarding-panel"><div class="onboarding-card" id="onboarding-card">${renderOnboardingStep1HTML()}</div></div>`;
+}
+
+function renderOnboardingStep1HTML() {
+    return `<div id="onboarding-step1"><div class="onboarding-icon">🎉</div><h2 class="onboarding-title">欢迎使用 Trade AI</h2><p class="onboarding-subtitle">Trade 可以帮你<strong>自动搜索客户背景信息（OSINT）</strong>，并基于你的产品定位<strong>撰写专业 B2B 开发信</strong>。</p><div class="onboarding-features"><div class="onb-feature"><span>🔍</span> 海关数据 · 社媒分析 · 官网诊断</div><div class="onb-feature"><span>📧</span> AI 写开发信 · 跟进序列 · 报价单</div><div class="onb-feature"><span>🤖</span> 7x24 自动获客 · 定时任务调度</div></div><button class="btn btn-primary btn-lg" onclick="onboardingGoToStep2()">🚀 开发第一个客户</button><div class="onboarding-skip"><a href="#" onclick="onboardingSkip(event)">跳过引导，直接开始</a></div></div>`;
+}
+
+function renderOnboardingStep2HTML() {
+    return `<div id="onboarding-step2"><div class="onboarding-step-indicator"><span class="onb-step done">✓ 了解 Trade</span><span class="onb-step-arrow">→</span><span class="onb-step active">● 开发客户</span></div><h3 class="onboarding-title" style="font-size:18px;margin-bottom:6px;">试试对目标客户做背调</h3><p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">输入客户公司名或官网，AI 将自动搜索公开信息并生成开发信</p><div class="onboarding-input-row"><input type="text" id="onboarding-osint-input" placeholder="粘贴客户公司名或网址，如：acme-corp.com" class="onboarding-text-input" onkeydown="if(event.key==='Enter')onboardingStartOSINT()" autofocus /><button class="btn btn-primary" id="onboarding-send-btn" onclick="onboardingStartOSINT()">开始分析</button><button id="onboarding-stop-btn" class="hidden" style="background:var(--accent-red);color:#fff;border:none;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;" onclick="onboardingStopOSINT()">🛑 停止</button></div><div id="onboarding-results-area"></div><div id="onboarding-actions" class="hidden"></div><div class="onboarding-skip"><a href="#" onclick="onboardingSkip(event)">跳过引导，直接开始</a></div></div>`;
+}
+
+function onboardingGoToStep2() {
+    _onboardingStep = 2;
+    $('onboarding-card').innerHTML = renderOnboardingStep2HTML();
+    setTimeout(function() { var inp = $('onboarding-osint-input'); if (inp) inp.focus(); }, 100);
+}
+
+async function onboardingStartOSINT() {
+    var input = $('onboarding-osint-input');
+    var query = input.value.trim();
+    if (!query) { toast('请输入公司名或网址'); return; }
+    _onboardingInputText = query;
+    input.disabled = true;
+    $('onboarding-send-btn').disabled = true;
+    $('onboarding-stop-btn').classList.remove('hidden');
+    var resultsArea = $('onboarding-results-area');
+    resultsArea.innerHTML = '';
+    var prompt = '请对 ' + query + ' 做全面的客户背景调查（OSINT），然后基于我的公司产品生成一封专业的 B2B 开发信。';
+    _onboardingStreamCtl = new AbortController();
+    var progDiv = document.createElement('div');
+    progDiv.className = 'onboarding-progress';
+    progDiv.innerHTML = '<div class="thinking-msg">💭 正在分析...</div>';
+    resultsArea.appendChild(progDiv);
+    var toolEls = {};
+    var progressDiv = null;
+    var responseText = '';
+    function ensureProgress() {
+        if (!progressDiv) { progressDiv = document.createElement('div'); progressDiv.className = 'tool-progress'; progDiv.appendChild(progressDiv); }
+        return progressDiv;
+    }
+    function addToolItem(tcId, name, status, detail) {
+        var div = ensureProgress();
+        var el = document.createElement('div');
+        el.className = 'tool-item ' + status;
+        el.id = 'onb-tool-' + tcId;
+        el.innerHTML = '<span class="tool-icon">' + (status==='running'?'◌':status==='done'?'✓':'✗') + '</span><div class="tool-body"><div class="tool-name">' + fmtTool(name) + '</div><div class="tool-detail">' + (detail||'') + '</div></div>';
+        div.appendChild(el);
+        resultsArea.scrollTop = resultsArea.scrollHeight;
+        toolEls[tcId] = el;
+    }
+    function updateTool(tcId, status, detail) {
+        var el = toolEls[tcId]; if (!el) return;
+        el.className = 'tool-item ' + status;
+        var icon = el.querySelector('.tool-icon'); if (icon) icon.textContent = status==='running'?'◌':status==='done'?'✓':'✗';
+        if (detail) { var d = el.querySelector('.tool-detail'); if (d) d.textContent = detail; }
+        resultsArea.scrollTop = resultsArea.scrollHeight;
+    }
+    function resetInputs() {
+        if (input) input.disabled = false;
+        var sb = $('onboarding-send-btn'); if (sb) sb.disabled = false;
+        var st = $('onboarding-stop-btn'); if (st) st.classList.add('hidden');
+        _onboardingStreamCtl = null;
+    }
+    try {
+        var resp = await fetch('/api/trade/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Hermes-Session-Token': TOKEN, 'X-Company-ID': String(currentCompanyId) },
+            body: JSON.stringify({ query: prompt }),
+            signal: _onboardingStreamCtl.signal
+        });
+        if (!resp.ok) { progDiv.remove(); resultsArea.innerHTML = '<div class="onb-error">请求失败 (' + resp.status + ')</div>'; resetInputs(); return; }
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+        while (true) {
+            var _a = await reader.read(), done = _a.done, value = _a.value;
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            var lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            var eventType = '', dataStr = '';
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].replace(/\r$/, '');
+                if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); continue; }
+                if (line.startsWith('data: ')) { dataStr = line.slice(6).trimStart(); continue; }
+                if (line === '' && eventType && dataStr) {
+                    var data;
+                    try { data = JSON.parse(dataStr); } catch(e) { eventType=''; dataStr=''; continue; }
+                    switch (eventType) {
+                        case 'tool_start':
+                            addToolItem(data.tool_call_id, data.name, 'running', data.args ? Object.entries(data.args).map(function(kv) { return kv[0] + '=' + (typeof kv[1]==='string'?(kv[1].length>60?kv[1].slice(0,60)+'...':kv[1]):String(kv[1])); }).join(', ') : '');
+                            break;
+                        case 'tool_complete':
+                            updateTool(data.tool_call_id, 'done', data.result_preview || '完成');
+                            break;
+                        case 'response':
+                            responseText = data.text || '';
+                            break;
+                        case 'error':
+                            progDiv.innerHTML = '<div class="onb-error">' + esc(data.message) + '</div>';
+                            resetInputs();
+                            return;
+                    }
+                    eventType = ''; dataStr = '';
+                }
+            }
+        }
+        progDiv.remove();
+        if (responseText) {
+            _onboardingOsinResponse = responseText;
+            var respDiv = document.createElement('div');
+            respDiv.className = 'onboarding-response';
+            var raw = marked.parse(responseText);
+            respDiv.innerHTML = DOMPurify.sanitize(raw, { ALLOWED_TAGS: ['p','br','strong','em','b','i','ul','ol','li','h1','h2','h3','h4','h5','h6','blockquote','code','pre','a','table','thead','tbody','tr','th','td','hr','span','div','img'], ALLOWED_ATTR: ['href','target','class','id','style','src','alt','width','height'] });
+            resultsArea.appendChild(respDiv);
+            showOnboardingActions();
+        } else {
+            resultsArea.innerHTML = '<div class="onb-error">AI 未返回有效回复，请重试。</div>';
+        }
+    } catch(e) {
+        progDiv.remove();
+        if (e.name === 'AbortError') resultsArea.innerHTML = '<div class="onb-info">已停止生成。</div>';
+        else resultsArea.innerHTML = '<div class="onb-error">网络错误：' + esc(e.message) + '</div>';
+    } finally { resetInputs(); }
+}
+
+function onboardingStopOSINT() {
+    if (_onboardingStreamCtl) { _onboardingStreamCtl.abort(); _onboardingStreamCtl = null; }
+}
+
+function showOnboardingActions() {
+    var actionsDiv = $('onboarding-actions');
+    actionsDiv.classList.remove('hidden');
+    actionsDiv.innerHTML = '<button class="btn btn-primary" onclick="onboardingSaveAndContinue()">✅ 保存到客户库</button><button class="btn" onclick="onboardingFinish()">进入主界面</button>';
+}
+
+async function onboardingSaveAndContinue() {
+    var inputText = _onboardingInputText.trim();
+    var customerName = inputText;
+    var website = '';
+    try {
+        var url = new URL(inputText.startsWith('http') ? inputText : 'https://' + inputText);
+        customerName = url.hostname.replace(/^www\./, '').split('.')[0];
+        website = url.hostname;
+    } catch(_) {}
+    var body = { name: customerName, note: _onboardingOsinResponse };
+    if (website) body.company_website = website;
+    var r = await api('POST', '/api/trade/customers', body);
+    if (r?.id) { toast('客户已保存到客户库'); onboardingFinish(); }
+    else toast(r?.detail || '保存失败，请重试');
+}
+
+function onboardingFinish() {
+    try { sessionStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
+    navToView('chat', 'daily', '今日简报');
+}
+
+function onboardingSkip(e) {
+    if (e) e.preventDefault();
+    // 不设置 _onboarding_completed — 用户未完成，下次还会显示
+    navToView('chat', 'daily', '今日简报');
+}
+
 // ═════════════════════ COMPANY MANAGEMENT ═════════════════════
 function showAddCompanyModal() {
     switchModalTab('tab-companies');
@@ -3259,6 +3554,11 @@ async function onCompanyChange(cid) {
         // 通知后端切换 session 绑定（旧 cid 会触发 403，因此 _enforce_company_binding 需放行 /switch 端点）
         try { await api('POST', '/api/trade/companies/' + newCid + '/switch'); } catch(_) {}
         saveState();
+        // 首个公司 + 引导未完成 → 显示新手引导
+        if (companies.length === 1 && !isOnboardingCompleted()) {
+            showOnboardingGuide();
+            return;
+        }
         navToView('chat', 'daily', '今日简报');
     } else {
         currentCompanyId = null;
@@ -3313,6 +3613,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveState();
         const sel = $('company-select');
         if (sel) sel.value = currentCompanyId;
+        // 首个公司 + 引导未完成 → 显示新手引导
+        if (companies.length === 1 && !isOnboardingCompleted()) {
+            showOnboardingGuide();
+            startCronPolling();
+            startVersionCheck();
+            return;
+        }
         // 恢复之前的视图或默认打开今日简报
         const restoreView = reloadState?.view || 'chat';
         const restoreCtx = reloadState?.chatCtx || 'daily';

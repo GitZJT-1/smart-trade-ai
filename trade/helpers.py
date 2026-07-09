@@ -110,13 +110,15 @@ def check_provider() -> str | None:
             "请运行: pip install openai==2.24.0"
         )
 
-    # 检查 anthropic SDK 是否可导入 — native Anthropic provider 依赖此包
+    # 检查 anthropic SDK 是否可导入 — 仅在使用原生 Anthropic provider 时需要
+    # 不作为硬错误阻断，因为大多数用户走 OpenAI/OpenRouter/DeepSeek 等 openai 兼容协议
     try:
         import anthropic  # noqa: F401
     except ImportError:
-        return (
-            "Anthropic Python SDK 未安装。如使用 Anthropic provider 必须此包。\n"
-            "请运行: pip install anthropic==0.87.0"
+        import logging
+        logging.getLogger(__name__).warning(
+            "Anthropic SDK not installed. Native Anthropic provider will not work. "
+            "Install with: pip install anthropic==0.87.0"
         )
 
     return None

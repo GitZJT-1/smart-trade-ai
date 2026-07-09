@@ -613,7 +613,24 @@ def health_audit(company_id: int) -> dict:
     ninety_days_ago_dt = now - _td(days=90)
     thirty_days_ago_dt = now - _td(days=30)
 
-    from trade.order import list_by_customer as _list_orders
+    # 批量加载所有客户的订单，避免 N+1 查询
+    cust_ids = [c["id"] for c in all_custs]
+    orders_by_customer: dict[int, list[dict]] = {cid: [] for cid in cust_ids}
+    if cust_ids:
+        placeholders = ",".join("?" for _ in cust_ids)
+        conn = get_connection()
+        try:
+            rows = conn.execute(
+                f"SELECT * FROM orders WHERE customer_id IN ({placeholders}) "
+                "AND company_id = ? ORDER BY created_at DESC",
+                (*cust_ids, company_id),
+            ).fetchall()
+            from trade.order import _row_to_dict as _order_row
+            for row in rows:
+                o = _order_row(row)
+                orders_by_customer.setdefault(o["customer_id"], []).append(o)
+        finally:
+            conn.close()
 
     stale_customers = []
     high_value_unconverted = []
@@ -636,8 +653,8 @@ def health_audit(company_id: int) -> dict:
             except (ValueError, IndexError):
                 last_contact_dt = None
 
-        # 关联订单
-        orders = _list_orders(cust["id"], company_id=company_id)
+        # 从批量结果取订单
+        orders = orders_by_customer.get(cust["id"], [])
 
         # 1. 僵尸客户：90 天以上无联系且无活跃订单（报价中/已下单/已出货）
         active_orders = [o for o in orders if o["status"] in ("报价中", "已下单", "已出货")]

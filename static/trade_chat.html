@@ -3283,6 +3283,7 @@ function showOnboardingGuide() {
     _onboardingStep = 1;
     _onboardingInputText = '';
     _onboardingOsinResponse = '';
+    if (_onboardingStreamCtl) { _onboardingStreamCtl.abort(); }
     _onboardingStreamCtl = null;
     $('main-content').innerHTML = `<div id="onboarding-panel" class="onboarding-panel"><div class="onboarding-card" id="onboarding-card">${renderOnboardingStep1HTML()}</div></div>`;
 }
@@ -3545,6 +3546,8 @@ async function onCompanyChange(cid) {
         viewCache[key].element.remove();
         delete viewCache[key];
     }
+    // 中止进行中的新手引导流，防止 reader 泄漏
+    if (_onboardingStreamCtl) { _onboardingStreamCtl.abort(); _onboardingStreamCtl = null; }
     // 清空 cron 输出记录，防止跨公司污染
     _shownCronOutputs = new Set();
     if (cid) {

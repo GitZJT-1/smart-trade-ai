@@ -57,6 +57,7 @@ _hidden_imports = [
     "hermes_cli", "hermes_cli.config", "hermes_cli.auth",
     "hermes_cli.env_loader", "hermes_cli.models",
     "hermes_constants", "run_agent",
+    "openai", "anthropic",  # LLM Provider SDKs — required, not optional
     "fastapi", "uvicorn", "uvicorn.loops", "uvicorn.loops.auto",
     "uvicorn.protocols", "uvicorn.protocols.http",
     "uvicorn.protocols.http.auto", "uvicorn.protocols.websockets",

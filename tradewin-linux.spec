@@ -34,6 +34,7 @@ a = Analysis(
         'hermes_cli', 'hermes_cli.config', 'hermes_cli.auth',
         'hermes_cli.env_loader', 'hermes_cli.models',
         'hermes_constants', 'run_agent',
+        'openai', 'anthropic',  # LLM Provider SDKs — required, not optional
         'webview', 'webview.platforms.gtk',
         'asyncio', 'sqlite3', 'json', 'csv', 'io', 're', 'hashlib',
         'multiprocessing',

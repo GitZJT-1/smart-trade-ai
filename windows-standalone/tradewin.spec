@@ -47,6 +47,8 @@ a = Analysis(
         'hermes_cli', 'hermes_cli.config', 'hermes_cli.auth',
         'hermes_cli.env_loader', 'hermes_cli.models',
         'hermes_constants', 'run_agent',
+        # LLM Provider SDKs — required, not optional
+        'openai', 'anthropic',
         'asyncio', 'sqlite3', 'json', 'csv', 'io', 're', 'hashlib',
     ],
     hookspath=[],

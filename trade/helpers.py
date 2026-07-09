@@ -101,14 +101,22 @@ def check_provider() -> str | None:
         # 所有已知的 API Key 环境变量均未设置，无法调用 LLM
         return "未检测到 API Key。请在 ~/.hermes/.env 中设置，或运行 trade setup 重新配置。"
 
-    # 检查 openai SDK 是否可导入（Hermes 的核心依赖）
+    # 检查 openai SDK 是否可导入 — Hermes 用此 SDK 作为所有 provider 的通用 HTTP 客户端
     try:
         import openai  # noqa: F401
     except ImportError:
         return (
-            "OpenAI Python SDK 未安装。Trade 通过 Hermes Agent 间接依赖此包。\n"
-            "请运行: pip install openai==2.24.0\n"
-            "或重新安装 Hermes: cd ~/.hermes/hermes-agent && pip install -e ."
+            "OpenAI Python SDK 未安装。所有 LLM Provider 的 HTTP 通信都依赖此包。\n"
+            "请运行: pip install openai==2.24.0"
+        )
+
+    # 检查 anthropic SDK 是否可导入 — native Anthropic provider 依赖此包
+    try:
+        import anthropic  # noqa: F401
+    except ImportError:
+        return (
+            "Anthropic Python SDK 未安装。如使用 Anthropic provider 必须此包。\n"
+            "请运行: pip install anthropic==0.87.0"
         )
 
     return None

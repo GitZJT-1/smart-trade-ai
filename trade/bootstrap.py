@@ -129,6 +129,53 @@ def check_hermes_version() -> bool:
     return True
 
 
+def check_native_architecture() -> bool:
+    """检测 Python 是否以原生架构运行，与硬件 CPU 匹配。
+
+    在 Apple Silicon (arm64) Mac 上尤为重要：如果 Python 是 x86_64 (Rosetta)，
+    pip 会安装 x86_64 的 C 扩展（pydantic-core, psutil 等），导致 Hermes 无法
+    加载，Trade API 返回 422。
+
+    Returns True 表示架构匹配（安全启动），False 表示不匹配。
+    """
+    import platform
+    import subprocess
+
+    # 仅在 macOS 上有 Rosetta 问题
+    if platform.system() != "Darwin":
+        return True
+
+    py_arch = platform.machine()
+    try:
+        hw_arch = subprocess.run(
+            ["uname", "-m"], capture_output=True, text=True, timeout=5
+        ).stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return True  # 无法检测，不阻断
+
+    # arm64 硬件 + x86_64 Python → Rosetta 模式
+    if hw_arch == "arm64" and py_arch == "x86_64":
+        print("  ✗ 架构不匹配：CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。")
+        print("    Rosetta Python 会导致 Hermes 依赖编译为 x86_64，无法加载。")
+        print()
+        print("    修复方法：")
+        print("    1. 安装原生 arm64 Python：brew install python@3.12")
+        print("    2. 如果 Homebrew 本身在 Rosetta 下：")
+        print("       /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+        print("    3. 用原生 Python 重新创建 venv：")
+        print("       /opt/homebrew/bin/python3.12 -m venv ~/.trade/venv --clear")
+        print("    4. 重新安装 Trade")
+        return False
+
+    # x86_64 硬件 + arm64 Python → 极罕见，但同样需要处理
+    if hw_arch == "x86_64" and py_arch == "arm64":
+        print("  ✗ 架构不匹配：CPU 是 x86_64 (Intel)，但 Python 是 arm64。")
+        print("    请使用与 CPU 匹配的 Python 版本。")
+        return False
+
+    return True
+
+
 # ── .env 加载 + YOLO 模式 ────────────────────────────────────────────────
 
 
@@ -227,6 +274,10 @@ def setup():
 
     if dispatch_subcommands():
         sys.exit(0)
+
+    # 架构检查必须在 Hermes 版本检查之前 —— 架构不匹配时 Hermes 无法导入
+    if not check_native_architecture():
+        sys.exit(1)
 
     if not check_hermes_version():
         sys.exit(1)

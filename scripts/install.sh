@@ -50,24 +50,47 @@ if [ -z "$PYTHON" ]; then
     exit 1
 fi
 
-# ── 架构检测（Apple Silicon 兼容性）────────────────────────────────────────
+# ── 架构检测 + 自动修正（Apple Silicon 兼容性）────────────────────────────
 ARCH=$(uname -m)
 PY_ARCH=$("$PYTHON" -c "import platform; print(platform.machine())")
 if [ "$ARCH" = "arm64" ] && [ "$PY_ARCH" = "x86_64" ]; then
-    log_warn "检测到架构不匹配：CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。"
-    log_warn "这会导致 Hermes 依赖（pydantic-core, psutil 等）出现 Mach-O 架构错误。"
-    echo ""
-    echo "  修复方法：安装原生 arm64 Python"
-    echo "    brew install python@3.12"
-    echo "  如果 Homebrew 也在 Rosetta 下："
-    echo "    /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-    echo ""
+    log_warn "检测到 CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。"
+    log_info "正在搜索原生 arm64 Python ..."
+
+    # 主动搜索原生 arm64 Homebrew Python
+    NATIVE_PYTHON=""
+    for candidate in /opt/homebrew/bin/python3.13 /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3.11; do
+        if [ -x "$candidate" ]; then
+            _arch=$("$candidate" -c "import platform; print(platform.machine())" 2>/dev/null)
+            if [ "$_arch" = "arm64" ]; then
+                NATIVE_PYTHON="$candidate"
+                break
+            fi
+        fi
+    done
+
+    if [ -n "$NATIVE_PYTHON" ]; then
+        log_ok "找到原生 arm64 Python: $NATIVE_PYTHON ($("$NATIVE_PYTHON" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"))"
+        PYTHON="$NATIVE_PYTHON"
+    else
+        log_err "未找到原生 arm64 Python。Rosetta Python 会导致 Hermes 不可用。"
+        echo ""
+        echo "  修复方法："
+        echo "    1. 安装原生 Homebrew（如果当前是 Rosetta 版）："
+        echo "       /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        echo "    2. 安装原生 Python："
+        echo "       brew install python@3.12"
+        echo "    3. 重新运行此安装脚本："
+        echo "       curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash"
+        exit 1
+    fi
 fi
 
-# 也检查另一种情况：CPU 是 x86_64 但 Python 是 arm64（几乎不会发生，但做个防护）
+# 反向检查：Intel CPU + arm64 Python（极罕见）
 if [ "$ARCH" = "x86_64" ] && [ "$PY_ARCH" = "arm64" ]; then
-    log_warn "检测到架构不匹配：CPU 是 x86_64 (Intel)，但 Python 是 arm64。"
-    log_warn "请使用与 CPU 匹配的 Python 版本。"
+    log_err "架构不匹配：CPU 是 x86_64 (Intel)，但 Python 是 arm64。"
+    echo "  请安装与 CPU 匹配的 Python 版本。"
+    exit 1
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────

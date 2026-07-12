@@ -264,6 +264,17 @@ def update_trade() -> dict:
         print(msg)
         messages.append(msg)
 
+    # ── Step 0: 架构检测 ─────────────────────────────────────────────────
+    from trade.bootstrap import check_native_architecture
+    if not check_native_architecture():
+        _emit("  ✗ 升级已中止：架构不匹配，继续升级会导致 Hermes 不可用。")
+        return {
+            "ok": False,
+            "version": "",
+            "errors": ["architecture_mismatch"],
+            "messages": messages,
+        }
+
     # ── Step 1: git pull / clone ───────────────────────────────────────────
     if not trade_dir.is_dir():
         _emit("→ Step 1/7: git clone (install directory not found) ...")

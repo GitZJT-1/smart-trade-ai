@@ -178,12 +178,36 @@ def _perform_restart() -> None:
     """
     import sys as _sys
 
+    # 架构检测：重启前尝试修正 Python 路径
+    _restart_python = _sys.executable
+    import platform as _platform
+    if _platform.system() == "Darwin" and _platform.machine() == "x86_64":
+        import subprocess as _sp_check
+        try:
+            _hw = _sp_check.run(
+                ["uname", "-m"], capture_output=True, text=True, timeout=5
+            ).stdout.strip()
+            if _hw == "arm64":
+                # 运行在 Rosetta 下，尝试找原生 arm64 Python
+                import shutil as _shutil
+                _native = _shutil.which("python3") or ""
+                if _native and "/opt/homebrew" in _native:
+                    _native_arch = _sp_check.run(
+                        [_native, "-c", "import platform; print(platform.machine())"],
+                        capture_output=True, text=True, timeout=5,
+                    ).stdout.strip()
+                    if _native_arch == "arm64":
+                        _restart_python = _native
+                        print(f"  ✓ 检测到原生 arm64 Python: {_native}，重启将使用原生架构")
+        except Exception:
+            pass
+
     trade_data = _get_trade_data_dir()
     pid_file = trade_data / "trade.pid"
     old_pid = os.getpid()  # 直接用自己的 PID，不从文件读（更可靠）
 
     # 记录启动命令，交给 shell 子进程执行
-    _restart_cmd = [_sys.executable] + _sys.argv
+    _restart_cmd = [_restart_python] + _sys.argv
     _cmd_str = " ".join(repr(a) for a in _restart_cmd)
 
     # 杀 Gateway

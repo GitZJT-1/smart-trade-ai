@@ -11,6 +11,7 @@ Exit codes:
   0  = compatible, proceed with trade install
   1  = hermes-agent not found, must install first
   2  = hermes-agent version incompatible, must upgrade/downgrade
+  3  = architecture mismatch (e.g. x86_64 Python on arm64 Mac)
 
 Usage (run BEFORE pip install trade):
   python pre_install_check.py
@@ -311,11 +312,14 @@ def run_check() -> int:
     """Run all checks. Returns exit code (0=ok, 1=not installed, 2=incompatible)."""
     print_header()
 
-    # Step 0: architecture check (warn but don't block install)
-    arch_warning = check_architecture()
-    if arch_warning:
-        print_warn(arch_warning)
+    # Step 0: architecture check — 不匹配时阻断安装（exit code 3）
+    arch_error = check_architecture()
+    if arch_error:
+        print_fail(arch_error)
         print()
+        print("  架构不匹配会导致 Hermes 依赖（pydantic-core, psutil 等）编译为错误架构，")
+        print("  无法加载。请先修正 Python 架构再重新运行此检查。")
+        return 3
 
     installed_version = get_installed_hermes_version()
 

@@ -120,7 +120,7 @@ Tests use temporary databases (monkeypatch `_get_db_path`), no production data i
 - Whether the version meets the minimum requirement (`>= 0.13.0`)
 - Queries GitHub API for latest official release
 
-Exit codes: `0` = compatible, `1` = not installed, `2` = incompatible version.
+Exit codes: `0` = compatible, `1` = not installed, `2` = incompatible version, `3` = architecture mismatch.
 
 ## CI/CD (GitHub Actions)
 

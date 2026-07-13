@@ -233,15 +233,16 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 1. **Log noise filter** — suppresses Hermes optional-tool-missing warnings
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
 3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
-4. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
-5. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
-6. **Database init** — creates tables, migrates schema, spare columns
-7. **License check** — validates license, warns if expired
-8. **Session token generation** — random url-safe token injected into HTML and validated by deps.py
-9. **Route mounting** — license endpoints → system endpoints (update/backup/restart, no session token required) → trade router
-10. **Gateway auto-launch** — spawns `hermes gateway run` as detached subprocess for cron scheduling (unless `--no-gateway`)
-11. **PID file** — writes `~/.trade/data/trade.pid`, cleaned up on exit for restart support
-12. **Start uvicorn** — binds to `127.0.0.1:9119` by default
+4. **Architecture check** - `check_native_architecture()` detects Rosetta (x86_64 Python on arm64 Mac); exits with error if mismatch, since Hermes C extensions (pydantic-core, psutil) would fail to load with Mach-O errors
+5. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
+6. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
+7. **Database init** — creates tables, migrates schema, spare columns
+8. **License check** — validates license, warns if expired
+9. **Session token generation** — random url-safe token injected into HTML and validated by deps.py
+10. **Route mounting** — license endpoints → system endpoints (update/backup/restart, no session token required) → trade router
+11. **Gateway auto-launch** — spawns `hermes gateway run` as detached subprocess for cron scheduling (unless `--no-gateway`)
+12. **PID file** — writes `~/.trade/data/trade.pid`, cleaned up on exit for restart support
+13. **Start uvicorn** — binds to `127.0.0.1:9119` by default
 
 ## Key Design Decisions
 
@@ -291,6 +292,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
     - Rollback tag: `pre-token-optimization` points to the commit before these changes.
 
 21. **Upgrade pipeline** (`trade/post_install.py`): `update_trade()` operates exclusively in `~/.trade/foreign-trade-assistant/` (the runtime directory) — no source-directory guessing or sync. `_perform_restart()` starts the new process first, then kills the old one (avoids the old "suicide before spawn" deadlock). The new process retries `uvicorn.run` for up to 10 seconds waiting for the old process to release the port. Windows uses `creationflags=0x00000200` (CREATE_NEW_PROCESS_GROUP) for clean subprocess detachment. `_latest_version_cache` (TTL 600s) prevents GitHub API rate-limiting on repeated version checks. `_capture_output` catches `SystemExit` so `sys.exit()` no longer causes FastAPI 500 errors. Failure markers cover `pip install failed`, `git stash failed`, and `Database check failed`.
+
+22. **Mac M-chip architecture detection** (2026-07-13): 6 defense lines prevent Rosetta Python from installing x86_64 C extensions (pydantic-core, psutil) that cause Hermes Mach-O load failures and Trade 422 errors. (1) `install.sh` searches `/opt/homebrew/bin/python3.*` for native arm64 Python, exits if not found. (2) `pre_install_check.py` returns exit code 3 on arch mismatch. (3) `bootstrap.py:check_native_architecture()` blocks startup with `sys.exit(1)`. (4) `post_install/update.py` Step 0 blocks upgrade with `architecture_mismatch` error. (5) `app.py:_perform_restart()` switches to native Python on Rosetta. (6) `app.py:_ensure_gateway_running()` uses `/opt/homebrew/bin/hermes` on Rosetta.
 
 ## Hermes Coupling Points
 

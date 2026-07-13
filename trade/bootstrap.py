@@ -151,6 +151,7 @@ def check_native_architecture() -> bool:
             ["uname", "-m"], capture_output=True, text=True, timeout=5
         ).stdout.strip()
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        print("  ⚠ 无法检测硬件架构（uname 不可用），跳过 Rosetta 检查继续启动")
         return True  # 无法检测，不阻断
 
     # arm64 硬件 + x86_64 Python → Rosetta 模式

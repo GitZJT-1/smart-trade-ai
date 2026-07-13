@@ -94,6 +94,27 @@ def _ensure_gateway_running() -> None:
     try:
         import shutil
         hermes_bin = shutil.which("hermes") or "hermes"
+
+        # 架构检测：Rosetta 下尝试使用原生 arm64 hermes 二进制
+        import platform as _platform
+        if _platform.system() == "Darwin" and _platform.machine() == "x86_64":
+            import subprocess as _sp_arch
+            try:
+                _hw = _sp_arch.run(
+                    ["uname", "-m"], capture_output=True, text=True, timeout=5
+                ).stdout.strip()
+                if _hw == "arm64":
+                    for _candidate in (
+                        "/opt/homebrew/bin/hermes",
+                        "/opt/homebrew/opt/hermes-agent/bin/hermes",
+                    ):
+                        if os.path.isfile(_candidate):
+                            hermes_bin = _candidate
+                            print(f"  ✓ 检测到 Rosetta，使用原生 arm64 hermes: {_candidate}")
+                            break
+            except Exception:
+                pass  # 架构检测失败不阻断 gateway 启动
+
         kwargs = {
             "stdout": _sp.DEVNULL,
             "stderr": _sp.DEVNULL,
@@ -188,17 +209,26 @@ def _perform_restart() -> None:
                 ["uname", "-m"], capture_output=True, text=True, timeout=5
             ).stdout.strip()
             if _hw == "arm64":
-                # 运行在 Rosetta 下，尝试找原生 arm64 Python
-                import shutil as _shutil
-                _native = _shutil.which("python3") or ""
-                if _native and "/opt/homebrew" in _native:
-                    _native_arch = _sp_check.run(
-                        [_native, "-c", "import platform; print(platform.machine())"],
-                        capture_output=True, text=True, timeout=5,
-                    ).stdout.strip()
+                # 运行在 Rosetta 下，搜索原生 arm64 Python（与 install.sh 逻辑一致）
+                for _candidate in (
+                    "/opt/homebrew/bin/python3.13",
+                    "/opt/homebrew/bin/python3.12",
+                    "/opt/homebrew/bin/python3.11",
+                    "/opt/homebrew/bin/python3",
+                ):
+                    if not os.path.isfile(_candidate):
+                        continue
+                    try:
+                        _native_arch = _sp_check.run(
+                            [_candidate, "-c", "import platform; print(platform.machine())"],
+                            capture_output=True, text=True, timeout=5,
+                        ).stdout.strip()
+                    except Exception:
+                        continue
                     if _native_arch == "arm64":
-                        _restart_python = _native
-                        print(f"  ✓ 检测到原生 arm64 Python: {_native}，重启将使用原生架构")
+                        _restart_python = _candidate
+                        print(f"  ✓ 检测到原生 arm64 Python: {_candidate}，重启将使用原生架构")
+                        break
         except Exception:
             pass
 

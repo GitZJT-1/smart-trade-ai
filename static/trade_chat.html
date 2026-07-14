@@ -3444,7 +3444,8 @@ function onboardingFinish() {
 
 function onboardingSkip(e) {
     if (e) e.preventDefault();
-    // 不设置 _onboarding_completed — 用户未完成，下次还会显示
+    // 标记已完成 — 引导是可选的，跳过就不再显示
+    try { sessionStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
     navToView('chat', 'daily', '今日简报');
 }
 

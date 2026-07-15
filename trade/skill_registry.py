@@ -979,6 +979,63 @@ STOP RULE（防止无效搜索）:
 
 详细错误码对照表见 skills/auto-smtp-email/SKILL.md。""",
     },
+    # ── b2b-email-imitation: 开发信仿写与再创作（P0）───────────────────
+    {
+        "name": "b2b-email-imitation",
+        "triggers": [
+            # Chinese
+            "仿写开发信", "模仿邮件", "学写开发信", "参考邮件写",
+            "仿照这封", "按这个风格写", "邮件仿写", "开发信再创作",
+            "优化这封邮件", "改进开发信", "抄作业", "借鉴这封",
+            "按照样本", "模仿这个邮件", "根据模板写",
+            # English
+            "sample email", "email imitation", "rewrite this email",
+            "follow this style", "copywriting reference", "email template reference",
+            "reference email", "imitate email", "inspired by",
+        ],
+        "aliases": [],
+        "input_fmt": "参考邮件样本（必需）+ 自家产品信息 + 目标客户类型（可选）",
+        "output_fmt": "样本结构分析 + 3-5 个主题行变体 + A/B 两个正文版本 + 风格复盘",
+        "augment_prompt": "",
+    },
+    # ── b2b-buyer-persona: 买家画像与角色分层（P0）─────────────────
+    {
+        "name": "b2b-buyer-persona",
+        "triggers": [
+            # Chinese
+            "买家画像", "客户画像", "角色分析", "人物画像",
+            "采购角色", "决策者分析", "客户分层", "买家角色",
+            "按角色写", "给采购写", "给工程师写", "给老板写",
+            "针对不同角色", "价值主张定制",
+            # English
+            "buyer persona", "customer analysis", "decision maker analysis",
+            "procurement manager", "technical buyer", "stakeholder mapping",
+            "role-based email", "tailor message", "customize for role",
+        ],
+        "aliases": [],
+        "input_fmt": "产品信息 + 目标客户类型 + 目标市场/国家 + 客单价（可选）",
+        "output_fmt": "3 个决策角色的结构化分析 + 按角色的 FAB 价值主张 + 沟通策略 + 触达路线图",
+        "augment_prompt": "",
+    },
+    # ── b2b-market-analysis: 市场分析作战地图（P1）────────────────
+    {
+        "name": "b2b-market-analysis",
+        "triggers": [
+            # Chinese
+            "市场分析", "目标市场", "市场调研", "进入市场",
+            "作战地图", "出口分析", "国家分析", "区域分析",
+            "竞品分析", "市场机会", "市场研究", "出口国分析",
+            # English
+            "market analysis", "market research", "country analysis",
+            "go to market", "target market", "market entry",
+            "competitive landscape", "export strategy",
+            "market intelligence", "region analysis",
+        ],
+        "aliases": [],
+        "input_fmt": "产品名称/HS 编码 + 目标国家/区域 + 公司类型 + 现有出口经验（可选）",
+        "output_fmt": "市场环境分析 + 认证/关税规则 + 关键词武器库 + 3 秒 Hook + 行动路线图",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

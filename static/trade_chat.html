@@ -788,7 +788,7 @@ let _onboardingOsinResponse = ''; // accumulated AI response text
 let _onboardingStreamCtl = null;  // AbortController for SSE stream
 
 function isOnboardingCompleted() {
-    try { return sessionStorage.getItem('_onboarding_completed') === '1'; } catch(_) { return false; }
+    try { return localStorage.getItem('_onboarding_completed') === '1'; } catch(_) { return false; }
 }
 
 // ═════════════════════ PERSISTENCE ═════════════════════
@@ -3438,14 +3438,14 @@ async function onboardingSaveAndContinue() {
 }
 
 function onboardingFinish() {
-    try { sessionStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
+    try { localStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
     navToView('chat', 'daily', '今日简报');
 }
 
 function onboardingSkip(e) {
     if (e) e.preventDefault();
     // 标记已完成 — 引导是可选的，跳过就不再显示
-    try { sessionStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
+    try { localStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
     navToView('chat', 'daily', '今日简报');
 }
 

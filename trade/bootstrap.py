@@ -129,14 +129,67 @@ def check_hermes_version() -> bool:
     return True
 
 
-def check_native_architecture() -> bool:
-    """检测 Python 是否以原生架构运行，与硬件 CPU 匹配。
+def _search_arm64_python() -> str | None:
+    """搜索 Apple Silicon 上的原生 arm64 Python。返回路径或 None。"""
+    import subprocess
+
+    for candidate in (
+        "/opt/homebrew/bin/python3.13",
+        "/opt/homebrew/bin/python3.12",
+        "/opt/homebrew/bin/python3.11",
+        "/opt/homebrew/bin/python3",
+    ):
+        import os as _os
+        if not _os.path.isfile(candidate):
+            continue
+        try:
+            arch = subprocess.run(
+                [candidate, "-c", "import platform; print(platform.machine())"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+            if arch == "arm64":
+                return candidate
+        except Exception:
+            continue
+    return None
+
+
+def _restart_with_arm64_python(arm64_py: str) -> None:
+    """用 arm64 Python 重新执行当前命令，替换当前进程。"""
+    import subprocess
+
+    print(f"  ✓ 检测到原生 arm64 Python: {arm64_py}")
+    print("  🔄 正在切换到原生架构重启...")
+
+    # 如果当前在 venv 内，检查 venv 是否是 arm64
+    venv = os.environ.get("VIRTUAL_ENV", "")
+    if venv:
+        venv_python = Path(venv) / "bin" / "python"
+        try:
+            venv_arch = subprocess.run(
+                [str(venv_python), "-c", "import platform; print(platform.machine())"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+        except Exception:
+            venv_arch = ""
+        if venv_arch == "arm64":
+            print("  ✓ Venv 已经是 arm64，直接用 venv python 重启")
+            arm64_py = str(venv_python)
+
+    # execve: 替换当前进程，保留环境变量和命令行参数
+    os.execve(arm64_py, [arm64_py] + sys.argv, os.environ)
+
+
+def check_native_architecture(auto_repair: bool = True) -> bool:
+    """检测 Python 架构与硬件匹配，必要时自动修复。
 
     在 Apple Silicon (arm64) Mac 上尤为重要：如果 Python 是 x86_64 (Rosetta)，
     pip 会安装 x86_64 的 C 扩展（pydantic-core, psutil 等），导致 Hermes 无法
     加载，Trade API 返回 422。
 
-    Returns True 表示架构匹配（安全启动），False 表示不匹配。
+    当 auto_repair=True 且找到 arm64 Python 时，自动重启进程（execve），用户无感。
+
+    Returns True 表示架构匹配（安全启动），False 表示不匹配且无法修复。
     """
     import platform
     import subprocess
@@ -156,6 +209,13 @@ def check_native_architecture() -> bool:
 
     # arm64 硬件 + x86_64 Python → Rosetta 模式
     if hw_arch == "arm64" and py_arch == "x86_64":
+        if auto_repair:
+            arm64_py = _search_arm64_python()
+            if arm64_py:
+                _restart_with_arm64_python(arm64_py)
+                # execve 不会返回这里，但为类型检查保留
+                return True
+
         print("  ✗ 架构不匹配：CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。")
         print("    Rosetta Python 会导致 Hermes 依赖编译为 x86_64，无法加载。")
         print()

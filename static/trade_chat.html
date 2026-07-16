@@ -664,6 +664,7 @@ body {
     <div class="sidebar-footer">
         <button id="system-update-btn" onclick="doTradeUpdate(event)" title="一键更新系统（git pull + skills + db）">⬆️ 系统更新</button>
         <button id="system-restart-btn" onclick="doRestartTrade(event)" title="重启 Trade 服务">🔄 重启</button>
+        <button id="skills-help-btn" onclick="showSkillsHelp()" title="查看所有 24 个技能和使用示例">📖 技能帮助</button>
         <button id="skills-update-btn" onclick="updateSkills(event)" title="从 GitHub 更新 B2B skills 到最新版本">🔄 Skills</button>
     </div>
 
@@ -766,6 +767,16 @@ body {
             <button class="btn" onclick="hideModal('library-modal')">取消</button>
             <button class="btn btn-primary" onclick="createLibrary()">添加</button>
         </div>
+    </div>
+</div>
+
+<!-- Skills Help Modal -->
+<div class="modal-backdrop hidden" id="skills-help-modal">
+    <div class="modal wide" style="max-width:800px;">
+        <h3>📖 全部 24 个技能速查</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">在聊天框输入关键词，Trade 自动匹配合适的技能。点击复制图标可复制快速启动提示词。</p>
+        <div id="skills-help-content" style="max-height:58vh;overflow-y:auto;line-height:1.6;"></div>
+        <div class="form-actions"><button class="btn" onclick="hideModal('skills-help-modal')">关闭</button></div>
     </div>
 </div>
 
@@ -1113,6 +1124,62 @@ async function doRestartTrade(e) {
         btn.disabled = false;
         btn.textContent = '🔄 重启';
     });
+}
+
+// ── Skills 帮助 ──
+const _ALL_SKILLS = [
+    {g:"客户开发",items:[
+        {n:"b2b-osint",d:"客户背景调查（6 层检测：WHOIS/邮箱/制裁/技术栈/LinkedIn/评分）",t:"背调、查公司、查域名、查邮箱、due diligence"},
+        {n:"b2b-email-intel",d:"邮箱情报 — 120+ 平台检测邮箱注册状态",t:"查邮箱、邮箱注册、邮箱背调、email lookup"},
+        {n:"b2b-lead-generation",d:"多通道客户搜索与开发（Google Maps/LinkedIn/Facebook）",t:"找客户、开发客户、lead generation、cold email"},
+        {n:"b2b-cold-outreach",d:"B2B 冷 outreach 邮件撰写（开发信/推广信/跟进信）",t:"开发信、写推广信、cold email、outreach"},
+        {n:"b2b-email-imitation",d:"开发信仿写与再创作 — 分析优秀邮件样本，学结构学风格",t:"仿写开发信、按照样本、模仿邮件、email imitation"},
+        {n:"b2b-buyer-persona",d:"买家画像与角色分层 — 按角色定制 FAB 价值主张",t:"买家画像、按角色写、给采购写、buyer persona"},
+        {n:"auto-trade-customer-development",d:"全自动客户开发流水线 — 搜索→背调→评分→写信→发送",t:"全自动客户开发、一键开发、auto customer dev"},
+    ]},{g:"内容营销",items:[
+        {n:"b2b-social-media",d:"社媒营销（Facebook/Instagram/TikTok/YouTube）",t:"社媒、Facebook、TikTok、内容日历、social media"},
+        {n:"b2b-linkedin-marketing",d:"LinkedIn 营销策略与内容（Profile/帖子/InMail）",t:"LinkedIn、领英、linkedin marketing、InMail"},
+        {n:"b2b-market-analysis",d:"市场分析作战地图 — 认证/关税/关键词/3 秒 Hook",t:"市场分析、目标市场、作战地图、market analysis"},
+        {n:"b2b-daily-automation",d:"定时任务（早安简报/日报/周报/定时发布）",t:"每日任务、定时任务、早安简报、cron、日报"},
+    ]},{g:"文档管理",items:[
+        {n:"b2b-document",d:"本地文档分析与提取（PDF/Word/Excel 等）",t:"分析文档、读报价、看合同、analyze document"},
+        {n:"b2b-doc-generation",d:"生成报价/合同/提案/PPT（DOCX/XLSX/PPTX）",t:"生成报价单、生成合同、做 PPT、generate doc"},
+        {n:"b2b-data-directory",d:"数据目录结构管理与初始化",t:"数据目录、数据结构、我的数据存在哪"},
+    ]},{g:"平台与数据",items:[
+        {n:"b2b-platform",d:"B2B 平台店铺诊断优化（阿里/MIC/独立站）",t:"平台诊断、阿里国际站、关键词优化、店铺诊断"},
+        {n:"b2b-customs-data",d:"海关数据分析找采购商与市场趋势",t:"海关数据、进出口记录、找买家、customs data"},
+    ]},{g:"客户与销售",items:[
+        {n:"b2b-customer-mgmt",d:"客户档案与分级管理（A/B/C 级、订单跟踪）",t:"客户管理、客户档案、客户分级、CRM"},
+        {n:"b2b-sales-pipeline",d:"销售管线策略 — 30 天跟进表 + KPI 追踪 + 健康度看板",t:"销售推进、跟进计划、怎么跟进、sales pipeline"},
+        {n:"b2b-trade-ops",d:"外贸履约与售后沟通（催款/索赔/展会/验厂/物流/售后）",t:"催款、索赔、展会、验厂、节日问候、物流"},
+    ]},{g:"合规与支持",items:[
+        {n:"b2b-trade-compliance",d:"外贸合规检查 — 文化禁忌/缩写/Incoterms/翻译二审/投标",t:"文化禁忌、Incoterms、翻译二审、Amazon上架检查"},
+        {n:"b2b-onboarding",d:"新公司全套部署方案（公司介绍/产品/营销/竞品分析）",t:"新公司、部署、全套方案、怎么开始、首次设置"},
+        {n:"b2b-skill-generator",d:"根据需求描述自动创建新的 B2B Skill",t:"生成 skill、创建技能、create skill、new skill"},
+        {n:"chat-memory",d:"历史对话查询（按今天/本周/本月/全部检索）",t:"之前说过、上周聊的、历史记录、chat history"},
+        {n:"auto-smtp-email",d:"SMTP 邮件发送（预览后发送/批量群发/HTML 模板）",t:"发邮件、群发、SMTP 发送、send email、bulk send"},
+    ]},
+];
+
+function showSkillsHelp() {
+    var container = $('skills-help-content');
+    if (!container) return;
+    var html = '';
+    for (var gi = 0; gi < _ALL_SKILLS.length; gi++) {
+        var group = _ALL_SKILLS[gi];
+        html += '<div style="margin-bottom:16px;"><h4 style="font-size:14px;font-weight:600;margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid var(--primary);color:var(--primary);">' + esc(group.g) + '</h4>';
+        for (var si = 0; si < group.items.length; si++) {
+            var sk = group.items[si];
+            html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="navigator.clipboard.writeText(\'' + sk.t.split('、')[0] + '\');toast(\'提示词已复制: ' + sk.t.split('、')[0] + '\')" title="点击复制提示词">';
+            html += '<code style="font-size:12px;white-space:nowrap;background:var(--bg-muted);padding:1px 6px;border-radius:3px;min-width:130px;">' + esc(sk.n) + '</code>';
+            html += '<span style="flex:1;font-size:12px;color:var(--text-secondary);">' + esc(sk.d) + '</span>';
+            html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">💬 ' + esc(sk.t.split('、').slice(0,2).join(' | ')) + '</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    showModal('skills-help-modal');
 }
 
 // ── Skills 更新 ──

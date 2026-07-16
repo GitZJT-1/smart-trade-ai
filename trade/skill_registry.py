@@ -1036,6 +1036,27 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "市场环境分析 + 认证/关税规则 + 关键词武器库 + 3 秒 Hook + 行动路线图",
         "augment_prompt": "",
     },
+    # ── b2b-sales-pipeline: 销售管线策略（P0）───────────────────────
+    {
+        "name": "b2b-sales-pipeline",
+        "triggers": [
+            # Chinese
+            "销售推进", "跟进策略", "销售动作", "跟进计划",
+            "客户推进", "销售流程", "推进客户", "销售管线",
+            "客户跟进", "催单", "催进展", "怎么跟进",
+            "下一步怎么办", "客户不动了", "跟进模板",
+            # English
+            "sales pipeline", "deal progress", "follow-up plan",
+            "sales process", "customer advancement", "sales sequence",
+            "next steps", "move the deal", "follow-up timeline",
+            "30-day plan", "deal velocity", "sales cadence",
+            "outreach sequence",
+        ],
+        "aliases": [],
+        "input_fmt": "客户当前状态（已发开发信/已寄样/在谈价格等），或产品信息+目标客户类型，或客户名单+各客户状态",
+        "output_fmt": "5 阶段客户旅程映射 + 阶段动作模板 + 30 天跟进时间表 + KPI 目标 + 客户分层策略 + 管线健康度",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

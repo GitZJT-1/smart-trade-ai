@@ -2052,6 +2052,7 @@ async function renderCustomersViewInto(container) {
             <div id="cust-import-banner" style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-bottom:12px;background:var(--bg-muted);border-radius:var(--radius-sm);border:1px dashed var(--border);">
                 <span style="font-size:13px;">📋 批量导入客户？</span>
                 <button class="btn-xs" onclick="downloadCsvTemplate()" style="text-decoration:none;">📥 下载 CSV 模板</button>
+                <button class="btn-xs" onclick="downloadManagementTables()" style="text-decoration:none;margin-left:4px;">📊 下载管理表格</button>
                 <span style="font-size:12px;color:var(--text-muted);">填好后上传 →</span>
                 <input type="file" id="cust-bulk-file" accept=".csv" style="display:none;" onchange="bulkImportCustomers()">
                 <button class="btn-xs primary" onclick="$('cust-bulk-file').click()">📤 上传导入</button>
@@ -2606,6 +2607,25 @@ async function bulkImportCustomers() {
     }
     btn.disabled = false; btn.textContent = '📤 上传导入';
     fileInput.value = '';
+}
+
+// ── 下载管理表格 Excel ──────────────────────────────
+async function downloadManagementTables() {
+    try {
+        const headers = {};
+        if (TOKEN) headers['X-Hermes-Session-Token'] = TOKEN;
+        if (currentCompanyId) headers['X-Company-ID'] = String(currentCompanyId);
+        const resp = await fetch('/api/trade/templates/download', { headers });
+        if (!resp.ok) { toast('下载管理表格失败'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'trade-management-tables.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('✅ 管理表格下载完成');
+    } catch(e) { toast('下载管理表格失败: ' + e.message); }
 }
 
 // ── 下载 CSV 模板（需携带 auth header） ─────────────

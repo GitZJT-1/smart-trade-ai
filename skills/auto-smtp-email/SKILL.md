@@ -31,18 +31,9 @@ injection_prompt: |
   4. 任何模糊回复（如「嗯」「好」）必须二次确认 — "确认现在发出？回复 Y 继续"
 
   ════════════════════════════════════════
-  凭证读取 — 从 ~/.hermes/.env
+  凭证读取 — 交互式配置向导
   ════════════════════════════════════════
-  必需环境变量（缺一不可，缺则报错并给出填写指引）：
-  - SMTP_HOST: 邮件服务器主机（如 smtp.gmail.com / smtp.163.com / smtp.exmail.qq.com）
-  - SMTP_PORT: 端口（SSL 通常 465 / STARTTLS 通常 587）
-  - SMTP_USER: 发件人邮箱（如 alice@company.com）
-  - SMTP_PASS: SMTP 授权码（注意不是邮箱登录密码，是各家邮箱后台生成的授权码）
-  - SMTP_FROM_NAME: 发件人显示名（可选，默认用 SMTP_USER）
-
-  可选变量：
-  - SMTP_REPLY_TO: 回复地址（如不同于发件人）
-  - SMTP_USE_TLS: "true" / "false"（默认 true）
+  第一次使用时，如果读取失败，**必须用交互式向导引导用户一步步配置**，而不是让用户自己去编辑 .env 文件。
 
   读取流程：
   1. 调用 execute_code 工具：
@@ -50,7 +41,7 @@ injection_prompt: |
      from pathlib import Path
      env_file = Path.home() / ".hermes" / ".env"
      if not env_file.is_file():
-         raise SystemExit("SMTP 未配置：请在 ~/.hermes/.env 写入 SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS")
+         raise SystemExit("SMTP 未配置")
      content = env_file.read_text(encoding="utf-8")
      creds = {}
      for line in content.splitlines():
@@ -63,14 +54,74 @@ injection_prompt: |
      required = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"]
      missing = [k for k in required if k not in creds]
      if missing:
-         raise SystemExit(f"SMTP 缺少必需字段：{missing}。请在 ~/.hermes/.env 补齐")
+         raise SystemExit(f"SMTP 缺少必需字段：{missing}")
      print(creds)
      ```
-  2. 缺字段时，明确告诉用户去哪个邮箱后台生成授权码：
-     - Gmail: https://myaccount.google.com/apppasswords
-     - 163: 邮箱设置 → POP3/SMTP/IMAP → 开启 SMTP → 生成授权码
-     - 腾讯企业邮箱: 邮箱设置 → 客户端专用密码
-     - Outlook/Hotmail: 账户安全 → 应用密码
+
+  2. 如果缺少配置，启动交互式向导，不能只是报错。按以下步骤逐一询问：
+
+  ### 向导流程
+
+  **Step 1 — 选择邮箱服务商**
+  输出选项让用户选择：
+  ```
+  ━━━ SMTP 配置向导 ━━━
+  请选择你的邮箱服务商：
+    1. Gmail
+    2. 163 邮箱
+    3. 腾讯企业邮箱
+    4. Outlook / Hotmail
+    5. QQ 邮箱
+    6. 其他（自定义 SMTP）
+  输入序号（1-6）：
+  ```
+
+  **Step 2 — 获取邮箱地址**
+  根据用户选择，要求提供邮箱地址。如果是自定义（选项 6），额外要求提供 SMTP_HOST 和 SMTP_PORT。
+
+  **Step 3 — 提供授权码指引**
+  根据服务商给出授权码获取链接，然后让用户把授权码粘贴过来：
+  ```
+  ━━━ 获取授权码 ━━━
+  请按以下步骤生成授权码（不是登录密码）：
+    1. 打开：https://myaccount.google.com/apppasswords
+    2. 登录你的 Google 账号
+    3. 在「应用名称」输入「Trade AI」
+    4. 点击「生成」
+    5. 把生成的 16 位授权码复制后发给我
+  ```
+
+  **Step 4 — 写入配置**
+  收集齐所有字段后，调用 execute_code 写入 .env：
+  ```python
+  env_file = Path.home() / ".hermes" / ".env"
+  existing = env_file.read_text(encoding="utf-8") if env_file.is_file() else ""
+  # 追加或更新 SMTP_ 设置
+  import os
+  lines = existing.splitlines() if existing else []
+  kept = [l for l in lines if not l.strip().startswith("SMTP_")]
+  kept.append(f'SMTP_HOST={smtp_host}')
+  kept.append(f'SMTP_PORT={smtp_port}')
+  kept.append(f'SMTP_USER={smtp_user}')
+  kept.append(f'SMTP_PASS={smtp_pass}')
+  if from_name: kept.append(f'SMTP_FROM_NAME={from_name}')
+  env_file.write_text("\n".join(kept) + "\n", encoding="utf-8")
+  print(f"✅ SMTP 配置已保存到 {env_file}")
+  ```
+
+  **Step 5 — 验证**
+  写入成功后再读取一次凭证，确认配置正确，然后询问用户是否需要发送测试邮件。
+
+  如果用户提供的邮箱地址或授权码有误（发送时报错），返回 Step 1 重新配置，并告知具体错误（如「535 认证失败，请检查授权码是否正确」）。
+
+  ### 服务商参数对照表
+  | 服务商 | SMTP_HOST | SMTP_PORT | 授权码获取地址 |
+  |--------|-----------|-----------|--------------|
+  | Gmail | smtp.gmail.com | 465 | https://myaccount.google.com/apppasswords |
+  | 163 邮箱 | smtp.163.com | 465 | 邮箱设置 → POP3/SMTP/IMAP → 开启 → 生成授权码 |
+  | 腾讯企业邮箱 | smtp.exmail.qq.com | 465 | 邮箱设置 → 客户端专用密码 |
+  | Outlook/Hotmail | smtp.office365.com | 587 | 账户安全 → 应用密码 |
+  | QQ 邮箱 | smtp.qq.com | 465 | 邮箱设置 → 账户 → POP3/SMTP → 生成授权码 |
 
   ════════════════════════════════════════
   发送流程

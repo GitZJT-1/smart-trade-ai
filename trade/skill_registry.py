@@ -1075,6 +1075,101 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "客户画像 + 第一稿回复 + 买家视角分析 + 优化版回复 + 最终评分",
         "augment_prompt": "",
     },
+    # ── b2b-kol-imitation: LinkedIn KOL 风格模仿（P1）────────────────
+    {
+        "name": "b2b-kol-imitation",
+        "triggers": [
+            "模仿风格", "学大V", "学意见领袖", "大V风格",
+            "KOL分析", "分析这个号", "模仿这个账号",
+            "kol imitation", "follow style", "imitate influencer",
+            "learn from this profile", "copy writing style",
+        ],
+        "aliases": ["b2b-linkedin-marketing"],
+        "input_fmt": "KOL 的 LinkedIn/社媒账号链接或 3-5 篇代表性帖子 + 自家公司/产品信息",
+        "output_fmt": "KOL 风格分析报告 + 3 条适配帖子",
+        "augment_prompt": "",
+    },
+    # ── b2b-reddit-engagement: Reddit 社区互动（P1）────────────────
+    {
+        "name": "b2b-reddit-engagement",
+        "triggers": [
+            "Reddit", "红迪", "社区评论", "写Reddit评论",
+            "发Reddit帖子", "专业评论", "行业讨论",
+            "reddit post", "reddit comment", "community engagement",
+        ],
+        "aliases": ["b2b-social-media"],
+        "input_fmt": "产品/行业描述 + 目标帖子链接或话题方向",
+        "output_fmt": "推荐 subreddit 列表 + 评论/帖子草稿",
+        "augment_prompt": "",
+    },
+    # ── b2b-seo-aeo: SEO+AEO 文章生成（P1）────────────────────────
+    {
+        "name": "b2b-seo-aeo",
+        "triggers": [
+            "SEO文章", "AEO文章", "搜索引擎优化", "AI搜索优化",
+            "写文章", "博客文章", "行业文章", "关键词文章",
+            "seo article", "aeo article", "blog post", "seo writing",
+        ],
+        "aliases": [],
+        "input_fmt": "行业/产品描述 + 目标关键词 + 文章类型",
+        "output_fmt": "SEO+AEO 优化的完整文章（含元数据/FAQ）",
+        "augment_prompt": "",
+    },
+    # ── b2b-short-video: 短视频脚本（P2）───────────────────────────
+    {
+        "name": "b2b-short-video",
+        "triggers": [
+            "短视频", "视频脚本", "TikTok脚本", "Reels",
+            "视频文案", "拍摄脚本", "产品视频", "工厂视频",
+            "short video", "tiktok script", "youtube shorts",
+            "video script", "b2b video",
+        ],
+        "aliases": ["b2b-social-media"],
+        "input_fmt": "产品名称 + 目标市场 + 视频主题 + 目标平台",
+        "output_fmt": "分镜脚本（时间/画面/配音/字幕）+ 拍摄建议",
+        "augment_prompt": "",
+    },
+    # ── b2b-exhibition: 展会全流程管理（P2）───────────────────────
+    {
+        "name": "b2b-exhibition",
+        "triggers": [
+            "展会", "参展", "广交会", "行业展", "展会邀约",
+            "展位设计", "展会准备", "展后跟进",
+            "trade show", "exhibition", "canton fair",
+        ],
+        "aliases": ["b2b-trade-ops"],
+        "input_fmt": "展会名称/日期/地点 + 参展产品 + 客户列表（可选）",
+        "output_fmt": "邀约邮件 + 准备清单 + 展中记录模板 + 展后跟进计划",
+        "augment_prompt": "",
+    },
+    # ── b2b-product-description: 产品描述生成器（P2）──────────────
+    {
+        "name": "b2b-product-description",
+        "triggers": [
+            "产品描述", "产品介绍", "产品文案", "Sales Kit",
+            "销售资料", "产品卖点", "产品说明", "产品推广",
+            "product description", "product copy", "sales kit",
+            "value proposition", "product selling points",
+        ],
+        "aliases": [],
+        "input_fmt": "产品名称/规格 + 认证资质 + 目标市场 + 内容类型",
+        "output_fmt": "FAB 分析表 + 完整产品描述 + 3 个差异化卖点",
+        "augment_prompt": "",
+    },
+    # ── b2b-six-thinking-hats: 六顶思考帽决策教练（P3）────────────
+    {
+        "name": "b2b-six-thinking-hats",
+        "triggers": [
+            "决策分析", "思考帽", "六顶帽", "要不要做",
+            "怎么决定", "利弊分析", "选择困难",
+            "six thinking hats", "decision making",
+            "risk analysis", "business decision",
+        ],
+        "aliases": [],
+        "input_fmt": "需要决策的具体问题（如选供应商/是否参展/付款条件变更等）",
+        "output_fmt": "6 顶帽子的逐项分析 + 总结与行动计划",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -313,9 +313,9 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
 
 ## Skills 参考手册
 
-Trade 会自动识别你的意图，匹配合适的技能。以下是全部 25 个技能的详细说明和使用示例。
+Trade 会自动识别你的意图，匹配合适的技能。以下是全部 32 个技能的详细说明和使用示例。
 
-### 25 个技能速查
+### 32 个技能速查
 
 | # | 技能 | 功能 | 典型提示词示例 |
 |---|------|------|---------------|
@@ -344,6 +344,13 @@ Trade 会自动识别你的意图，匹配合适的技能。以下是全部 25 �
 | 23 | **b2b-market-analysis** | 市场分析作战地图 | 分析一下德国市场进入策略 / 帮我做一个中东市场调研 |
 | 24 | **b2b-sales-pipeline** | 销售管线与跟进策略 | 这个客户一个月没回了怎么办 / 帮我设计一个 30 天跟进计划 |
 | 25 | **b2b-inquiry-training** | 询盘回复训练 | 帮我练一下询盘回复 / 模拟一个刁钻买家 |
+| 26 | **b2b-kol-imitation** | KOL 风格模仿 | 模仿这个领英大V的风格 / 分析这个账号的内容策略 |
+| 27 | **b2b-reddit-engagement** | Reddit 社区互动 | 帮我在 Reddit 写一条专业评论 / 在哪个 subreddit 发帖 |
+| 28 | **b2b-seo-aeo** | SEO+AEO 文章生成 | 写一篇针对 AI 搜索优化的行业文章 / 帮我做 Pillar Page |
+| 29 | **b2b-short-video** | 短视频脚本生成 | 帮我写一个 TikTok 产品视频脚本 / 工厂参观短视频 |
+| 30 | **b2b-exhibition** | 展会全流程管理 | 帮我写展会邀约邮件 / 展会后的跟进计划 |
+| 31 | **b2b-product-description** | 产品描述生成 | 帮我把这款产品写成销售资料 / 用 FAB 分析产品卖点 |
+| 32 | **b2b-six-thinking-hats** | 六顶思考帽决策 | 帮我分析这个决策 / 要不要给这个客户独家代理权 |
 
 ### 技能自动匹配原理
 

@@ -376,4 +376,3 @@ Trade 会自动识别你的意图，匹配合适的技能。以下是全部 32 �
 | b2b-lead-generation | b2b-customer-mgmt |
 | b2b-trade-ops | b2b-customer-mgmt |
 | auto-trade-customer-development | b2b-lead-generation, b2b-osint, auto-smtp-email |
-</p>

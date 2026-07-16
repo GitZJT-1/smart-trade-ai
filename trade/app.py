@@ -319,7 +319,7 @@ def _create_system_router() -> APIRouter:
         返回 {"ok": bool, "version": str, "errors": list, "restart_scheduled": bool}
         """
         _tk = request.headers.get("X-Hermes-Session-Token", "")
-        if _tk and not _check_system_rate_limit(hash(_tk)):
+        if _tk and not _check_system_rate_limit(_tk[:16]):
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 
@@ -336,7 +336,7 @@ def _create_system_router() -> APIRouter:
     def api_backup_trade(request: Request):
         """备份 Trade 数据为 tar.gz。"""
         _tk = request.headers.get("X-Hermes-Session-Token", "")
-        if _tk and not _check_system_rate_limit(hash(_tk)):
+        if _tk and not _check_system_rate_limit(_tk[:16]):
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 
@@ -351,7 +351,7 @@ def _create_system_router() -> APIRouter:
         委托给 _perform_restart()——含三层 PID 安全校验和 Gateway 协同重启。
         """
         _tk = request.headers.get("X-Hermes-Session-Token", "")
-        if _tk and not _check_system_rate_limit(hash(_tk)):
+        if _tk and not _check_system_rate_limit(_tk[:16]):
             from fastapi import HTTPException
             raise HTTPException(status_code=429, detail="系统端点请求过于频繁，请稍后重试。")
 

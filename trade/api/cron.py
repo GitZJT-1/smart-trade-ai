@@ -277,7 +277,7 @@ def _check_skills_rate_limit(key: str) -> bool:
 def api_update_skills(request: Request):
     """从 GitHub 拉取最新 B2B skill 定义。"""
     _tk = request.headers.get("X-Hermes-Session-Token", "")
-    if _tk and not _check_skills_rate_limit(str(hash(_tk))):
+    if _tk and not _check_skills_rate_limit(_tk[:16]):
         raise HTTPException(status_code=429, detail="Skills 更新请求过于频繁，请稍后重试。")
 
     from trade.post_install import update_skills as _do_update

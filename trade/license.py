@@ -272,10 +272,11 @@ def days_remaining(company_id: int | None = None) -> int:
 
 
 def _make_request_code() -> str:
-    """生成本机申请码: TRADE-REQ-XXXX-XXXX-XXXX-XXXX（基于机器码哈希前 16 位 / 64 bit）。"""
+    """生成本机申请码: TRADE-REQ-{64 hex with separators}（基于完整 SHA256 / 256 bit）。"""
     mid = _machine_id()
-    h = hashlib.sha256(mid.encode()).hexdigest()[:16].upper()
-    return f"TRADE-REQ-{h[:4]}-{h[4:8]}-{h[8:12]}-{h[12:16]}"
+    h = hashlib.sha256(mid.encode()).hexdigest().upper()
+    groups = ["".join(g) for g in zip(h[0::4], h[1::4], h[2::4], h[3::4], strict=True)]
+    return f"TRADE-REQ-{'-'.join(groups)}"
 
 
 def status(company_id: int | None = None) -> dict:
@@ -441,11 +442,15 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     except Exception:
         return False, "激活码无效"
 
-    # 验证机器码：支持 8 hex（旧 32 bit）和 16 hex（新 64 bit）两种格式
+    # 验证机器码：支持 64 hex（256 bit 新格式）、16 hex（旧 64 bit）、8 hex（旧 32 bit）
     local_full = hashlib.sha256(_machine_id().encode()).hexdigest().upper()
     _mh = decoded["machine_hash"]
-    if len(_mh) == 16:
-        # 新格式 64 bit：比较前 16 hex
+    if len(_mh) == 64:
+        # 新格式 256 bit：比较完整哈希
+        if not hmac.compare_digest(local_full, _mh):
+            return False, "此激活码不适用于本机。请在本机上生成申请码后联系作者。"
+    elif len(_mh) == 16:
+        # 旧格式 64 bit：比较前 16 hex（兼容已发出的激活码）
         if not hmac.compare_digest(local_full[:16], _mh):
             return False, "此激活码不适用于本机。请在本机上生成申请码后联系作者。"
     else:
@@ -499,7 +504,7 @@ def _encode_activation_code(request_code: str, expires_at: str) -> str:
     req_hash = request_code.replace("TRADE-REQ-", "").replace("-", "").upper()
     date_str = expires_at[:10].replace("-", "")  # YYYYMMDD
 
-    # payload: 日期(8) + 机器码哈希(16) = 24 bytes ASCII hex
+    # payload: 日期(8) + 机器码哈希(64) = 72 bytes ASCII hex
     payload = (date_str + req_hash).encode()
 
     # Ed25519 签名
@@ -530,9 +535,14 @@ def _decode_activation_code(code: str) -> dict:
     b64 += "=" * (-len(b64) % 4)
     decoded = base64.urlsafe_b64decode(b64)
 
-    # 根据总长度严格判断格式：88 bytes = 新 16 hex / 80 bytes = 旧 8 hex
-    if len(decoded) == 88:
-        # 新格式 (v0.6.3+): date(8) + hash(16) + sig(64) = 88
+    # 根据总长度严格判断格式：136 bytes = 新 64 hex / 88 bytes = 旧 16 hex / 80 bytes = 旧 8 hex
+    if len(decoded) == 136:
+        # 新格式 (v0.6.9+): date(8) + hash(64) + sig(64) = 136
+        date_part = decoded[:8].decode()
+        req_hash = decoded[8:72].decode()
+        sig = decoded[72:136]
+    elif len(decoded) == 88:
+        # 旧格式 (v0.6.3+): date(8) + hash(16) + sig(64) = 88
         date_part = decoded[:8].decode()
         req_hash = decoded[8:24].decode()
         sig = decoded[24:88]

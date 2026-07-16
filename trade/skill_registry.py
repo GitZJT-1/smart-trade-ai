@@ -1057,6 +1057,24 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "5 阶段客户旅程映射 + 阶段动作模板 + 30 天跟进时间表 + KPI 目标 + 客户分层策略 + 管线健康度",
         "augment_prompt": "",
     },
+    # ── b2b-inquiry-training: 询盘回复与 Top Sales 训练 ──────────
+    {
+        "name": "b2b-inquiry-training",
+        "triggers": [
+            # Chinese
+            "询盘训练", "回复练习", "模拟买家", "询盘回复",
+            "训练回复", "练询盘", "模拟客户", "反对意见",
+            "客户刁难", "谈判练习", "话术训练", "销售人员训练",
+            "回复优化", "询盘模拟", "不匹配询盘",
+            # English
+            "inquiry training", "practice reply", "role play buyer",
+            "objection handling", "sales training", "improve reply",
+        ],
+        "aliases": [],
+        "input_fmt": "目标买家场景（国家/类型/关注点），或一封真实询盘，或一个具体反对意见",
+        "output_fmt": "客户画像 + 第一稿回复 + 买家视角分析 + 优化版回复 + 最终评分",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

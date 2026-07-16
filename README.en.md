@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 20 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 24 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 20 Professional Skills
+## 24 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -209,6 +209,10 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Morning Brief | Live FX rates + commodities + market news + client follow-up reminders |
 | Cron Tasks | Workday automations: morning brief / outreach / social posts / daily summary |
 | Chat History | Per-company chat memory, searchable and retraceable |
+| Email Imitation | Analyze excellent cold email samples → extract AIDA structure and style → generate original emails for your own products |
+| Buyer Persona | Role-based buyer analysis (procurement/technical/executive) with FAB value proposition per role |
+| Market Analysis | Go-to-market war map: certifications, tariffs, keyword arsenal, 3-second hooks, action roadmap |
+| Sales Pipeline | 5-stage customer journey mapping, 30-day follow-up timeline, KPI tracking, pipeline health dashboard |
 | Trade Operations | 11 post-deal scenarios: payment reminders / claims / exhibitions / factory audits / logistics / after-sales / satisfaction surveys / annual reviews |
 | Trade Compliance | Cultural taboo check / abbreviation standards / Incoterms 2020 / translation review / bidding / e-commerce listing |
 | Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
@@ -247,10 +251,10 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      20 skill registry (pure data)
+├── skill_registry.py      24 skill registry (pure data)
 └── ... + 20 business modules
 
-skills/                    17 B2B skills (Markdown-driven)
+skills/                    24 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

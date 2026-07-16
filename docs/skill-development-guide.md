@@ -177,6 +177,14 @@ skills/
 │   └── SKILL.md
 ├── b2b-skill-generator/   # Skill 生成器
 │   └── SKILL.md
+├── b2b-email-imitation/   # 开发信仿写与再创作
+│   └── SKILL.md
+├── b2b-buyer-persona/     # 买家画像与角色分层
+│   └── SKILL.md
+├── b2b-market-analysis/   # 市场分析作战地图
+│   └── SKILL.md
+├── b2b-sales-pipeline/    # 销售管线策略
+│   └── SKILL.md
 ├── auto-trade-customer-development/  # 全自动客户开发编排
 │   └── SKILL.md
 ├── auto-smtp-email/       # SMTP 邮件发送
@@ -248,7 +256,7 @@ injection_prompt: |
 
 ---
 
-## 6. 现有 20 个 Skills 的触发词快速参考
+## 6. 现有 24 个 Skills 的触发词快速参考
 
 | Skill | 典型触发词 |
 |-------|-----------|
@@ -270,5 +278,9 @@ injection_prompt: |
 | b2b-trade-compliance | 文化禁忌、Incoterms、翻译二审、投标 |
 | chat-memory | 之前说过、上周聊的、历史记录、帮我查 |
 | b2b-skill-generator | 生成skill、创建技能、新建能力、做个skill |
+| b2b-email-imitation | 仿写开发信、模仿邮件、参考邮件写、按这个风格写 |
+| b2b-buyer-persona | 买家画像、客户画像、角色分析、按角色写 |
+| b2b-market-analysis | 市场分析、目标市场、作战地图、竞品分析 |
+| b2b-sales-pipeline | 销售推进、跟进策略、怎么跟进、下一步怎么办 |
 | auto-trade-customer-development | 全自动客户开发、一键开发客户、端到端 |
 | auto-smtp-email | 发邮件、SMTP发送、群发邮件、开发信发送 |

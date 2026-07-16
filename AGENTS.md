@@ -16,7 +16,7 @@ trade/                        Core Python package
   ├── database.py             SQLite schema + connection
   ├── customer.py             Customer CRUD, dedup, completeness scoring, briefing, health audit
   ├── chat_memory.py          Conversation log + rating + lifecycle (365-day / 30k-threshold cleanup)
-  ├── skill_registry.py       20 skill definitions (triggers, aliases, augment prompts)
+  ├── skill_registry.py       24 skill definitions (triggers, aliases, augment prompts)
   ├── skill_router.py         Skill matching, frontmatter parsing, query augmentation
   ├── prompt.py               System prompts (full, minimal, OSINT, brand safety)
   ├── prompts.py              Prompt resolution chain (file → DB → code fallback)
@@ -27,7 +27,7 @@ trade/                        Core Python package
   ├── bootstrap.py            First-run environment setup
   ├── app.py                  Application lifecycle & startup
   └── license.py              Ed25519 license validation + self-recovery
-skills/                       20 skill markdown files (version controlled)
+skills/                       24 skill markdown files (version controlled)
 tests/                        8 test files, ~225 tests
 ```
 
@@ -77,7 +77,7 @@ coverage run -m pytest tests/ -v && coverage report
 
 ## Key Design Points
 
-1. **20 skills** with registry + disk files: OSINT, email-intel, lead-generation, document, doc-generation, platform, linkedin-marketing, social-media, customs-data, onboarding, daily-automation, customer-mgmt, data-directory, chat-memory, skill-generator, trade-ops, trade-compliance, cold-outreach, auto-trade-customer-development, auto-smtp-email.
+1. **24 skills** with registry + disk files: OSINT, email-intel, lead-generation, document, doc-generation, platform, linkedin-marketing, social-media, customs-data, onboarding, daily-automation, customer-mgmt, data-directory, chat-memory, skill-generator, trade-ops, trade-compliance, cold-outreach, auto-trade-customer-development, auto-smtp-email.
 2. **Brand Safety Guardrails**: `BRAND_SAFETY_BLOCK` in `trade/prompt.py` prohibits derogatory language, fabricated certifications, hype claims, and competitor attacks. Loaded per-company via `get_brand_safety()` or falls back to code default. Injected into system prompt in `build_query()`.
 3. **Customer Dedup & Health**: Soft dedup warnings on `create()`; `bulk_save()` 3-dimensional dedup (name + email + website); `find_duplicates()` email exact match + website domain-normalized match; `compute_data_completeness()` weighted 0–100 score across 16 fields; `build_briefing()` AI customer briefing; `health_audit()` detects stale customers, high-value unconverted, and incomplete data.
 4. **Conversation Lifecycle**: Automatic daily cleanup via `purge_old_conversations()` — removes conversations older than 365 days only when total exceeds 30,000 records. Rate-limited to once per day. Per-company scoped.

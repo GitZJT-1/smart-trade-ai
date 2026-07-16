@@ -307,6 +307,7 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
   Smart Trade AI — 外贸业务员的本地 AI 助手<br>
   <a href="https://github.com/chefroger/smart-trade-ai">GitHub</a> ·
   <a href="https://github.com/chefroger/smart-trade-ai/releases">Releases</a>
+</p>
 
 ---
 

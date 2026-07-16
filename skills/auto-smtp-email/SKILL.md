@@ -109,10 +109,76 @@ injection_prompt: |
   print(f"✅ SMTP 配置已保存到 {env_file}")
   ```
 
-  **Step 5 — 验证**
-  写入成功后再读取一次凭证，确认配置正确，然后询问用户是否需要发送测试邮件。
+  **Step 5 — 域名送达率检查**
+  写入配置后，从用户的邮箱地址中提取域名，用 execute_code 执行 DNS 查询，检查发信域名的 SPF / DKIM / DMARC 记录：
 
-  如果用户提供的邮箱地址或授权码有误（发送时报错），返回 Step 1 重新配置，并告知具体错误（如「535 认证失败，请检查授权码是否正确」）。
+  ```python
+  import dns.resolver
+  import re
+
+  email = smtp_user  # 来自刚刚写入的配置
+  domain = email.split("@", 1)[1].strip().lower()
+
+  print(f"🔍 正在检查 {domain} 的邮件认证记录...")
+  print()
+
+  # 1. SPF 检查
+  try:
+      answers = dns.resolver.resolve(domain, "TXT")
+      spf = [str(r) for r in answers if "v=spf1" in str(r)]
+      if spf:
+          print(f"✅ SPF: 已配置 — {spf[0][:120]}")
+      else:
+          print(f"❌ SPF: 未配置！")
+          print(f"   添加 TXT 记录: v=spf1 include:_spf.google.com ~all")
+          print(f"   （将 include 值替换为你的邮件服务商提供的地址）")
+  except Exception as e:
+      print(f"❌ SPF: 查询失败 — {e}")
+
+  # 2. DKIM 检查（需要知道邮件服务商的 DKIM selector，这里做通用提示）
+  print()
+  has_dkim = False
+  # 常见 DKIM selector
+  for selector in ["google._domainkey", "default._domainkey", "dkim._domainkey",
+                    "s1._domainkey", "s2._domainkey"]:
+      try:
+          qname = f"{selector}.{domain}"
+          dns.resolver.resolve(qname, "TXT")
+          has_dkim = True
+          break
+      except Exception:
+          continue
+  if has_dkim:
+      print(f"✅ DKIM: 已配置（检测到 {qname} 记录）")
+  else:
+      print(f"❌ DKIM: 未检测到标准 DKIM 记录！")
+      print(f"   请在邮箱服务商的后台获取 DKIM 密钥并添加 TXT 记录")
+
+  # 3. DMARC 检查
+  print()
+  try:
+      answers = dns.resolver.resolve(f"_dmarc.{domain}", "TXT")
+      dmarc = [str(r) for r in answers if "v=DMARC1" in str(r)]
+      if dmarc:
+          print(f"✅ DMARC: 已配置 — {dmarc[0][:120]}")
+      else:
+          print(f"❌ DMARC: 未配置！")
+          print(f"   建议添加 TXT 记录 _dmarc.{domain}: v=DMARC1; p=none; rua=mailto:admin@{domain}")
+  except Exception as e:
+      print(f"❌ DMARC: 查询失败 — {e}")
+  ```
+
+  检查结果输出后，逐条向用户解释：
+  - **SPF** 缺失：发信方身份未被验证，收件邮局可能拒收或判为垃圾
+  - **DKIM** 缺失：邮件内容未被签名加密，邮局无法确认邮件未被篡改
+  - **DMARC** 缺失：无法告诉邮局"怎么处理验证失败的邮件"，各邮局自行决定
+
+  告知用户：即使缺少这些记录，邮件现在也能发出去，但**送达率和收件箱到达率会大幅降低**，建议尽快配置。给用户提供：
+  - 缺失记录的查询结果（复制粘贴到 DNS 管理后台即可）
+  - 对应邮箱服务商的配置指南链接
+
+  **Step 6 — 测试发送**
+  域名检查完成后，询问用户是否需要发送测试邮件验证配置。如果用户提供的邮箱地址或授权码有误（发送时报错），返回 Step 1 重新配置，并告知具体错误（如「535 认证失败，请检查授权码是否正确」）。
 
   ### 服务商参数对照表
   | 服务商 | SMTP_HOST | SMTP_PORT | 授权码获取地址 |

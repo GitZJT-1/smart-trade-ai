@@ -1419,6 +1419,14 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
     const items = all.map(t => `<div style="font-size:11px;color:var(--text-muted);line-height:1.6;">${esc(t.time)} ${esc(_stripEmoji(t.name))}</div>`);
     barHtml += `<div>${items.join('')}</div>`;
 
+    // 文档生成上下文：显示单证模板下载
+    if (currentChatContext === 'docgen') {
+        barHtml += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border-light);font-size:11px;display:flex;gap:8px;align-items:center;">
+            <span>📄</span>
+            <a href="#" onclick="event.preventDefault();downloadManagementTables();" style="color:var(--primary);text-decoration:none;">下载单证模板（商业发票/装箱单/形式发票/报价单）</a>
+        </div>`;
+    }
+
     barHtml += `</div>`;
     return barHtml;
 }

@@ -480,11 +480,207 @@ def _build_culture(ws: Workbook):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Sheet 11 — Commercial Invoice (外贸商业发票模板)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _build_commercial_invoice(wb: Workbook):
+    ws_ = wb.create_sheet("11-商业发票")
+    ws_.sheet_properties.tabColor = "1F4E79"
+
+    rows_data = [
+        ["商业发票", ""],
+        ["COMMERCIAL INVOICE", ""],
+        ["", ""],
+        ["发票编号:", "[Invoice No.]", "发票日期:", "[Date]"],
+        ["合同编号:", "[S/C No.]", "合同日期:", "[Date]"],
+        ["", ""],
+        ["卖方:", "[Seller Name & Address]", "", ""],
+        ["买方:", "[Buyer Name & Address]", "", ""],
+        ["", ""],
+        ["运输方式:", "[By Sea/Air]", "装运港:", "[Port of Loading]"],
+        ["目的港:", "[Port of Destination]", "装运期:", "[Time of Shipment]"],
+        ["付款方式:", "[Terms of Payment]", "信用证号:", "[L/C No.]"],
+        ["", ""],
+        ["唛头 Marks", "品名 Description", "HS 编码", "数量 Quantity", "单价 Unit Price", "总价 Amount"],
+        ["[Marks]", "[Description of Goods]", "[HS Code]", "[Qty]", "[Unit Price]", "[Amount]"],
+        ["", "", "", "", "", ""],
+        ["合计", "", "", "[Total Qty]", "", "[Total Amount]"],
+        ["", "", "", "", "", ""],
+        ["金额大写: [SAY TOTAL]", "", "", "", "", ""],
+        ["", "", "", "", "", ""],
+        ["卖方签章:", "", "", "日期:", ""],
+    ]
+    for ri, row in enumerate(rows_data):
+        for ci, val in enumerate(row):
+            c = ws_.cell(row=ri + 1, column=ci + 1, value=val)
+            c.font = Font(name="微软雅黑", size=9)
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+            if ri == 0 or ri == 1:
+                c.font = Font(name="微软雅黑", bold=True, size=14, color="1F4E79")
+                c.alignment = Alignment(horizontal="center")
+            if ri == 13:
+                c.font = Font(name="微软雅黑", bold=True, size=9)
+    ws_.column_dimensions["A"].width = 20
+    ws_.column_dimensions["B"].width = 30
+    ws_.column_dimensions["C"].width = 14
+    ws_.column_dimensions["D"].width = 14
+    ws_.column_dimensions["E"].width = 16
+    ws_.column_dimensions["F"].width = 16
+    ws_.merge_cells("A1:F1")
+    ws_.merge_cells("A2:F2")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Sheet 12 — Packing List (外贸装箱单模板)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _build_packing_list(wb: Workbook):
+    ws_ = wb.create_sheet("12-装箱单")
+    ws_.sheet_properties.tabColor = "2E75B6"
+
+    rows_data = [
+        ["装箱单", ""],
+        ["PACKING LIST", ""],
+        ["", ""],
+        ["发票编号:", "[Invoice No.]", "日期:", "[Date]"],
+        ["合同编号:", "[S/C No.]", "", ""],
+        ["", ""],
+        ["卖方:", "[Seller Name & Address]", "", ""],
+        ["买方:", "[Buyer Name & Address]", "", ""],
+        ["", ""],
+        ["唛头 Marks", "品名 Description", "件数 Packages", "毛重 G.W.(kg)", "净重 N.W.(kg)", "体积 Meas.(m³)"],
+        ["[Marks]", "[Description of Goods]", "[Pkgs]", "[G.W.]", "[N.W.]", "[CBM]"],
+        ["", "", "", "", "", ""],
+        ["合计", "", "[Total Pkgs]", "[Total G.W.]", "[Total N.W.]", "[Total CBM]"],
+        ["", "", "", "", "", ""],
+        ["卖方签章:", "", "", "", "", ""],
+    ]
+    for ri, row in enumerate(rows_data):
+        for ci, val in enumerate(row):
+            c = ws_.cell(row=ri + 1, column=ci + 1, value=val)
+            c.font = Font(name="微软雅黑", size=9)
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+            if ri == 0 or ri == 1:
+                c.font = Font(name="微软雅黑", bold=True, size=14, color="2E75B6")
+                c.alignment = Alignment(horizontal="center")
+            if ri == 9:
+                c.font = Font(name="微软雅黑", bold=True, size=9)
+    ws_.column_dimensions["A"].width = 20
+    ws_.column_dimensions["B"].width = 30
+    ws_.column_dimensions["C"].width = 16
+    ws_.column_dimensions["D"].width = 16
+    ws_.column_dimensions["E"].width = 16
+    ws_.column_dimensions["F"].width = 16
+    ws_.merge_cells("A1:F1")
+    ws_.merge_cells("A2:F2")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Sheet 13 — Proforma Invoice (外贸形式发票模板)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _build_proforma_invoice(wb: Workbook):
+    ws_ = wb.create_sheet("13-形式发票")
+    ws_.sheet_properties.tabColor = "548235"
+
+    rows_data = [
+        ["形式发票", ""],
+        ["PROFORMA INVOICE", ""],
+        ["", ""],
+        ["PI 编号:", "[PI No.]", "日期:", "[Date]"],
+        ["合同编号:", "[S/C No.]", "有效期至:", "[Validity]"],
+        ["", ""],
+        ["卖方:", "[Seller]", "买方:", "[Buyer]"],
+        ["", "", "", ""],
+        ["装运港:", "[Port of Loading]", "目的港:", "[Port of Destination]"],
+        ["装运期:", "[Time of Delivery]", "付款方式:", "[Terms of Payment]"],
+        ["保险:", "[Insurance]", "", ""],
+        ["", "", "", ""],
+        ["唛头 Marks", "品名 Description", "数量 Quantity", "单价 Unit Price", "总价 Amount"],
+        ["[Marks]", "[Description of Goods]", "[Qty]", "[Unit Price]", "[Amount]"],
+        ["", "", "", "", ""],
+        ["合计", "", "[Total Qty]", "", "[Total Amount]"],
+        ["", "", "", "", ""],
+        ["金额大写: [SAY TOTAL]", "", "", "", ""],
+        ["", "", "", "", ""],
+        ["受益人:", "[Beneficiary]", "", ""],
+        ["通知行:", "[Advising Bank]", "", ""],
+        ["", "", "", "", ""],
+        ["卖方签章:", "", "日期:", "", ""],
+    ]
+    for ri, row in enumerate(rows_data):
+        for ci, val in enumerate(row):
+            c = ws_.cell(row=ri + 1, column=ci + 1, value=val)
+            c.font = Font(name="微软雅黑", size=9)
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+            if ri == 0 or ri == 1:
+                c.font = Font(name="微软雅黑", bold=True, size=14, color="548235")
+                c.alignment = Alignment(horizontal="center")
+            if ri == 12:
+                c.font = Font(name="微软雅黑", bold=True, size=9)
+    ws_.column_dimensions["A"].width = 18
+    ws_.column_dimensions["B"].width = 30
+    ws_.column_dimensions["C"].width = 16
+    ws_.column_dimensions["D"].width = 16
+    ws_.column_dimensions["E"].width = 16
+    ws_.merge_cells("A1:E1")
+    ws_.merge_cells("A2:E2")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Sheet 14 — Quotation (外贸报价单模板)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _build_quotation(wb: Workbook):
+    ws_ = wb.create_sheet("14-报价单")
+    ws_.sheet_properties.tabColor = "BF8F00"
+
+    rows_data = [
+        ["报价单", ""],
+        ["QUOTATION", ""],
+        ["", ""],
+        ["客户名:", "[Customer Name]", "报价日期:", "[Date]"],
+        ["有效期:", "[Validity]", "贸易术语:", "[Incoterms]"],
+        ["付款方式:", "[Payment Terms]", "交期:", "[Delivery Time]"],
+        ["", "", "", ""],
+        ["序号", "产品名称/型号", "图片", "数量", "单价", "总价"],
+        ["1", "[Product Name]", "[Photo]", "[Qty]", "[Unit Price]", "[Amount]"],
+        ["2", "", "", "", "", ""],
+        ["3", "", "", "", "", ""],
+        ["", "", "", "", "", ""],
+        ["", "", "合计", "", "", "[Total Amount]"],
+        ["", "", "", "", "", ""],
+        ["备注:", "", "", "", "", ""],
+        ["[Remarks/Notes]", "", "", "", "", ""],
+        ["", "", "", "", "", ""],
+        ["卖方签章:", "", "", "", "", ""],
+    ]
+    for ri, row in enumerate(rows_data):
+        for ci, val in enumerate(row):
+            c = ws_.cell(row=ri + 1, column=ci + 1, value=val)
+            c.font = Font(name="微软雅黑", size=9)
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+            if ri == 0 or ri == 1:
+                c.font = Font(name="微软雅黑", bold=True, size=14, color="BF8F00")
+                c.alignment = Alignment(horizontal="center")
+            if ri == 7:
+                c.font = Font(name="微软雅黑", bold=True, size=9)
+    ws_.column_dimensions["A"].width = 8
+    ws_.column_dimensions["B"].width = 28
+    ws_.column_dimensions["C"].width = 18
+    ws_.column_dimensions["D"].width = 12
+    ws_.column_dimensions["E"].width = 14
+    ws_.column_dimensions["F"].width = 14
+    ws_.merge_cells("A1:F1")
+    ws_.merge_cells("A2:F2")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # 主入口
 # ═══════════════════════════════════════════════════════════════════════════
 
 def generate_templates() -> Workbook:
-    """生成包含 10 张管理表格的完整 Excel 工作簿。"""
+    """生成包含 14 张管理表格的完整 Excel 工作簿。"""
     wb = Workbook()
     _build_selection(wb)
     _build_persona(wb)
@@ -496,4 +692,8 @@ def generate_templates() -> Workbook:
     _build_kpi(wb)
     _build_competitor(wb)
     _build_culture(wb)
+    _build_commercial_invoice(wb)
+    _build_packing_list(wb)
+    _build_proforma_invoice(wb)
+    _build_quotation(wb)
     return wb

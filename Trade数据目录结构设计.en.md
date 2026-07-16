@@ -468,7 +468,7 @@ Status: pending / accepted / rejected / expired
 When the Agent's working directory is set to `~/.trade/companies/{company_slug}/`, Hermes automatically injects the `AGENTS.md` and `SOUL.md` files from that directory. Trade can leverage this mechanism:
 
 ```
-~/.trade/companies/kechen/
+~/.trade/companies/example-co/
 ├── agent-identity.md    ← Copied as SOUL.md for Hermes auto-loading
 ├── company-profile.md   ← Agent reads via read_file
 ├── products.md
@@ -498,12 +498,12 @@ Analysis results from document library content will:
 The `trade init-company` command creates the standard directory skeleton with one command:
 
 ```bash
-trade init-company --name "Kechen" --slug "kechen"
+trade init-company --name "ExampleCo" --slug "example-co"
 ```
 
 Output:
 ```
-Creating company directory: ~/.trade/companies/kechen/
+Creating company directory: ~/.trade/companies/example-co/
   ✓ company-profile.md
   ✓ products.md
   ✓ business-scope.md

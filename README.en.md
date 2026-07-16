@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 24 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 25 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -213,6 +213,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Buyer Persona | Role-based buyer analysis (procurement/technical/executive) with FAB value proposition per role |
 | Market Analysis | Go-to-market war map: certifications, tariffs, keyword arsenal, 3-second hooks, action roadmap |
 | Sales Pipeline | 5-stage customer journey mapping, 30-day follow-up timeline, KPI tracking, pipeline health dashboard |
+| Inquiry Training | Dual-AI adversarial training for inquiry responses, buyer persona simulation, objection handling |
 | Trade Operations | 11 post-deal scenarios: payment reminders / claims / exhibitions / factory audits / logistics / after-sales / satisfaction surveys / annual reviews |
 | Trade Compliance | Cultural taboo check / abbreviation standards / Incoterms 2020 / translation review / bidding / e-commerce listing |
 | Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |

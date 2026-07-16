@@ -467,7 +467,7 @@ def get_hermes_home() -> Path:
 当 Agent 的工作目录设置为 `~/.trade/companies/{company_slug}/` 时，Hermes 会自动注入该目录下的 `AGENTS.md` 和 `SOUL.md`。Trade 可以利用这个机制：
 
 ```
-~/.trade/companies/kechen/
+~/.trade/companies/example-co/
 ├── agent-identity.md    ← 复制为 SOUL.md 供 Hermes 自动加载
 ├── company-profile.md   ← Agent 通过 read_file 读取
 ├── products.md
@@ -497,12 +497,12 @@ def get_hermes_home() -> Path:
 `trade init-company` 命令一键创建标准目录骨架：
 
 ```bash
-trade init-company --name "Kechen" --slug "kechen"
+trade init-company --name "ExampleCo" --slug "example-co"
 ```
 
 输出：
 ```
-创建公司目录：~/.trade/companies/kechen/
+创建公司目录：~/.trade/companies/example-co/
   ✓ company-profile.md
   ✓ products.md
   ✓ business-scope.md

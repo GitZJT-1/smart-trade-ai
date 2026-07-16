@@ -282,5 +282,6 @@ injection_prompt: |
 | b2b-buyer-persona | 买家画像、客户画像、角色分析、按角色写 |
 | b2b-market-analysis | 市场分析、目标市场、作战地图、竞品分析 |
 | b2b-sales-pipeline | 销售推进、跟进策略、怎么跟进、下一步怎么办 |
+| b2b-inquiry-training | 询盘训练、回复练习、模拟买家、反对意见 |
 | auto-trade-customer-development | 全自动客户开发、一键开发客户、端到端 |
 | auto-smtp-email | 发邮件、SMTP发送、群发邮件、开发信发送 |

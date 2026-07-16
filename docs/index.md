@@ -307,4 +307,64 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
   Smart Trade AI — 外贸业务员的本地 AI 助手<br>
   <a href="https://github.com/chefroger/smart-trade-ai">GitHub</a> ·
   <a href="https://github.com/chefroger/smart-trade-ai/releases">Releases</a>
+
+---
+
+## Skills 参考手册
+
+Trade 会自动识别你的意图，匹配合适的技能。以下是全部 24 个技能的详细说明和使用示例。
+
+### 24 个技能速查
+
+| # | 技能 | 功能 | 典型提示词示例 |
+|---|------|------|---------------|
+| 1 | **b2b-osint** | 客户背景调查（6 层检测） | 帮我查一下这家公司 / 背调这个邮箱 / 查一下域名注册时间 |
+| 2 | **b2b-email-intel** | 邮箱情报（120+ 平台检测） | 查一下这个邮箱哪个平台注册了 / 邮箱是真的吗 |
+| 3 | **b2b-lead-generation** | 多通道客户搜索与开发 | 帮我找一下德国的 XX 产品客户 / 写一封开发信给美国客户 |
+| 4 | **b2b-document** | 本地文档分析与提取 | 分析一下这份报价单 / 帮我看看这个合同有什么问题 |
+| 5 | **b2b-doc-generation** | 生成报价/合同/提案文件 | 帮我生成一份 PDF 报价单 / 做一份产品介绍 PPT |
+| 6 | **b2b-platform** | B2B 平台店铺诊断优化 | 帮我看看这个阿里国际站产品页 / 优化一下产品标题 |
+| 7 | **b2b-linkedin-marketing** | LinkedIn 营销策略与内容 | 帮我想一下领英发什么内容 / 写一个 LinkedIn Add Note |
+| 8 | **b2b-social-media** | 社媒营销（FB/Ins/TikTok/YT） | 帮我做一个 Facebook 内容计划 / 写一个 TikTok 脚本 |
+| 9 | **b2b-customs-data** | 海关数据分析找采购商 | 帮我看看谁在进口这个产品 / 分析一下这个 HS 编码 |
+| 10 | **b2b-onboarding** | 新公司全套部署方案 | 我刚做外贸，帮我制定一个营销方案 / 新公司怎么开始 |
+| 11 | **b2b-daily-automation** | 定时任务（早报/晚报/周报） | 每天早上 8 点给我一份简报 / 设置一个每日工作总结 |
+| 12 | **b2b-customer-mgmt** | 客户档案与分级管理 | 帮我查一下 XX 公司的信息 / A 级客户有哪些 |
+| 13 | **b2b-data-directory** | 数据目录结构管理 | 我的数据存在哪了 / 帮我初始化一下数据目录 |
+| 14 | **chat-memory** | 历史对话查询 | 上次和 XX 公司聊到什么了 / 之前那份报价是多少 |
+| 15 | **b2b-skill-generator** | 动态创建新的 B2B Skill | 帮我创建一个新的 skill，用来查 XX |
+| 16 | **b2b-trade-ops** | 外贸履约与售后沟通 | 帮我写一封催款邮件 / 客户投诉质量有问题怎么办 |
+| 17 | **b2b-trade-compliance** | 合规检查与文化禁忌 | 这个颜色在沙特有什么忌讳吗 / 检查一下 FOB 写对了没有 |
+| 18 | **b2b-cold-outreach** | 冷 outreach 邮件撰写 | 给德国的 XX 公司写一封开发信 / 写一封产品推广信 |
+| 19 | **auto-trade-customer-development** | 全自动客户开发流水线 | 帮我跑一轮自动化客户开发 / 全自动开发一批客户 |
+| 20 | **auto-smtp-email** | SMTP 邮件发送 | 把这封开发信发出去 / 群发这批邮件，间隔 60 秒 |
+| 21 | **b2b-email-imitation** | 开发信仿写与再创作 | 参考这封邮件，帮我写一个类似的 / 模仿这个风格写一封开发信 |
+| 22 | **b2b-buyer-persona** | 买家画像与角色分层 | 帮我分析一下买家画像 / 针对采购经理应该怎么沟通 |
+| 23 | **b2b-market-analysis** | 市场分析作战地图 | 分析一下德国市场进入策略 / 帮我做一个中东市场调研 |
+| 24 | **b2b-sales-pipeline** | 销售管线与跟进策略 | 这个客户一个月没回了怎么办 / 帮我设计一个 30 天跟进计划 |
+
+### 技能自动匹配原理
+
+当你在聊天框输入内容时，Trade 会自动匹配关键词，调用最合适的 skill。匹配规则：
+
+- **词边界匹配**（+3 分）：独立关键词命中，如"背调"、"开发信"、"海关数据"
+- **子串匹配**（+1 分）：关键词出现在句子中，如"帮我查一下这个公司"匹配到"查公司"
+- **显式调用**（最高优先级）：用"用 b2b-xxx" 或 "加载 skill b2b-xxx" 直接指定
+
+得分最高的 skill 会被激活。如果连续使用同一个 skill，系统会用简短的提示词继续（节省 token）。
+
+### 如何查看当前激活的技能
+
+当 Trade 匹配到一个 skill 时，在回复的开头会显示技能名称，如 `[SKILL AUGMENTATION] 技能触发：b2b-osint`。你也可以直接输入"用 b2b-osint 查一下这个邮箱"来强制指定某个技能。
+
+### 技能别名
+
+部分技能之间存在别名关联，输入一个技能名可能触发相关联的技能：
+
+| 输入技能 | 也会触发 |
+|----------|---------|
+| b2b-osint | b2b-email-intel |
+| b2b-lead-generation | b2b-customer-mgmt |
+| b2b-trade-ops | b2b-customer-mgmt |
+| auto-trade-customer-development | b2b-lead-generation, b2b-osint, auto-smtp-email |
 </p>

@@ -9,7 +9,7 @@ description = "Smart Trade AI — AI sales assistant for B2B trade companies. Le
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Roger Lococo" }]
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-only" }
 dependencies = [
   # Core
   "fastapi>=0.104.0,<1.0",

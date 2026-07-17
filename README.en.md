@@ -282,8 +282,6 @@ ruff check trade/ server.py  # Lint
 
 - [Product Requirements (en)](项目需求文档.en.md)
 - [Business Overview (en)](业务概览.en.md)
-- [Trade Knowledge Base (en)](外贸业务知识库.en.md)
-- [Trade Methodology (en)](外贸业务方法总结.en.md)
 - [Data Directory Structure (en)](Trade数据目录结构设计.en.md)
 - [COMPATIBILITY.md](COMPATIBILITY.md) — Hermes version compatibility
 - [Database Schema](docs/database-schema.md)

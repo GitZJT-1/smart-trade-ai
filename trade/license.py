@@ -357,14 +357,23 @@ def _verify_license(data: dict) -> bool:
         from cryptography.hazmat.primitives.asymmetric import ed25519
 
         sig = base64.urlsafe_b64decode(sig_b64)
-        # 验签 payload 必须与 _encode_activation_code / _sign_license 签名时一致：
-        #   YYYYMMDD + SHA256(machine_id).hexdigest().upper()[:16]
-        # [:10] 截取纯日期部分，兼容 "2026-08-31" 和 "2027-12-31T00:00:00+00:00" 两种格式
-        mid_hash = hashlib.sha256(_machine_id().encode()).hexdigest().upper()[:16]
+        # 验签 payload: YYYYMMDD + SHA256(machine_id).hexdigest()
+        # 兼容新旧两种格式：优先用完整 256 bit (64 hex)，失败则回退 64 bit (16 hex)
         date_str = expires_at[:10].replace("-", "")
-        payload = (date_str + mid_hash).encode()
+        full_hash = hashlib.sha256(_machine_id().encode()).hexdigest().upper()
         public_key = ed25519.Ed25519PublicKey.from_public_bytes(_PUBLIC_KEY_BYTES)
-        public_key.verify(sig, payload)
+
+        # 新格式 (256 bit): date(8) + hash(64)
+        payload_256 = (date_str + full_hash).encode()
+        try:
+            public_key.verify(sig, payload_256)
+            return True
+        except (InvalidSignature, ValueError):
+            pass
+
+        # 旧格式 (64 bit): date(8) + hash(16)
+        payload_64 = (date_str + full_hash[:16]).encode()
+        public_key.verify(sig, payload_64)
         return True
     except ImportError:
         # cryptography 未安装 — 无法验签，视为无效（提示用户安装依赖）

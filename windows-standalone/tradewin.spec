@@ -51,6 +51,7 @@ a = Analysis(
         'openai', 'anthropic',
         # OCR — Python wrapper (tesseract.exe must be installed separately on Windows)
         'pytesseract',
+        'psutil', 'dnspython',  # Process management / DNS lookups
         'asyncio', 'sqlite3', 'json', 'csv', 'io', 're', 'hashlib',
     ],
     hookspath=[],

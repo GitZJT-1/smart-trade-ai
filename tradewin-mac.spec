@@ -36,6 +36,7 @@ a = Analysis(
         'hermes_constants', 'run_agent',
         'openai', 'anthropic',  # LLM Provider SDKs — required, not optional
         'pytesseract',  # OCR — Python wrapper for Tesseract
+        'psutil', 'dnspython',  # Process management / DNS lookups
         'webview', 'webview.platforms.cocoa',
         'asyncio', 'sqlite3', 'json', 'csv', 'io', 're', 'hashlib',
         'multiprocessing',

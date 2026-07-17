@@ -9,6 +9,14 @@ pyyaml>=6.0
 packaging>=23.0
 pydantic>=2.0
 
+# LLM Provider SDKs (required — Hermes uses openai for all providers)
+openai==2.24.0
+anthropic==0.87.0
+# Process management
+psutil>=5.9.0,<8.0
+# DNS — OSINT email verification
+dnspython>=2.6.0,<3.0
+
 # OCR — Tesseract (requires system package: brew install tesseract / apt install tesseract-ocr)
 pytesseract>=0.3.10
 # Document extraction (read_file tool)

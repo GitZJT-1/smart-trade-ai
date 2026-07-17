@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 24 Professional Skills
+## 32 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -216,9 +216,17 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Inquiry Training | Dual-AI adversarial training for inquiry responses, buyer persona simulation, objection handling |
 | Trade Operations | 11 post-deal scenarios: payment reminders / claims / exhibitions / factory audits / logistics / after-sales / satisfaction surveys / annual reviews |
 | Trade Compliance | Cultural taboo check / abbreviation standards / Incoterms 2020 / translation review / bidding / e-commerce listing |
-| Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
+| KOL Style Imitation | Analyze LinkedIn KOL content style (tone/structure/hooks) and apply to your own brand |
+| Reddit Engagement | Build trust in Reddit communities via valuable comments, drive B2B leads |
+| SEO + AEO Articles | Generate content optimized for both Google search and AI search (Perplexity/Gemini/ChatGPT) |
+| Short Video Script | B2B product/factory video scripts (TikTok/YouTube Shorts/Reels) with storyboard |
+| Exhibition Manager | Full trade show lifecycle: pre-show invites → on-site records → 48h post-show follow-up |
+| Product Description | FAB method product selling points & sales kits (catalog/website/email embedded) |
+| Decision Coach | Six Thinking Hats methodology for trade decisions (supplier selection, exhibition, payment terms) |
+| Onboarding Wizard | 2-step guided setup: create company → paste customer URL → auto OSINT + cold email |
+| Skill Generator | Describe what you need, auto-generates a new B2B skill + registers it |
 | Auto Customer Dev | One-click end-to-end pipeline: search → vet → score → email → save → log |
-| ~~Auto SMTP Email~~ | ~~Preview-then-send via SMTP — 已禁用，见设计理念~~ |
+| ~~Auto SMTP Email~~ | ~~Preview-then-send via SMTP — disabled, AI does not send emails on behalf of users~~ |
 
 ---
 

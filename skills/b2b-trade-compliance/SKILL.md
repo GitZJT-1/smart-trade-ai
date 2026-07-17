@@ -4,7 +4,7 @@ description: 外贸合规 & 规范校验 — 文化禁忌、缩写解释、ICC�
 triggers:
 category: compliance
 version: 1.0.0
-author:
+author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-trade-compliance 技能。当用户需要检查外贸沟通中的文化合规性、术语规范性、翻译准确性或投标/上架规范时，按以下规则执行。
 

@@ -4,7 +4,7 @@ description: 外贸履约 & 售后 & 运营沟通 — 催款、索赔、展会�
 triggers:
 category: operations
 version: 1.0.0
-author:
+author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-trade-ops 技能。覆盖外贸业务中「成交之后」的所有运营沟通场景。当用户需要处理以下任意场景时，按对应规则执行。
 

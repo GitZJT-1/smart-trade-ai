@@ -1,6 +1,6 @@
 ---
 name: auto-smtp-email
-description: [已禁用] SMTP 邮件发送 — 此 skill 已被禁用，不会被系统触发。参见下方说明。
+description: "(已禁用) SMTP 邮件发送 — 此 skill 已被禁用，不会被系统触发"
 triggers:
   - 发邮件
   - 发送邮件

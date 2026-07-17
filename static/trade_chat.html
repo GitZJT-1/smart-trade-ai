@@ -860,6 +860,16 @@ async function loadLicenseStatus() {
                 expiredHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
             }
             bar.innerHTML = expiredHtml;
+        } else if (data.status === 'active' && data.days_remaining <= 7) {
+            // 已激活但快到期（7天内）：显示黄色/红色警告 + 申请码 + 续期按钮
+            bar.style.display = 'block';
+            bar.style.background = data.days_remaining === 0 ? '#FEF2F2' : '#FFFBEB';
+            bar.style.color = data.days_remaining === 0 ? '#991B1B' : '#92400E';
+            var activeWarn = '✅ 已激活 · 有效期至 ' + (data.expires_at||'').slice(0,10) + ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining===0?'#DC2626':'#D97706') + ';text-decoration:underline;font-weight:600;">续期激活</a>';
+            if (data.request_code) {
+                activeWarn += ' · 申请码: <code style="background:' + (data.days_remaining===0?'#FEE2E2':'#FEF3C7') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
+            }
+            bar.innerHTML = activeWarn;
         } else if (data.status === 'active') {
             bar.style.display = 'block';
             bar.style.background = '#F0FDF4';
@@ -881,17 +891,6 @@ async function loadLicenseStatus() {
                 trialHtml += ' · 申请码: <code style="background:' + (data.days_remaining <= 7 ? '#FEF3C7' : '#DBEAFE') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
             }
             bar.innerHTML = trialHtml;
-        } else if (data.status === 'active' && data.days_remaining <= 7) {
-            // 已激活但快到期（7天内）：显示黄色警告 + 申请码 + 激活按钮
-            bar.style.display = 'block';
-            bar.style.background = data.days_remaining === 0 ? '#FEF2F2' : '#FFFBEB';
-            bar.style.color = data.days_remaining === 0 ? '#991B1B' : '#92400E';
-            var activeHtml = '✅ 已激活 · 有效期至 ' + (data.expires_at||'').slice(0,10);
-            activeHtml += ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining===0?'#DC2626':'#D97706') + ';text-decoration:underline;font-weight:600;">续期激活</a>';
-            if (data.request_code) {
-                activeHtml += ' · 申请码: <code style="background:' + (data.days_remaining===0?'#FEE2E2':'#FEF3C7') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = activeHtml;
         } else if (data.status === 'tampered') {
             bar.style.display = 'block';
             bar.style.background = '#FEF2F2';

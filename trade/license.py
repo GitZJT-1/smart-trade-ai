@@ -240,7 +240,10 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
             else:
                 return False, "许可证数据异常，请使用激活码重新激活。"
         expires = datetime.fromisoformat(data["expires_at"]).replace(tzinfo=UTC)
-        if now < expires:
+        # 使用日期比较（非时间比较）：激活码在到期日当天仍然有效，
+        # datetime.fromisoformat("2026-07-17") 解析为当天 00:00:00，
+        # 而 now 是当天 HH:MM:SS，直接用 < 比较会导致当天判为过期
+        if now.date() <= expires.date():
             return True, ""
         else:
             return False, "激活码已到期，请联系作者续期：lauroge@gmail.com"
@@ -254,13 +257,14 @@ def check_license(company_id: int | None = None) -> tuple[bool, str]:
 
 
 def days_remaining(company_id: int | None = None) -> int:
-    """返回剩余可用天数。已过期返回 0。"""
+    """返回剩余可用天数（到期日当天仍有效，返回 0 而非 -1）。"""
     data = _get_license_data(company_id)
     now = datetime.now(UTC)
 
     if data.get("activated") and data.get("expires_at"):
         expires = datetime.fromisoformat(data["expires_at"]).replace(tzinfo=UTC)
-        remaining = (expires - now).days
+        # 使用日期对比确保到期日当天返回 0 而非 -1
+        remaining = (expires.date() - now.date()).days
         return max(0, remaining)
 
     if "first_launch_at" in data:
@@ -471,7 +475,8 @@ def activate(code: str, company_id: int | None = None) -> tuple[bool, str]:
     now = datetime.now(UTC)
     expires_dt = datetime.fromisoformat(expires_at).replace(tzinfo=UTC)
 
-    if now >= expires_dt:
+    # 激活码在到期日当天仍然可以激活（日期比较，含当天）
+    if now.date() > expires_dt.date():
         return False, f"该激活码已到期（有效期至 {expires_at[:10]}）"
 
     # 写入激活信息（含 Ed25519 签名用于运行时防篡改验签）

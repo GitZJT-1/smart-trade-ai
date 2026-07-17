@@ -315,6 +315,9 @@ def status(company_id: int | None = None) -> dict:
             result["request_code"] = _make_request_code()
         else:
             result["status"] = "active"
+            # 距离到期 7 天内时同样返回申请码，提醒用户提前续期
+            if result["days_remaining"] <= 7:
+                result["request_code"] = _make_request_code()
     else:
         result["status"] = "trial"
 

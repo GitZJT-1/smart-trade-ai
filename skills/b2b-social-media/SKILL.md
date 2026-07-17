@@ -1,62 +1,23 @@
 ---
 name: b2b-social-media
-description: 
+description: 社媒营销 — Facebook/Instagram/TikTok/YouTube 内容策略与日历
 triggers:
-category: 
+  - 社媒营销
+  - 社交媒体营销
+  - Facebook营销
+  - Ins营销
+  - TikTok营销
+  - YouTube营销
+  - 社媒内容
+  - 社媒运营
+  - 内容日历
+  - 社媒计划
+  # ... (see skill_registry.py for full list)
+category: 内容营销
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-social-media 技能。当用户需要制定 Facebook、Instagram、TikTok 或 YouTube 的社媒营销策略时，请执行以下步骤：
-
-  ## 核心原则：客户价值导向（最重要规则！）
-
-  外贸 B2B 的社媒关注者不是来逛网店的——他们是来寻找**能帮自己解决供应链难题的伙伴**。
-  每发布一条内容前，先问：**「看到这条的人，会觉得这跟他的工作有关吗？」**
-
-  内容围绕以下五个方向展开（按重要性排序）：
-  1. **帮客户避坑 + 解决方案**（30%）：行业采购陷阱、验货盲区、认证雷区、谈判技巧
-  2. **差异化服务展示**（20%）：同行做不到的——48h 打样？非标定制？实验室检测？目标国认证？
-  3. **工厂硬实力 + 产品力**（20%）：产线实拍、检测流程、工艺细节、原材料把控。产品可以出场，但裹在「这对客户意味着什么」的语境里
-  4. **客户成功故事**（15%）：你帮客户解决了什么棘手问题、创造了什么价值
-  5. **互动 + 行业话题**（15%）：引发讨论、了解客户真实需求
-
-  **内容真实性规则（最高优先级）**：
-  - **不用模糊数字**：不说 "saves $2,000-$5,000"，说 "eliminates hydraulic compressor investment" 或用用户资料中的真实价格数据。没有准确数据时用定性描述（"大幅降低"、"显著节省"）
-  - **不用绝对化安装描述**：不说 "one worker, one pair of gloves, done"，说 "hand-installed without special tools" 或 "typical installation by one worker in under X minutes"
-  - **标注适用范围**：大规格或特殊场景需注明适用条件，如 "for distribution-class guy anchors" 或 "ideal for ADSS/OPGW strand anchoring under 20kN"
-  - **专业术语准确**：预绞丝产品用 "helical preformed wires" 或 "helical formed wires"，不用 "helical rods"。金具类用 "dead-end grips" / "guy grips" / "retention rods" 等国际通用术语
-  - **替代对比写定性不写定量**：不编造具体金额，"省去液压设备采购与运输成本" 优于 "省 $5000 工具费"
-
-  **产品/工厂可以发，但遵守三个规则**：
-  - 不发纯产品参数帖（规格/MOQ/价格放评论区）
-  - 每张产品照配一段客户视角的解读（"这个细节意味着你们不用..."/"我们多做这一步，客户就少踩一个坑"）
-  - 同一产品不发重复内容，每次换角度
-
-  ## 输出语言规则
-
-  所有社媒帖子、视频文案、互动回复使用**目标客户的语言**：
-  - 目标市场为英语国家（欧美、中东、东南亚等）→ **全部使用英语**发帖
-  - 目标市场为中文地区 → 使用中文
-  - 不确定目标市场的 → **默认用英语**（LinkedIn/FB/YouTube 上英语覆盖最广）
-  - 品牌名、产品型号、技术术语、Hashtag 保持英文原样
-
-  1. 加载 skill: b2b-social-media
-  2. 确认平台组合（可多平台）：
-     - Facebook：B2B 长文、案例分析、行业洞察、Group 运营
-     - Instagram：工厂纪实、品质瞬间、客户故事、Reels 过程展示
-     - TikTok：采购冷知识、行业避坑、工厂日常、产品背后的技术
-     - YouTube：客户案例纪录片、品质管控全流程、行业趋势分析
-  3. 内容日历（周计划）：
-     - 建议发布频率（每个平台）
-     - 内容类型配比（客户价值 70% / 信任建设 20% / 公司动态 10%）
-     - 发布时间（按目标市场时区）
-  4. 每条帖子包含：
-     - 标题/文案（以客户视角切入，不含产品参数堆砌）
-     - 配图/视频描述
-     - CTA（引发讨论/索要资料/访问链接）
-  5. 竞品分析：找出3个同行动议参考的账号，分析其内容策略
-  6. 返回：完整月历（每条帖子含：日期/平台/内容主题/核心价值点）
+author: Foreign Trade Assistant
 ---
+
 
 Platform: [Facebook/Instagram/TikTok/YouTube]
 Account Name: [Competitor's account]

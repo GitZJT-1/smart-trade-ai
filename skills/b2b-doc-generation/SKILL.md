@@ -1,37 +1,23 @@
 ---
 name: b2b-doc-generation
-description: 
+description: 商务文档生成 — 一键生成报价单/PI/合同/PPT（DOCX/XLSX/PPTX）
 triggers:
-category: 
+  - 生成文档
+  - 创建文档
+  - 制作文档
+  - 生成PPT
+  - 做一份报价
+  - 做一份合同
+  - 生成报价单
+  - 生成合同
+  - 生成提案
+  - gen doc
+  # ... (see skill_registry.py for full list)
+category: 文档管理
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-doc-generation 技能。当用户要求生成 PPT、Word 文档、Excel 报价单、合同或商业提案时，请执行以下步骤：
-  
-  1. 加载 skill: b2b-doc-generation
-  2. 确认信息（必要时询问）：
-     - 文档类型：PPTX（演示）/ DOCX（合同/协议）/ XLSX（报价）
-     - 受众：国际客户（全英文）/ 中国客户（全中文）
-     - 产品/服务内容：从对话或文档库获取
-  3. 生成文档：
-     - PPTX：python-pptx，品牌色（工业用深蓝#0B2A4A+金#D4A853），标题页→双栏→卡片网格→数据表格→图标文字行
-     - DOCX：python-docx，条款清晰、格式专业
-     - XLSX：python-openpyxl，完整数据表、交替行颜色
-  4. 验证：生成后用 read_file 抽查，确认数据完整无占位符
-  5. 保存路径：./output/{文档类型}_{客户名}_{日期}.{ext}
-  6. 返回：生成文件的绝对路径 + 文件大小 + 关键内容摘要
-  7. 输出引用来源清单（见下方规范）
-  
-  重要：所有文档必须是单一语言（英文或中文），不混用。
-
-  ════════════════════════════════════════
-  引用来源清单（每次生成文档时输出，仅内部使用，不写入文档正文）
-  ════════════════════════════════════════
-  开发信/提案/合同中涉及客户的具体信息，必须标注来源。
-  在返回文件路径之后，附加以下表格：
-
-  | 引用语句 | 来源类型 | 来源详情 | 可信度 |
-  |----------|----------|----------|--------|
+author: Foreign Trade Assistant
+---
+-------|----------|----------|--------|
   | "注意到贵公司主营不锈钢板出口" | b2b-osint | 官网产品页 targetco.com/products | ✅ 高 |
   | "贵公司近年拓展了南美市场" | web_search | news.example.com/article | ⚠️ 间接 |
   | "如能与贵司深度合作" | - | AI 通用话术 | - |

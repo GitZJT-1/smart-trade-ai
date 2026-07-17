@@ -1,29 +1,23 @@
 ---
 name: b2b-platform
-description: 
+description: B2B 平台诊断 — 阿里国际站/MIC/独立站产品页分析与优化建议
 triggers:
-category: 
+  - 网站诊断
+  - 平台诊断
+  - 阿里国际站优化
+  - 中国制造网
+  - 独立站优化
+  - 官网优化
+  - 产品链接分析
+  - 关键词优化
+  - 阿里店铺
+  - 平台上排名
+  # ... (see skill_registry.py for full list)
+category: 客户开发
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-platform 技能。当用户需要诊断或优化任何网站（B2B平台店铺、公司官网、独立站、产品页面）时，请执行以下步骤：
-  
-  1. 加载 skill: b2b-platform
-  2. 获取数据：
-     - 如果提供了产品链接：用 browser_navigate 打开并截图分析
-     - 如果只提供了关键词：用平台搜索结果页面做竞品分析
-  3. 按诊断维度分析：
-     - 产品标题：关键词覆盖、移动端友好度、专业性
-     - 产品图片：数量、质量、是否展示工厂/证书
-     - 产品描述：结构化程度、关键词密度、卖点清晰度
-     - 关键词：排名词覆盖、长尾词布局
-     - 询盘转化：主图、视频、交易保障因素
-  4. 返回格式：
-     - 总体评级（优秀/良好/需改进/差），不用数字评分以免主观
-     - 各维度评级（标题/图片/描述/关键词/询盘转化），基于实际页面分析而非猜测
-     - 优化建议：按优先级（高/中/低）列出
-     - 行动清单：第一周做什么、第二周做什么
+author: Foreign Trade Assistant
 ---
+
 
 ```
 Good: "High-Quality Stainless Steel Ball Valve DN50 PN16 for Industrial Use | ISO Certified"

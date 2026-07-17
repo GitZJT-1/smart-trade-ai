@@ -1,36 +1,23 @@
 ---
 name: b2b-customs-data
-description: 
+description: 海关数据分析 — 进出口记录查询、采购商筛选、市场趋势分析
 triggers:
-category: 
+  - 海关数据
+  - 进出口记录
+  - 广交会数据
+  - 贸易数据挖掘
+  - 采购商分析
+  - 供应商分析
+  - 市场调研
+  - 竞争对手分析
+  - 查采购商
+  - 找买家
+  # ... (see skill_registry.py for full list)
+category: 数据分析
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-customs-data 技能。当用户需要分析海关进出口数据、找采购商、做市场调研或竞品分析时，请执行以下步骤：
-  
-  1. 加载 skill: b2b-customs-data
-  2. 确认输入（自动创建目录）：
-     - 使用 execute_code 查询当前公司的工作目录路径：
-       from trade import company as _co
-       tc = _co.get_trade_company({当前公司ID})
-       data_dir = tc["data_dir"]
-       print(data_dir)
-     - 拼接「海关数据」文件夹路径：{data_dir}/海关数据/
-     - 使用 terminal 工具 mkdir -p 创建该目录（如果不存在）
-     - 使用 list_files 或 terminal ls 查看目录中是否有 .csv/.xlsx/.xls 文件
-     - 有数据文件 → 自动 read_file 读取并分析所有文件
-     - 无数据文件 → 提示用户：「请在桌面工作目录的『海关数据』文件夹中放入 Excel 或 CSV 格式的海关数据文件，然后再次询问我。」
-  3. 分析维度：
-     - 采购商分析：按进口量排序，找出TOP10买家，分析购买频率和价格敏感度
-     - 供应商分析：按出口量排序，分析主要竞争者市场份额
-     - 市场趋势：近N个月进口量变化，判断是增长还是萎缩
-     - 价格区间：该产品的CIF/FOB价格分布
-     - 目标客户优先级：A级（高频率大批量）/ B级（稳定中等）/ C级（低频小量）
-  4. 返回：
-     - 采购商表格：公司名 | 国家 | 进口量 | 频率 | 价格敏感度 | 推荐等级
-     - 市场洞察：3个关键发现
-     - 具体行动：如何接触A类客户 + 差异化话术建议
+author: Foreign Trade Assistant
 ---
+
 
 Exclude:
 - Products outside user's business scope

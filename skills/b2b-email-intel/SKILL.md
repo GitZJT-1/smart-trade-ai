@@ -1,25 +1,23 @@
 ---
 name: b2b-email-intel
-description: 
+description: 邮箱背景调查 — 120+ 平台注册检测、社交档案发现、真实性评估
 triggers:
-category: 
+  - 背景调查
+  - 邮箱查询
+  - 邮箱注册
+  - 邮箱查注册
+  - 邮箱查平台
+  - 邮箱查社交
+  - 邮箱情报
+  - 邮箱是真的吗
+  - 邮箱真实性
+  - 查一下这个邮箱
+  # ... (see skill_registry.py for full list)
+category: 客户开发
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-email-intel 技能。当用户需要调查某个邮箱的背景时（例如"查一下这个邮箱"、"背景调查"、"email intel"），请执行以下步骤：
-  
-  1. 从对话中提取邮箱地址（格式：xxx@domain.com）
-  2. 加载 skill: b2b-email-intel
-  3. 调用 email_background_check(邮箱地址)
-  4. 返回结构化报告：
-     - 平台检测结果（checked_count / found_count）
-     - 每个平台：平台名 | 是否注册 | 用户名 | 档案URL | 注册时间
-     - 社交档案汇总（GitHub/LinkedIn/Twitter 等）
-     - 真实性评估：高/中/低 及依据
-     - 备注：哪些平台注册代表该客户可信度高
-  
-  如果用户只说了"背景调查"但没有提供邮箱，在回复中请用户补充邮箱地址。
+author: Foreign Trade Assistant
 ---
+
 
 ### ✅ 已找到的注册账号
 

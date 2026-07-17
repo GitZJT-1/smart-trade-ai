@@ -1,29 +1,23 @@
 ---
 name: b2b-daily-automation
-description: 
+description: 定时任务自动化 — 早安简报、日报/周报、定时发布、自动化工作流
 triggers:
-category: 
+  - 每日任务
+  - 自动化
+  - 定时任务
+  - 定时发布
+  - Cron
+  - 早安简报
+  - 工作总结
+  - 晚间总结
+  - 周报
+  - 日报
+  # ... (see skill_registry.py for full list)
+category: 自动化
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-daily-automation 技能。当用户需要设置每日自动化任务（如早安简报、定时发布、周报自动生成）时，请执行以下步骤：
-  
-  1. 加载 skill: b2b-daily-automation
-  2. 确认任务需求：
-     - 早安简报：**必须使用 web_search 获取实时数据**，不得编造或留空。详见下方简报规范。
-     - 定时发布：指定平台（LinkedIn/FB/Ins）+ 发布时间
-     - 晚间总结：今日新询盘/客户互动/订单进度
-     - 周报：本周数据汇总 + 下周行动计划
-  3. 使用 cronjob 工具创建任务：
-     - 指定 schedule（如 "0 8 * * *" 对应每天UTC 8点）
-     - 指定 skills（如 b2b-linkedin-marketing 用于内容发布）
-     - **必须指定 deliver="local"**（结果写入 ~/.hermes/cron/output/ 本地文件，无需平台推送）
-  4. 返回：
-     - 已创建的任务 ID
-     - 下次执行时间（换算为用户本地时间）
-     - 任务内容描述
-     - **注意：不要输出管理命令参考或 crontab 命令参考。只需要描述任务即可。**
+author: Foreign Trade Assistant
 ---
+
 ## 🌅 早安简报规范（Morning Brief Specification）
 
 **【最重要】简报中的所有数据必须通过 web_search 实时获取，不得编造、不得留空、不得使用占位符。**

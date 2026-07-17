@@ -1,112 +1,23 @@
 ---
 name: b2b-lead-generation
-description: 
+description: 多通道客户开发 — Google Maps + LinkedIn + Facebook 搜索、开发信生成、询盘回复、报价谈判
 triggers:
-category: 
+  - 找客户
+  - 开发客户
+  - 客户开发
+  - 找潜在客户
+  - 开发信
+  - 询盘
+  - 客户跟进
+  - 客户分析
+  - 报价
+  - 谈判
+  # ... (see skill_registry.py for full list)
+category: 客户开发
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-lead-generation 技能。当用户需要开发客户、写开发信、做客户分析、处理询盘、报价、谈判或成交时，请执行以下步骤：
-
-  ## 核心原则：客户价值导向
-
-  外贸买家每天收到几十封开发信，99% 都是「我们是XX工厂，生产YY产品，价格好质量优」。
-  要让客户回复，**必须让客户在 5 秒内感受到"这封信和我有关，能帮我解决实际问题"**。
-
-  ## 输出语言规则
-
-  所有输出内容（开发信、跟进邮件、InMail 等）使用**目标客户的语言**：
-  - 客户来自英语国家（欧美、中东、东南亚等）→ **全部使用英语**
-  - 客户来自中文地区 → 使用中文
-  - 不确定客户语言的 → **默认用英语**（国际 B2B 通用语言）
-  - 公司名、产品型号等专有名词保持原样，不翻译
-
-  写任何内容前，先回答：
-  1. 这个客户最可能面临的三个问题是什么？（交期不稳？质量波动？认证不全？语言沟通成本高？）
-  2. 我有什么能力是同行没有或不愿做的？（48h 打样？专属跟单？目标国市场准入经验？）
-  3. 选择我之后，他每个月能省多少时间/少操多少心/少损失多少钱？
-
-  **铁律**：一封开发信中，60% 讲客户可能遇到的问题和你的解决方案，25% 展示工厂/产品硬实力（实拍、资质、产能），15% 作为收尾和 call-to-action。产品和工厂可以出现，但放在客户视角之后，作为「所以我们能做到」的支撑证据。
-
-  **内容真实性规则**：
-  - **不编造客户数字**：不说 "We've helped 300+ companies..." 除非用户资料中有明确数据。无数据时用 "We work with utility companies across..." 等定性表述
-  - **不编造成本节省**：不说 "reduced costs by 40%" 等精确百分比，改为 "eliminated the need for expensive hydraulic tooling"
-  - **不编造服务承诺**：不说 "48h response guaranteed" 除非用户实际能做到。改为 "we typically respond within 48 hours"
-  - **案例必须来源真实**：提及客户案例时，要么用用户提供的真实案例，要么说 "one of our clients in [region]" 泛化表述
-
-  1. 加载 skill: b2b-lead-generation
-  2. 根据用户需求执行对应子任务：
-     - 找客户：使用「三通道并行搜索 + 域名级去重 + 黑名单过滤」（见下方 Phase 0），或使用 b2b-platform/LinkedIn/海关数据等来源
-     - 写开发信：先加载 b2b-email-intel 查邮箱背景，再撰写个性化邮件。邮件以客户痛点为开头，不讲产品
-     - 客户分析：提取客户名称/公司/地区，从对话或文档中获取信息
-     - 报价/谈判：强调差异化服务价值，不陷入价格战
-
-  ## Phase 0 — 三通道并行潜客搜索（找客户专用）
-
-  当用户说「找客户」「找潜客」「找买家」时，启用三通道并行搜索。单通道搜索会漏掉大量优质客户，必须三通道并行。
-
-  ### 通道 A — Google Maps（本地分销商/批发商）
-
-  适合找有实体店/仓库的本地买家。这类客户决策快、订单稳定。
-
-  搜索 query 模板（按目标市场语言生成）：
-  - `{product} distributor in {country/city}`
-  - `{product} wholesaler near {city}`
-  - `{product} supplier {country}`
-
-  执行方式：
-  1. `web_search` 搜索上述 query
-  2. 对前 10 条结果用 `browser_navigate` 访问 Google Maps 页面，提取商家名/官网/电话/地址
-  3. 注意：Google Maps 数据受地区限制，必要时用 `https://www.google.com/maps/search/{query}` 直接访问
-
-  ### 通道 B — Google Search（B2B 买家站点）
-
-  适合找品牌方/工厂/连锁超市的采购负责人。
-
-  搜索 query 模板：
-  - `{product} buyer OR importer OR purchasing {country}`
-  - `site:linkedin.com/in {product} procurement {country}`
-  - `site:linkedin.com/company {product} {country}`
-  - `{product} "purchasing manager" OR "procurement lead" {country}`
-  - `{product} trade shows {country} 2026` → 拿到展会参展商名单
-
-  执行方式：
-  1. 每个 query 用 `web_search` 取前 20 条
-  2. 用 `browser_navigate` 访问linkedin.com/company 页面，提取官网域名 + 员工规模
-  3. 对站点结果，从首页和 About/Contact 页面提取邮箱/电话
-
-  ### 通道 C — Facebook Pages / LinkedIn 公司页
-
-  适合找活跃在线的中小买家（FB）+ 中大型企业（LinkedIn）。
-
-  搜索 query 模板：
-  - Facebook: `site:facebook.com {product} {country}`
-  - Facebook: `site:facebook.com "{product brand}" {country}`
-  - LinkedIn: `site:linkedin.com/company {product} {country} "1-10 employees" OR "11-50 employees"`
-
-  执行方式：
-  1. `web_search` 搜索上述 query
-  2. 对前 10 条 FB 结果用 `browser_navigate` 访问，提取 Page 名/官网/联系方式（About 栏）
-  3. 对前 10 条 LinkedIn 结果，提取公司名/官网/员工数/关键人
-
-  ### 跨通道去重规则
-
-  **域名级去重**（关键）：
-  1. 对每条结果提取 `company_website`（去掉 www. / http:// 前缀，统一为 `domain.com` 形式）
-  2. 同一域名出现多次只保留信息最全的一条（首选有邮箱 + LinkedIn + 电话的）
-  3. 没有 `company_website` 的（仅有 FB Page）按 `facebook.com/{page-id}` 去重
-
-  **去重后排序**：
-  - 优先级 1：同时命中 3 通道的（信号最强）
-  - 优先级 2：命中 2 通道
-  - 优先级 3：仅命中 1 通道但信息完整（有邮箱+电话+LinkedIn）
-
-  ### 黑名单过滤
-
-  命中以下任一特征的条目直接剔除：
-
-  | 类别 | 黑名单特征 | 示例 |
-  |------|-----------|------|
+author: Foreign Trade Assistant
+---
+---|-----------|------|
   | 平台目录页 | URL 含 alibaba.com / made-in-china.com / tradekey.com / globalsources.com | 阿里产品页本身不是买家 |
   | 聚合页 | URL 含 yellowpages.com / yelp.com / opencorporates.com | 这类是目录不是客户 |
   | 竞争对手 | 同行业供应商官网（你卖他卖的同一类产品） | 用产品名+manufacturer 搜出的同行 |

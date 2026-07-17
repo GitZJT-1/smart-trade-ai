@@ -1,10 +1,10 @@
 ---
 name: b2b-data-directory
-description: 
+description: 数据目录管理 — 结构化知识库初始化、档案维护
 triggers:
-category: 
+category: 系统工具
 version: 1.0.0
-author: 
+author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-data-directory 技能。当用户需要了解或初始化 ~/.trade/ 数据目录结构时，请执行以下步骤：
   

@@ -1,53 +1,23 @@
 ---
 name: b2b-customer-mgmt
-description: 
+description: 客户档案与分级管理 — A/B/C 分级、客户详情、文档库关联、CSV 批量导入
 triggers:
-category: 
+  - 客户管理
+  - 客户档案
+  - 客户分级
+  - 大客户
+  - 客户分类
+  - 客户等级
+  - VIP客户
+  - 客户信息
+  - 客户资料
+  - 订单管理
+  # ... (see skill_registry.py for full list)
+category: 客户管理
 version: 1.0.0
-author: 
-injection_prompt: |
-  你是 b2b-customer-mgmt 技能。当用户需要管理客户档案、查看客户列表、跟踪订单或进行客户分级时，请执行以下步骤：
-
-  ════════════════════════════════════════
-  批量导入规则（从 Excel/CSV 导入客户时强制执行）
-  ════════════════════════════════════════
-  当用户提供 Excel(.xlsx/.xls)、CSV(.csv) 或 TXT(.txt) 文件要求批量导入客户时，必须按以下流程操作，不可跳过任何一步。TXT 文件可能是制表符分隔、逗号分隔或固定宽度，需根据内容自动判断分隔符：
-
-  1. 先用 read_file 读取文件，列出所有列名和前 3 行示例数据
-
-  2. 向用户展示列映射表（文件列名 → customer 系统字段），等待确认。
-     系统字段包括：name, contact, country, tier, email, phone, whatsapp, wechat, title, note, linkedin_url, company_website, source
-     格式示例：
-     | 文件列名 | → | 系统字段 | 示例值 |
-     | 公司名称 | → | name | 深圳XX贸易有限公司 |
-     | 联系人   | → | contact | 张三 |
-     | 手机号   | → | phone | 13800138000 |
-     如果能确定映射，标注 ✅；不确定的列标注 ❓让用户决定
-
-  3. 自动跳过明显不是数据行的内容：合计行、空行、标题行、备注行，并在映射表中注明跳过了哪些行
-
-  4. 用户确认或调整映射后，再逐条调用 POST /api/trade/customers 创建记录。
-     每创建一条，简要汇报进度（如 "已导入 3/15"）
-
-  **严禁在用户确认前直接导入。** 列名可能是中文、英文或中英混合，不要假设列名就是字段名。
-
-  ════════════════════════════════════════
-  常规操作
-  ════════════════════════════════════════
-  
-  1. 加载 skill: b2b-customer-mgmt
-  2. 根据操作类型执行：
-     - 查看客户列表：调用 customer.list_by_company(company_id)，
-       按 A/B/C 分级展示，标注每个客户的最新跟进时间
-     - 客户详情：调用 customer.get(customer_id, company_id)，
-       显示档案完整信息 + 关联报价单 + 订单历史
-     - 客户分级：根据年交易额/订单频率/利润贡献重新分类
-     - 订单跟踪：从对话中提取订单号，查询状态更新
-  3. 返回格式：
-     - 客户列表表格：名称 | 分级 | 国家 | 最近跟进 | 当前阶段 | 待办事项
-     - 客户详情卡片：联系信息 + 交易历史 + 跟进记录时间线
-     - 下一步行动建议（基于客户当前阶段）
+author: Foreign Trade Assistant
 ---
+
 
 CUSTOMER: [Company Name]
 ├── Basic Info

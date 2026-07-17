@@ -577,7 +577,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trade License Manager")
     sub = parser.add_subparsers(dest="cmd")
     gen = sub.add_parser("generate", help="生成激活码")
-    gen.add_argument("request_code", help="用户申请码 (TRADE-REQ-XXXX-XXXX-XXXX-XXXX)")
+    gen.add_argument("request_code", help="用户申请码 (TRADE-REQ-{SHA256[:64] 分组})")
     gen.add_argument("date", help="到期日期 (YYYY-MM-DD)")
     sub.add_parser("status", help="查看当前许可证状态")
 

@@ -181,7 +181,7 @@ def _restart_with_arm64_python(arm64_py: str) -> None:
 
 
 def check_native_architecture(auto_repair: bool = True) -> bool:
-    """检测 Python 架构与硬件匹配，必要时自动修复。
+    """全面检测平台与 Python 架构匹配性，必要时自动修复。
 
     在 Apple Silicon (arm64) Mac 上尤为重要：如果 Python 是 x86_64 (Rosetta)，
     pip 会安装 x86_64 的 C 扩展（pydantic-core, psutil 等），导致 Hermes 无法
@@ -189,51 +189,123 @@ def check_native_architecture(auto_repair: bool = True) -> bool:
 
     当 auto_repair=True 且找到 arm64 Python 时，自动重启进程（execve），用户无感。
 
+    检测维度：
+      - 操作系统类型（Darwin / Linux / Windows）
+      - CPU 硬件架构（arm64 / x86_64）
+      - Python 进程架构（platform.machine）
+      - Rosetta 翻译层（sysctl proc_translated）
+      - Apple Silicon 能力（sysctl hw.optional.arm64）
+      - 虚拟环境架构一致性
+
     Returns True 表示架构匹配（安全启动），False 表示不匹配且无法修复。
     """
-    import platform
-    import subprocess
+    import platform as _platform
+    import subprocess as _sp
 
-    # 仅在 macOS 上有 Rosetta 问题
-    if platform.system() != "Darwin":
+    os_name = _platform.system()          # Darwin / Linux / Windows
+    py_machine = _platform.machine()      # Python 进程的架构
+
+    # ── 通用检测：所有平台 ──────────────────────────────────────────────
+    # 获取硬件 CPU 架构（通过 uname，不受 Python 架构影响）
+    try:
+        hw_arch = _sp.run(
+            ["uname", "-m"], capture_output=True, text=True, timeout=5,
+        ).stdout.strip()
+    except Exception:
+        hw_arch = ""
+
+    # ── macOS 专项检测 ──────────────────────────────────────────────────
+    if os_name == "Darwin":
+        # 检测 Rosetta 翻译层
+        under_rosetta = False
+        try:
+            translated = _sp.run(
+                ["sysctl", "-n", "sysctl.proc_translated"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+            under_rosetta = translated == "1"
+        except Exception:
+            pass
+
+        # 检测硬件是否支持 arm64（Apple Silicon 或有 Rosetta 的 Intel）
+        hw_supports_arm64 = False
+        try:
+            arm64_opt = _sp.run(
+                ["sysctl", "-n", "hw.optional.arm64"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+            hw_supports_arm64 = arm64_opt == "1"
+        except Exception:
+            pass
+
+        # Case 1: Rosetta 模式 — Python 运行在翻译层上
+        if under_rosetta:
+            print("  平台: Apple Silicon (Rosetta 翻译层)")
+            print(f"  Python: {py_machine}  硬件: {hw_arch}")
+
+            if auto_repair:
+                arm64_py = _search_arm64_python()
+                if arm64_py:
+                    _restart_with_arm64_python(arm64_py)
+                    return True
+
+            print("  ✗ Python 运行在 Rosetta (x86_64 翻译) 下")
+            print("    这会导致 Hermes C 扩展编译为 x86_64 后无法加载。")
+            print()
+            print("    修复：安装原生 arm64 Homebrew Python:")
+            print("      /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+            print("      brew install python@3.12")
+            return False
+
+        # Case 2: Apple Silicon 原生模式
+        if hw_supports_arm64 and py_machine == "arm64" and hw_arch == "arm64":
+            return True  # 一切正常
+
+        # Case 3: arm64 硬件 + x86_64 Python（无 Rosetta 标记的 Rosetta 场景）
+        if hw_arch == "arm64" and py_machine == "x86_64":
+            if auto_repair:
+                arm64_py = _search_arm64_python()
+                if arm64_py:
+                    _restart_with_arm64_python(arm64_py)
+                    return True
+
+            print("  ✗ 架构不匹配：CPU arm64，但 Python x86_64")
+            print("    修复：使用原生 arm64 Python 重新运行")
+            return False
+
+        # Case 4: Intel Mac + arm64 Python（极罕见 — 交叉编译或容器）
+        if hw_arch == "x86_64" and py_machine == "arm64":
+            print("  ⚠ 架构异常：CPU x86_64，但 Python arm64")
+            print("    请安装与 CPU 匹配的 Python 版本")
+            return False
+
         return True
 
-    py_arch = platform.machine()
-    try:
-        hw_arch = subprocess.run(
-            ["uname", "-m"], capture_output=True, text=True, timeout=5
-        ).stdout.strip()
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        print("  ⚠ 无法检测硬件架构（uname 不可用），跳过 Rosetta 检查继续启动")
-        return True  # 无法检测，不阻断
+    # ── Linux 检测 ──────────────────────────────────────────────────────
+    if os_name == "Linux":
+        # Linux ARM (树莓派/ARM 服务器) — Python 架构需匹配硬件
+        if hw_arch == "aarch64" and py_machine == "x86_64":
+            print("  ⚠ 架构不匹配：CPU 是 aarch64 (ARM)，但 Python 是 x86_64")
+            print("    请安装原生 ARM64 Python")
+            return False
+        if hw_arch == "x86_64" and py_machine == "aarch64":
+            print("  ⚠ 架构不匹配：CPU 是 x86_64，但 Python 是 aarch64")
+            return False
+        return True
 
-    # arm64 硬件 + x86_64 Python → Rosetta 模式
-    if hw_arch == "arm64" and py_arch == "x86_64":
-        if auto_repair:
-            arm64_py = _search_arm64_python()
-            if arm64_py:
-                _restart_with_arm64_python(arm64_py)
-                # execve 不会返回这里，但为类型检查保留
-                return True
+    # ── Windows 检测 ────────────────────────────────────────────────────
+    if os_name == "Windows":
+        # Windows ARM (Snapdragon X) — 检查是否存在 x86/x64 模拟
+        if hw_arch.lower() in ("arm64", "aarch64") and py_machine == "AMD64":
+            print("  ⚠ Windows ARM 上运行 x64 Python — Hermes C 扩展可能不兼容")
+            print("    建议安装原生 ARM64 Python")
+            return False
+        if hw_arch.lower() in ("arm64", "aarch64") and py_machine == "ARM64":
+            return True
+        # x86_64 硬件 + AMD64 Python — 标准 x86_64 Windows
+        return True
 
-        print("  ✗ 架构不匹配：CPU 是 arm64 (Apple Silicon)，但 Python 是 x86_64 (Rosetta)。")
-        print("    Rosetta Python 会导致 Hermes 依赖编译为 x86_64，无法加载。")
-        print()
-        print("    修复方法：")
-        print("    1. 安装原生 arm64 Python：brew install python@3.12")
-        print("    2. 如果 Homebrew 本身在 Rosetta 下：")
-        print("       /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
-        print("    3. 用原生 Python 重新创建 venv：")
-        print("       /opt/homebrew/bin/python3.12 -m venv ~/.trade/venv --clear")
-        print("    4. 重新安装 Trade")
-        return False
-
-    # x86_64 硬件 + arm64 Python → 极罕见，但同样需要处理
-    if hw_arch == "x86_64" and py_arch == "arm64":
-        print("  ✗ 架构不匹配：CPU 是 x86_64 (Intel)，但 Python 是 arm64。")
-        print("    请使用与 CPU 匹配的 Python 版本。")
-        return False
-
+    # ── 未知 OS ─────────────────────────────────────────────────────────
     return True
 
 

@@ -25,6 +25,11 @@ import re
 #                   新 skill 优先使用 SKILL.md frontmatter 的 injection_prompt
 # ─────────────────────────────────────────────────────────────────────────────
 
+# 禁用的 skill：系统不触发这些技能，仅保留为引用记录。
+# auto-smtp-email: Trade 的设计理念是辅助用户完成工作流程、生成邮件草稿，
+# 但不替用户直接发送邮件/文件给客户。AI 有可能出错，最终必须由用户复核确认后自主发出。
+_BLOCKED_SKILLS: frozenset = frozenset({"auto-smtp-email"})
+
 _SKILLS: list[dict] = [
     {
         "name": "b2b-osint",

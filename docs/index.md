@@ -338,7 +338,7 @@ Trade 会自动识别你的意图，匹配合适的技能。以下是全部 32 �
 | 17 | **b2b-trade-compliance** | 合规检查与文化禁忌 | 这个颜色在沙特有什么忌讳吗 / 检查一下 FOB 写对了没有 |
 | 18 | **b2b-cold-outreach** | 冷 outreach 邮件撰写 | 给德国的 XX 公司写一封开发信 / 写一封产品推广信 |
 | 19 | **auto-trade-customer-development** | 全自动客户开发流水线 | 帮我跑一轮自动化客户开发 / 全自动开发一批客户 |
-| 20 | **auto-smtp-email** | SMTP 邮件发送 | 把这封开发信发出去 / 群发这批邮件，间隔 60 秒 |
+| 20 | ~~**auto-smtp-email**~~ | ~~SMTP 邮件发送 — 已禁用~~ | ~~把这封开发信发出去 / 群发这批邮件~~ |
 | 21 | **b2b-email-imitation** | 开发信仿写与再创作 | 参考这封邮件，帮我写一个类似的 / 模仿这个风格写一封开发信 |
 | 22 | **b2b-buyer-persona** | 买家画像与角色分层 | 帮我分析一下买家画像 / 针对采购经理应该怎么沟通 |
 | 23 | **b2b-market-analysis** | 市场分析作战地图 | 分析一下德国市场进入策略 / 帮我做一个中东市场调研 |
@@ -366,6 +366,10 @@ Trade 会自动识别你的意图，匹配合适的技能。以下是全部 32 �
 
 当 Trade 匹配到一个 skill 时，在回复的开头会显示技能名称，如 `[SKILL AUGMENTATION] 技能触发：b2b-osint`。你也可以直接输入"用 b2b-osint 查一下这个邮箱"来强制指定某个技能。
 
+> **设计理念**：Trade 辅助用户梳理工作流程、生成邮件草稿、撰写文档，
+> **但不替用户直接发送邮件/文件给客户**。AI 可能出错，所有对外内容必须
+> 经用户复核确认后自主发出。`auto-smtp-email` 已被禁用，不会由系统触发。
+
 ### 技能别名
 
 部分技能之间存在别名关联，输入一个技能名可能触发相关联的技能：
@@ -375,4 +379,4 @@ Trade 会自动识别你的意图，匹配合适的技能。以下是全部 32 �
 | b2b-osint | b2b-email-intel |
 | b2b-lead-generation | b2b-customer-mgmt |
 | b2b-trade-ops | b2b-customer-mgmt |
-| auto-trade-customer-development | b2b-lead-generation, b2b-osint, auto-smtp-email |
+| auto-trade-customer-development | b2b-lead-generation, b2b-osint, ~~auto-smtp-email~~ |

@@ -160,7 +160,7 @@
 | b2b-customs-data | — | Trade 独有 |
 | b2b-data-directory | — | Trade 独有 |
 | auto-trade-customer-development | — | Trade 独有（编排器） |
-| auto-smtp-email | — | Trade 独有 |
+| ~~auto-smtp-email~~ | — | 已禁用 — Trade 不替用户直接发送邮件 |
 
 ### 4.2 培训资料有但 Trade 没有的能力（建议新增）
 

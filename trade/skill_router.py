@@ -243,7 +243,11 @@ def _score_skills(query: str) -> list[dict]:
     normed = _norm(query)
     results = []
 
+    from trade.skill_registry import _BLOCKED_SKILLS
+
     for idx, skill_name, patterns in _PRECOMPILED:
+        if skill_name in _BLOCKED_SKILLS:
+            continue  # 跳过被禁用的 skill（见 _BLOCKED_SKILLS 说明）
         total_score = 0
         triggers_matched: list[str] = []
         boundary_hits = 0
@@ -347,11 +351,17 @@ def augment_query(
     """
     # 确定要注入的 skill
     # 优先使用显式传入的 skill_name，否则通过自动匹配检测
+    from trade.skill_registry import _BLOCKED_SKILLS
+
     if skill_name:
         skill = get_skill_by_name(skill_name)
+        if skill and skill["name"] in _BLOCKED_SKILLS:
+            skill = None
     else:
         results = _score_skills(query)
         skill = get_skill_by_name(results[0]["skill_name"]) if results else None
+    if skill and skill["name"] in _BLOCKED_SKILLS:
+        return query
 
     # 如果两个路径都未匹配到 skill，原样返回用户 query，不做任何修改
     if skill is None:

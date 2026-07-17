@@ -218,7 +218,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Trade Compliance | Cultural taboo check / abbreviation standards / Incoterms 2020 / translation review / bidding / e-commerce listing |
 | Skill Generator | Describe what you need in plain language, auto-generates a new skill + registers it |
 | Auto Customer Dev | One-click end-to-end pipeline: search → vet → score → email → save → log |
-| Auto SMTP Email | Preview-then-send via SMTP, HTML templates + CC + attachments + rate-limited bulk sending |
+| ~~Auto SMTP Email~~ | ~~Preview-then-send via SMTP — 已禁用，见设计理念~~ |
 
 ---
 

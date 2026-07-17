@@ -1,6 +1,6 @@
 ---
 name: auto-smtp-email
-description: SMTP 邮件发送技能 — 从 ~/.hermes/.env 读凭证，预览后发送，支持 HTML 模板 + 抄送 + 附件 + 限速群发
+description: [已禁用] SMTP 邮件发送 — 此 skill 已被禁用，不会被系统触发。参见下方说明。
 triggers:
   - 发邮件
   - 发送邮件

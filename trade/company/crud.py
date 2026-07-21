@@ -192,12 +192,17 @@ def create(
     conn = get_connection()
 
     try:
-        # slug 唯一性检查
-        existing = conn.execute(
-            "SELECT id FROM companies WHERE slug = ?", (slug,)
-        ).fetchone()
-        if existing:
-            raise ValueError(f"Company with slug '{slug}' already exists")
+        # slug 唯一性检查：冲突时自动追加 -N 后缀
+        base_slug = slug
+        counter = 1
+        while True:
+            existing = conn.execute(
+                "SELECT id FROM companies WHERE slug = ?", (slug,)
+            ).fetchone()
+            if not existing:
+                break
+            counter += 1
+            slug = f"{base_slug}-{counter}"
 
         # 1) 创建 ~/.trade/{slug}/ 数据目录
         data_dir = str(_ensure_data_dir(slug, TRADE_HOME))

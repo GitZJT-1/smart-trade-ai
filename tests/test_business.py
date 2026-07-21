@@ -75,11 +75,11 @@ class TestCompanyCRUD:
         assert c["is_active"] is True
 
     def test_create_duplicate_slug(self, test_db):
-        """重复 slug 应抛出 ValueError。"""
+        """重复 slug 应自动递增后缀。"""
         from trade import company
         company.create(name="First", slug="same-slug")
-        with pytest.raises(ValueError, match="already exists"):
-            company.create(name="Second", slug="same-slug")
+        c2 = company.create(name="Second", slug="same-slug")
+        assert c2["slug"] == "same-slug-2"
 
     def test_list_all(self, test_db):
         """list_all 返回激活和未激活的公司。"""

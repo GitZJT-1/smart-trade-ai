@@ -222,8 +222,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     └── constants.py     Shared constants
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
-        ├─ trade/skill_registry.py 20 skill definitions (pure data — triggers, aliases, formats)
-        └─ trade/post_install.py Skill installation + CLI commands (update/backup)
+        ├─ trade/skill_registry.py 34 skill definitions (pure data — triggers, aliases, formats)
+        └─ trade/post_install.py Skill installation + CLI commands (update/backup/restore/skills-update)
 ```
 
 ## Server Startup Sequence
@@ -258,7 +258,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 
 6. **Document libraries = filesystem directories**. Each library has a `root_path` pointing to a real directory. The AI agent uses `read_file` / `list_dir` tools to analyze files.
 
-7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 24 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
+7. **Skill auto-routing**: `trade/skill_router.py` intercepts every query via `build_query()` and uses keyword/regex matching against 34 skill trigger lists. When matched, it injects a `[SKILL AUGMENTATION]` block with the skill's injection_prompt (loaded from SKILL.md frontmatter, with mtime caching). No match → pass-through with zero added latency.
 
    The 34 skills are: `b2b-platform`, `b2b-lead-generation`, `b2b-customer-mgmt`, `b2b-document`, `b2b-doc-generation`, `b2b-osint`, `b2b-data-directory`, `b2b-email-intel`, `b2b-social-media`, `b2b-linkedin-marketing`, `b2b-onboarding`, `b2b-customs-data`, `b2b-daily-automation`, `chat-memory`, `b2b-skill-generator`, `b2b-trade-ops`, `b2b-trade-compliance`, `b2b-cold-outreach`, `b2b-email-imitation`, `b2b-buyer-persona`, `b2b-market-analysis`, `b2b-sales-pipeline`, `b2b-inquiry-training`, `b2b-kol-imitation`, `b2b-reddit-engagement`, `b2b-seo-aeo`, `b2b-short-video`, `b2b-exhibition`, `b2b-product-description`, `b2b-customer-intel`, `b2b-six-thinking-hats`, `b2b-customer-finder`, `auto-trade-customer-development`, ~~`auto-smtp-email`~~.
 
@@ -291,7 +291,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
     - **Skill injection caching**: `chat.py` maintains per-company `_last_skill_per_company` dict. Consecutive use of the same skill sends a brief hint (`"继续使用 {name} 技能，规则同上一次。"`) instead of the full injection_prompt (~1500 tokens). Process restart clears cache (safe degradation).
     - Rollback tag: `pre-token-optimization` points to the commit before these changes.
 
-21. **Upgrade pipeline** (`trade/post_install.py`): `update_trade()` operates exclusively in `~/.trade/foreign-trade-assistant/` (the runtime directory) — no source-directory guessing or sync. `_perform_restart()` starts the new process first, then kills the old one (avoids the old "suicide before spawn" deadlock). The new process retries `uvicorn.run` for up to 10 seconds waiting for the old process to release the port. Windows uses `creationflags=0x00000200` (CREATE_NEW_PROCESS_GROUP) for clean subprocess detachment. `_latest_version_cache` (TTL 600s) prevents GitHub API rate-limiting on repeated version checks. `_capture_output` catches `SystemExit` so `sys.exit()` no longer causes FastAPI 500 errors. Failure markers cover `pip install failed`, `git stash failed`, and `Database check failed`.
+21. **Upgrade pipeline** (`trade/post_install.py`): Implements all CLI commands (`trade-update`, `trade-backup`, `trade-restore`, `install-trade-skills`, `trade-skills-update`) and the upgrade pipeline. `update_trade()` operates exclusively in `~/.trade/foreign-trade-assistant/` (the runtime directory) — no source-directory guessing or sync. `_perform_restart()` starts the new process first, then kills the old one (avoids the old "suicide before spawn" deadlock). The new process retries `uvicorn.run` for up to 10 seconds waiting for the old process to release the port. Windows uses `creationflags=0x00000200` (CREATE_NEW_PROCESS_GROUP) for clean subprocess detachment. `_latest_version_cache` (TTL 600s) prevents GitHub API rate-limiting on repeated version checks. `_capture_output` catches `SystemExit` so `sys.exit()` no longer causes FastAPI 500 errors. Failure markers cover `pip install failed`, `git stash failed`, and `Database check failed`.
 
 22. **Mac M-chip architecture detection** (2026-07-13): 6 defense lines prevent Rosetta Python from installing x86_64 C extensions (pydantic-core, psutil) that cause Hermes Mach-O load failures and Trade 422 errors. (1) `install.sh` searches `/opt/homebrew/bin/python3.*` for native arm64 Python, exits if not found. (2) `pre_install_check.py` returns exit code 3 on arch mismatch. (3) `bootstrap.py:check_native_architecture()` blocks startup with `sys.exit(1)`. (4) `post_install/update.py` Step 0 blocks upgrade with `architecture_mismatch` error. (5) `app.py:_perform_restart()` switches to native Python on Rosetta. (6) `app.py:_ensure_gateway_running()` uses `/opt/homebrew/bin/hermes` on Rosetta.
 
@@ -387,6 +387,24 @@ Every chat message (query + response) is persisted to SQLite `conversations` tab
 - MCP registered: yes
 - Artifacts sync: artifacts-only
 - Current repo policy: read-write
+
+## CodeGraph
+
+This project has a CodeGraph MCP server (`codegraph_*` tools) configured — a tree-sitter-parsed knowledge graph of every symbol, edge, and file. Use it for **structural** questions (what calls what, where is X defined, what would break). Use native grep/read only for literal text queries (string contents, comments, log messages).
+
+| Question | Tool |
+|---|---|
+| "Where is X defined?" / "Find symbol named X" | `codegraph_search` |
+| "What calls function Y?" | `codegraph_callers` |
+| "What does Y call?" | `codegraph_callees` |
+| "How does X reach/become Y?" | `codegraph_trace` (one call = full path with dynamic hops) |
+| "What would break if I changed Z?" | `codegraph_impact` |
+| "Show me Y's signature / source" | `codegraph_node` |
+| "Focused context for a task/area" | `codegraph_context` |
+| "Several related symbols' source at once" | `codegraph_explore` |
+| "Is the index healthy?" | `codegraph_status` |
+
+**Rules of thumb**: Answer directly with 2-3 codegraph calls — don't delegate exploration. Trust codegraph results (full AST parse, don't re-verify with grep). For "how does X reach Y", start with `codegraph_trace` from→to. When a response starts with "⚠️ Some files referenced below were edited since the last index sync…", Read those specific files for accurate content.
 
 ## Code Annotation Standards
 

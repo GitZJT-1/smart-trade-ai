@@ -288,6 +288,24 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
 
 ---
 
+## 如何更新 Trade
+
+Trade 会持续更新，新版本增加功能和修复问题。最简单的方式是让 AI 帮你更新：
+
+1. 按 `Win+R`，输入 `powershell`，回车
+2. 输入 `hermes` 启动 Hermes
+3. 在对话框里输入：
+
+```
+帮我更新trade，并重启trade，地址是https://github.com/chefroger/smart-trade-ai
+```
+
+4. 等 AI 执行完毕，看到「重启完成」提示后，刷新浏览器页面（`Ctrl+Shift+R`）即可。
+
+> 如果 `hermes` 命令找不到，说明 Hermes 没装好，回到第五步重装。
+
+---
+
 ## 常见问题
 
 | 你看到的现象 | 怎么解决 |

@@ -332,6 +332,16 @@ ruff check trade/ server.py  # 代码检查
 
 ## 故障排除
 
+### 用 Hermes 更新 Trade（推荐）
+
+最快的方式是让 AI 帮你更新。打开终端，启动 Hermes，在对话框里输入：
+
+```
+帮我更新trade，并重启trade，地址是https://github.com/chefroger/smart-trade-ai
+```
+
+Hermes 会自动执行 `git pull` → `pip install` → `install-trade-skills` → 数据库检查 → 重启 Trade。遇到报错它会自行排查重试，比手动操作更省心。
+
 ### 系统升级按钮无反应
 
 点击「系统升级」按钮后，系统会自动执行 `git pull` + `pip install` + skills 更新，完成后**自动重启服务并刷新页面**。重启时新进程先启动并等待旧进程释放端口（最多 10 秒），避免端口冲突。整个过程中页面会短暂不可用，之后自动恢复。

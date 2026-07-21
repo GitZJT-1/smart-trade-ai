@@ -248,6 +248,28 @@ STOP RULE（防止无效搜索）:
 多条邮箱时逐一列出。""",
     },
     {
+        "name": "b2b-customer-finder",
+        "triggers": [
+            # Chinese — 傻瓜式 / 一键 / 快速 / 新手
+            "傻瓜式找客户", "傻瓜式开发", "一键找客户", "一键开发客户",
+            "快速找客户", "快速开发客户", "新手找客户", "不会找客户",
+            "简单找客户", "客户开发向导", "找客户向导", "三问找客户",
+            "教我怎么找客户", "我要开发客户", "找客户太难了",
+            # English
+            "quick customer finder", "easy customer find",
+            "find customers quickly", "help me find customers",
+            # Fragments — 长匹配优先于 b2b-lead-generation 的短触发词
+            "帮我开发客户", "怎么开发客户", "如何找客户",
+        ],
+        "aliases": ["b2b-lead-generation"],
+        "input_fmt": "你卖什么产品？+ 卖到哪个国家？+ 找什么类型客户？（三问）",
+        "output_fmt": (
+            "客户表格（公司名/国家/网站/联系方式/匹配度）+ "
+            "个性化开发信（含主题行变体）+ 一键保存指引"
+        ),
+        "augment_prompt": "",
+    },
+    {
         "name": "b2b-lead-generation",
         "triggers": [
             # Chinese

@@ -40,3 +40,5 @@ AI指令分析总结.md
 外贸业务知识库.en.md
 外贸业务方法总结.md
 外贸业务方法总结.en.md
+data/*.db-shm
+data/*.db-wal

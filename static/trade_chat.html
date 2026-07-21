@@ -1039,6 +1039,7 @@ async function wizardLaunch() {
     style.textContent = '@keyframes wizardProgress { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }';
     document.head.appendChild(style);
 })();
+function saveState() {
     if (currentCompanyId) sessionStorage.setItem('trade_cid', currentCompanyId);
     else sessionStorage.removeItem('trade_cid');
     sessionStorage.setItem('trade_view', currentView);

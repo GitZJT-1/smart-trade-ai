@@ -691,7 +691,7 @@ body {
             <h4 style="font-size:13px;font-weight:600;margin-bottom:10px;">添加新公司</h4>
             <div class="form-row">
                 <div class="form-group"><label for="co-name">公司名称 *</label><input type="text" id="co-name" placeholder="例如：我的外贸公司" oninput="autoSlug()"></div>
-                <div class="form-group"><label for="co-slug">Slug</label><input type="text" id="co-slug" placeholder="自动生成" style="color:var(--text-muted);"></div>
+                <div class="form-group"><label for="co-slug">Slug</label><input type="text" id="co-slug" readonly placeholder="自动生成" style="color:var(--text-muted);background:var(--bg-main);cursor:not-allowed;" title="由系统根据公司名称自动生成"></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label for="co-contact-name">联系人</label><input type="text" id="co-contact-name" placeholder="姓名"></div>

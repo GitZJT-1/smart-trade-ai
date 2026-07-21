@@ -38,14 +38,17 @@ def _slugify(name: str) -> str:
     """将公司名称转换为 URL 安全的 slug 标识（仅小写字母、数字、连字符）。
 
     用于生成文件系统目录名，确保跨平台兼容。
+    当名称无法生成有效 slug 时，使用带随机后缀的唯一后备值，避免多公司冲突。
     """
+    import uuid
+
     slug = name.lower().strip()
     if not slug:
-        return "company"  # 空输入 → 固定后备值
-    slug = re.sub(r"[^\w\s-]", "", slug)   # 移除非单词字符
+        return f"company-{uuid.uuid4().hex[:6]}"  # 空输入 → 唯一后备值
+    slug = re.sub(r"[^\w\s-]", "", slug)   # 移除非单词字符（Unicode 模式下 \w 含 CJK）
     slug = re.sub(r"[_\s]+", "-", slug)    # 下划线/空格 → 连字符
     slug = re.sub(r"--+", "-", slug)       # 合并连续连字符
-    return slug.strip("-") or "company"
+    return slug.strip("-") or f"company-{uuid.uuid4().hex[:6]}"  # 兜底 → 唯一后缀
 
 
 def _validate_slug(slug: str) -> str:

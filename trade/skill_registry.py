@@ -1175,6 +1175,22 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "6 顶帽子的逐项分析 + 总结与行动计划",
         "augment_prompt": "",
     },
+    # ── b2b-customer-intel: 单一客户深度画像 ──────────────────
+    {
+        "name": "b2b-customer-intel",
+        "triggers": [
+            "客户画像", "深度画像", "客户分析", "了解客户",
+            "客户情报", "客户档案", "怎么跟这个客户谈",
+            "客户偏好", "送礼建议", "回扣怎么给", "记住客户",
+            "客户家底", "客户决策风格", "深入了解客户",
+            "customer intel", "customer profile", "know your customer",
+            "deep profile", "buyer intelligence",
+        ],
+        "aliases": ["b2b-customer-mgmt", "b2b-buyer-persona"],
+        "input_fmt": "客户的任何已知信息（公司名/LinkedIn/名片/聊天记录/展会记录）",
+        "output_fmt": "15 维度结构化深度画像报告",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

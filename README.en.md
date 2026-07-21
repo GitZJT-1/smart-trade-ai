@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 33 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 34 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash

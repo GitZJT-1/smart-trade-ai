@@ -72,7 +72,7 @@ def _adjust_sys_path():
 
 # ── 子命令分发 ────────────────────────────────────────────────────────────
 _MIN_HERMES_VERSION = "0.13.0"
-_MAX_HERMES_VERSION = "0.19.0"  # exclusive upper bound: bumped 2026-07-06 for v0.18.0 compatibility
+_MAX_HERMES_VERSION = "0.20.0"  # exclusive upper bound: bumped 2026-07-22 for v0.19.0 compatibility
 
 
 def dispatch_subcommands() -> bool:

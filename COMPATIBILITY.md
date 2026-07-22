@@ -4,7 +4,7 @@
 
 ## 兼容性矩阵
 
-> **当前声明范围**：`0.13.0 <= version < 0.19.0`（定义在 `trade/bootstrap.py` 的 `_MIN_HERMES_VERSION` / `_MAX_HERMES_VERSION`）
+> **当前声明范围**：`0.13.0 <= version < 0.20.0`（定义在 `trade/bootstrap.py` 的 `_MIN_HERMES_VERSION` / `_MAX_HERMES_VERSION`）
 
 | Hermes 版本 | 兼容状态 | 测试日期 | 测试人 | 备注 |
 |------------|---------|---------|--------|------|
@@ -15,6 +15,7 @@
 | 0.16.0 | ✅ 兼容 | 2026-06-11 | AI | 扫描了 origin/main 领先 387 commits：AIAgent 新增可选参数（tool_progress_mode/read_terminal_callback）向后兼容；config.model 格式不变；_PROVIDER_MODELS 结构不变；hermes_constants 无变更。无需 Trade 修改。 |
 | 0.17.0 | ✅ 兼容 | 2026-06-24 | AI | v2026.6.19 版本。AIAgent 重构为 `agent.agent_init.init_agent` 转发器；load_config/PROVIDER_REGISTRY/_PROVIDER_MODELS/get_hermes_home/load_hermes_dotenv 均无 breaking change。 |
 | 0.18.0 | ✅ 兼容 | 2026-07-06 | AI | v2026.7.1 版本。扫描 release notes 无 breaking change 涉及 Trade 耦合点（AIAgent/load_config/_PROVIDER_MODELS/get_hermes_home/gateway）。packaging/psutil/pyyaml/pydantic 版本未变。仅需更新 `_MAX_HERMES_VERSION` 到 0.19.0。 |
+| 0.19.0 | ✅ 兼容 | 2026-07-22 | AI | v2026.7.20 "Quicksilver" 版本。扫描 release notes 无 breaking change 涉及 Trade 耦合点（AIAgent/load_config/_PROVIDER_MODELS/get_hermes_home/gateway）。新增 Fireworks AI / DeepInfra provider、GPT-5.6 等模型、订阅管理、SecretSource 接口。仅需更新 `_MAX_HERMES_VERSION` 到 0.20.0。 |
 
 ## 升级检查流程
 

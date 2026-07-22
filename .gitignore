@@ -44,3 +44,4 @@ data/*.db-shm
 data/*.db-wal
 .agents/
 .claude/
+skills-lock.json

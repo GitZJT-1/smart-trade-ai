@@ -234,7 +234,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
 2. **sys.path bootstrap** — ensures Trade's `trade/` package takes priority over Hermes's `trade/` package; resolves `HERMES_HOME` from env → `~/.hermes/hermes-agent` → `../trade_ai_assistant`
 3. **Subcommand dispatch** — `trade update/backup/skills-update` exit early, no server
 4. **Architecture check** - `check_native_architecture()` detects Rosetta (x86_64 Python on arm64 Mac); exits with error if mismatch, since Hermes C extensions (pydantic-core, psutil) would fail to load with Mach-O errors
-5. **Hermes version check** — `0.13.0 <= version < 0.19.0` (see COMPATIBILITY.md)
+5. **Hermes version check** — `0.13.0 <= version < 0.20.0` (see COMPATIBILITY.md)
 6. **Skills sync** — fetches latest SKILL.md from GitHub main; falls back to local hash comparison if offline
 7. **Database init** — creates tables, migrates schema, spare columns
 8. **License check** — validates license, warns if expired

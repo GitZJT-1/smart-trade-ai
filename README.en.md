@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 32 Professional Skills
+## 34 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -206,6 +206,8 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Business Doc Generation | One-click quotes, proforma invoices, contracts (DOCX / XLSX / PPTX) |
 | Quote & Negotiation | Negotiation strategy based on product knowledge base + client profile |
 | Due Diligence | 6-layer verification: email → WHOIS → sanctions → MX → tech stack → LinkedIn |
+| Customer Intel | Single-customer 15-dimension deep profile: decision chain, purchasing preferences, gift advice |
+| Customer Finder | 3-question wizard: what to sell → where to sell → find who, auto search + cold email |
 | Morning Brief | Live FX rates + commodities + market news + client follow-up reminders |
 | Cron Tasks | Workday automations: morning brief / outreach / social posts / daily summary |
 | Chat History | Per-company chat memory, searchable and retraceable |
@@ -260,10 +262,10 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      24 skill registry (pure data)
+├── skill_registry.py      34 skill registry (pure data)
 └── ... + 20 business modules
 
-skills/                    24 B2B skills (Markdown-driven)
+skills/                    34 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

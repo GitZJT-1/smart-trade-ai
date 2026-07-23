@@ -45,3 +45,5 @@ data/*.db-wal
 .agents/
 .claude/
 skills-lock.json
+.pytest_cache/
+.coverage

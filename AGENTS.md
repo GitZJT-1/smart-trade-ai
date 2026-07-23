@@ -16,7 +16,7 @@ trade/                        Core Python package
   ├── database.py             SQLite schema + connection
   ├── customer.py             Customer CRUD, dedup, completeness scoring, briefing, health audit
   ├── chat_memory.py          Conversation log + rating + lifecycle (365-day / 30k-threshold cleanup)
-  ├── skill_registry.py       24 skill definitions (triggers, aliases, augment prompts)
+  ├── skill_registry.py       34 skill definitions (triggers, aliases, augment prompts)
   ├── skill_router.py         Skill matching, frontmatter parsing, query augmentation
   ├── prompt.py               System prompts (full, minimal, OSINT, brand safety)
   ├── prompts.py              Prompt resolution chain (file → DB → code fallback)
@@ -27,8 +27,8 @@ trade/                        Core Python package
   ├── bootstrap.py            First-run environment setup
   ├── app.py                  Application lifecycle & startup
   └── license.py              Ed25519 license validation + self-recovery
-skills/                       24 skill markdown files (version controlled)
-tests/                        8 test files, ~225 tests
+skills/                       34 skill markdown files (version controlled)
+tests/                        9 test files, ~230 tests
 ```
 
 ## Build, Test, and Development Commands

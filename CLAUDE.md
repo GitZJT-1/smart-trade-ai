@@ -110,7 +110,7 @@ coverage run -m pytest tests/ -v
 coverage report
 ```
 
-Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. Test files: test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade.
+Tests use temporary databases (monkeypatch `_get_db_path`), no production data is touched. `tests/conftest.py` sets `TRADE_HOME` to a temp directory before any imports to prevent touching real data. `asyncio_mode=auto` handles async test functions automatically. Test files (9): test_database, test_business, test_api, test_osint, test_chat_smoke, test_license, test_upgrade, test_customer_dedup, test_skill_router_blocked.
 
 ## Pre-install Check
 
@@ -207,8 +207,8 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         │     ├─ trade/library.py       Document library CRUD
         │     ├─ trade/customer.py      Customer CRUD + library associations
         │     ├─ trade/order.py         Order CRUD (3-layer context query)
-        │     └─ trade/chat_memory.py   Conversation log + Hindsight bridge
-        │           └─ trade/memory.py  Hindsight long-term memory client
+        │     ├─ trade/chat_memory.py   Conversation log + rating + lifecycle cleanup
+        │     ├─ trade/memory.py        Hindsight long-term memory client (sibling, not child of chat_memory)
         │
         ├─ trade/onboarding.py  First-run wizard (create company + agent identity in one step)
         ├─ trade/osint/         B2B due-diligence (6-layer subpackage)
@@ -223,7 +223,7 @@ trade/api/__init__.py           FastAPI router aggregator — all B2B endpoints
         ├─ trade/email_intel.py Email background check (120+ platform detection via holehe)
         ├─ trade/license.py     License validation
         ├─ trade/skill_registry.py 34 skill definitions (pure data — triggers, aliases, formats)
-        └─ trade/post_install.py Skill installation + CLI commands (update/backup/restore/skills-update)
+        └─ trade/post_install/     Skill installation + CLI commands (skills.py, update.py, backup.py)
 ```
 
 ## Server Startup Sequence
@@ -405,6 +405,10 @@ This project has a CodeGraph MCP server (`codegraph_*` tools) configured — a t
 | "Is the index healthy?" | `codegraph_status` |
 
 **Rules of thumb**: Answer directly with 2-3 codegraph calls — don't delegate exploration. Trust codegraph results (full AST parse, don't re-verify with grep). For "how does X reach Y", start with `codegraph_trace` from→to. When a response starts with "⚠️ Some files referenced below were edited since the last index sync…", Read those specific files for accurate content.
+
+## Cross-Platform Path Convention
+
+All `Path.home()` references to `.trade` or `.hermes` must be guarded by `os.name == "nt"` with `LOCALAPPDATA` fallback. The canonical implementations are in `trade/post_install/skills.py` (`_get_trade_home()` / `_get_hermes_home()`). Do NOT hardcode `Path.home() / ".trade"` without the platform check. This was audited project-wide on 2026-07-23 and all existing usages are correct — new code must follow the same pattern.
 
 ## Code Annotation Standards
 

@@ -12,11 +12,14 @@ from pathlib import Path
 
 from trade.database import get_connection
 
-# 禁止作为 root_path 的敏感目录
+# 禁止作为 root_path 的敏感目录（含 Windows 路径）
+_LOCAL_APP = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
 _FORBIDDEN_DIRS = [
     Path.home() / ".hermes",
     Path.home() / ".trade",
     Path.home() / ".ssh",
+    Path(_LOCAL_APP) / "hermes",    # Windows Hermes 路径
+    Path(_LOCAL_APP) / "trade",     # Windows Trade 路径
     Path("/etc"),
     Path("/var"),
     Path("/tmp"),

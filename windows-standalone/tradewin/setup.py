@@ -11,8 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-_HERMES_HOME = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
-_TRADE_HOME = Path(os.environ.get("TRADE_HOME", Path.home() / ".trade"))
+_LOCAL = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+_HERMES_HOME = Path(os.environ.get("HERMES_HOME", str(Path(_LOCAL) / "hermes")))
+_TRADE_HOME = Path(os.environ.get("TRADE_HOME", str(Path(_LOCAL) / "trade")))
 
 
 # ── 检测函数 ──────────────────────────────────────────────────────────────

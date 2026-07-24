@@ -49,3 +49,21 @@ skills-lock.json
 .coverage
 AGENTS.md
 CLAUDE.md
+AGENTS.md
+
+# 内部设计文档（本地保留，不入库）
+CHANGELOG.md
+项目需求文档.md
+项目需求文档.en.md
+业务概览.md
+业务概览.en.md
+使用说明书.md
+使用说明书.en.md
+Trade数据目录结构设计.md
+Trade数据目录结构设计.en.md
+docs/database-schema.md
+docs/skill-development-guide.md
+docs/diagrams/
+docs/superpowers/
+windows-standalone/README.md
+.pre-commit-config.yaml

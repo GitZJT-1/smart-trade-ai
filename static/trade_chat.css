@@ -120,7 +120,7 @@ body {
     scroll-behavior: smooth;
 }
 .chat-messages > * {
-    width: 100%; padding: 0 24px;
+    width: 98%; margin: 0 auto; padding: 0 24px;
 }
 .chat-messages > .empty-state {
     max-width: var(--chat-max-w); margin: 0 auto;

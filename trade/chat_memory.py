@@ -96,11 +96,15 @@ def save(
 def list_by_context(
     company_id: int, context: str, limit: int = 50
 ) -> list[dict]:
-    """返回指定公司内某个上下文（如 daily/lead/platform）最近的对话记录。"""
+    """返回指定公司内某个上下文（如 daily/lead/platform）最近的对话记录。
+
+    同时包含 context 为空字符串的旧记录，兼容升级前的历史数据。
+    """
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT * FROM conversations WHERE company_id = ? AND context = ? "
+            "SELECT * FROM conversations WHERE company_id = ? "
+            "AND (context = ? OR context = '') "
             "ORDER BY id DESC LIMIT ?",
             (company_id, context, limit),
         ).fetchall()

@@ -137,8 +137,8 @@ def _copy_trade_template(src: Path, dst: Path) -> None:
         if not dest.exists():
             shutil.copytree(src, dest, dirs_exist_ok=False)
             for f in dest.rglob("*"):
-                if f.is_file():
-                    f.chmod(0o644)  # 设置为用户可读写
+                if f.is_file() and os.name != "nt":
+                    f.chmod(0o644)  # 设置为用户可读写（Windows 不支持 chmod）
 
     # 植入初始 system prompt（仅当目标不存在时，避免覆盖用户自定义内容）
     prompts_src = src / "prompts" / "system.md"
@@ -147,7 +147,8 @@ def _copy_trade_template(src: Path, dst: Path) -> None:
     if prompts_src.is_file() and not prompts_dst.is_file():
         prompts_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(prompts_src, prompts_dst)
-        prompts_dst.chmod(0o644)
+        if os.name != "nt":
+            prompts_dst.chmod(0o644)
 
 
 # ── 公开 API ──────────────────────────────────────────────────────────────

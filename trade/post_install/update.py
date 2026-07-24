@@ -83,7 +83,7 @@ def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
         # 模板目录不存在：全量复制
         shutil.copytree(template_src, _dest, dirs_exist_ok=False)
         for f in _dest.rglob("*"):
-            if f.is_file():
+            if f.is_file() and os.name != "nt":
                 f.chmod(0o644)
     else:
         # 模板目录已存在：仅复制源目录中有但目标目录中缺少的文件
@@ -95,7 +95,8 @@ def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
             elif item.is_file() and not target.exists():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(item, target)
-                target.chmod(0o644)
+                if os.name != "nt":
+                    target.chmod(0o644)
 
     # 植入初始 system prompt（仅当目标文件尚不存在时，不覆盖用户编辑的内容）
     prompts_src = template_src / "prompts" / "system.md"
@@ -104,7 +105,8 @@ def _sync_trade_template(template_src: Path, trade_home: Path) -> None:
     if prompts_src.is_file() and not prompts_dst.is_file():
         prompts_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(prompts_src, prompts_dst)
-        prompts_dst.chmod(0o644)
+        if os.name != "nt":
+            prompts_dst.chmod(0o644)
 
 
 # ── 开机自启动 ────────────────────────────────────────────────────────────

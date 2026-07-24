@@ -143,12 +143,13 @@ def restore_trade(backup_file: str = "") -> str:
 
     trade_home = _get_trade_home()
 
-    # 步骤 1: 解压到临时目录
+    # 步骤 1: 解压到临时目录（使用内建 tarfile，跨平台兼容）
     print(f"[restore] 解压 {src.name} ...")
     tmp_dir = Path(tempfile.mkdtemp(prefix="trade-restore-"))
     try:
-        _sp.run(["tar", "-xzf", str(src), "-C", str(tmp_dir)], check=True)
-    except _sp.CalledProcessError as e:
+        with tarfile.open(src, "r:gz") as tar:
+            tar.extractall(path=tmp_dir)
+    except Exception as e:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return f"✗ 解压失败: {e}"
 

@@ -1422,9 +1422,9 @@ async function loadChatHistory() {
         if (c.query) addMsg('user', c.query, filesRead, false);
         if (c.response) addMsg('assistant', c.response, null, false);
     });
-    // 恢复上次浏览位置，首次加载停在顶部
+    // 恢复上次浏览位置，首次加载滚到底部（最新消息）
     var savedPos = sessionStorage.getItem('scroll_' + currentChatContext);
-    container.scrollTop = savedPos ? parseInt(savedPos) : 0;
+    container.scrollTop = savedPos ? parseInt(savedPos) : container.scrollHeight;
 }
 
 // ═════════════════════ SSE STREAMING ═════════════════════

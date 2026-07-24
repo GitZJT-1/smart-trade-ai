@@ -16,6 +16,7 @@ import uvicorn
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 # ── Database initialization ──────────────────────────────────────────────────
 
@@ -492,6 +493,10 @@ def serve_trade_chat(app: FastAPI) -> None:
         else:
             _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
     _TRADE_CHAT_HTML = _STATIC_DIR / "trade_chat.html"
+
+    # 托管 static/ 目录下的 CSS/JS 等静态资源
+    if _STATIC_DIR.is_dir():
+        app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     @app.get("/trade", response_class=HTMLResponse, include_in_schema=False)
     async def trade_chat_ui():

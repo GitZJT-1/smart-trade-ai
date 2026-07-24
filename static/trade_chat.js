@@ -2794,13 +2794,15 @@ function showConversationDetail(cid) {
     const c = allConversations.find(x => x.id === cid);
     if (!c) return;
 
-    if (c.library_id) {
-        currentLibraryId = c.library_id;
+    // 从对话记录读取真实的 context；旧数据无 context 则回退到旧逻辑
+    if (c.context) {
+        currentChatContext = c.context;
+    } else if (c.library_id) {
         currentChatContext = 'docs';
     } else {
-        currentLibraryId = null;
         currentChatContext = 'daily';
     }
+    currentLibraryId = c.library_id || null;
     currentChatName = '对话详情';
     currentCustomerId = null;
 

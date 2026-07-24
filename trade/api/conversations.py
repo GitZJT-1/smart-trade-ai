@@ -24,10 +24,13 @@ router = APIRouter(tags=["conversations"])
 @router.get("/conversations")
 def list_conversations(
     library_id: int | None = None,
+    context: str | None = None,
     limit: int = 50,
     x_company_id: int = Depends(require_company),
 ):
-    """列出当前公司的最近对话，可按文档库过滤。"""
+    """列出当前公司的最近对话，可按文档库或上下文过滤。"""
+    if context:
+        return chat_memory.list_by_context(x_company_id, context, limit)
     if library_id is not None:
         return chat_memory.list_by_library(x_company_id, library_id, limit)
     return chat_memory.list_by_company(x_company_id, limit)

@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     query       TEXT    NOT NULL,
     response    TEXT    DEFAULT '',
     files_read  TEXT    DEFAULT '[]',  -- JSON array: [{"file":"...","pages":[1,2]}]
+    context     TEXT    DEFAULT '',    -- chat context: daily|lead|platform|social|linkedin|customs|docs|docgen|osint
     created_at  TEXT    DEFAULT (datetime('now', 'localtime')),
     extra1      TEXT    DEFAULT '{}',  -- spare: {"tokens_used":0, "model":"", "duration_ms":0}
     extra2      TEXT    DEFAULT '{}',  -- spare: {"rating":null, "feedback":""}
@@ -207,6 +208,24 @@ def _add_spare_columns(conn: sqlite3.Connection) -> None:
             # 仅当列不存在时才添加，避免 ALTER TABLE 重复报错
             if col not in existing_cols:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT '{{}}'")
+
+
+def _add_context_column(conn: sqlite3.Connection) -> None:
+    """为 conversations 表添加 context 列（如果缺少的话）。
+
+    幂等操作 — 先检查列是否存在，避免重复 ALTER TABLE 报错。
+    新增安装和升级都会执行，兼容已有数据库。
+    """
+    if "conversations" not in {
+        r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }:
+        return  # 表尚不存在，等待 CREATE TABLE 时自动包含 context 列
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)").fetchall()}
+    if "context" not in cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN context TEXT DEFAULT ''")
+        conn.commit()
 
 
 def _migrate_from_v0(conn: sqlite3.Connection) -> bool:
@@ -373,6 +392,8 @@ def init_db() -> Path:
             # 已是 v1（或全新安装）— 仍然确保备用列存在
             _add_spare_columns(conn)
             conn.commit()
+        # 检查并添加 conversations 表的 context 列（向后兼容）
+        _add_context_column(conn)
         # 执行增量迁移（从 schema_migrations 表驱动）
         new_migrations = _apply_pending_migrations(conn)
         conn.commit()

@@ -683,6 +683,12 @@ function navToView(view, chatCtx, chatName) {
                        document.querySelector(`.nav-item[data-view="${view}"]`);
     if (activeItem) activeItem.classList.add('active');
 
+    // 保存当前视图的滚动位置，切换回来时恢复
+    if (currentChatContext && currentChatContainer) {
+        var msgs = currentChatContainer.querySelector('#chat-messages');
+        if (msgs) sessionStorage.setItem('scroll_' + currentChatContext, msgs.scrollTop);
+    }
+
     // 隐藏所有视图，并清除非缓存内容（如 empty state）
     const main = $('main-content');
     for (const key in viewCache) {
@@ -1386,14 +1392,19 @@ function addMsg(role, content, files, save, convId) {
     }
 
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    // 只在用户发消息或新 AI 回复流式到达时自动滚到底部
+    // 历史加载和手动浏览不强制滚动
 }
 
 async function loadChatHistory() {
     if (!currentCompanyId) return;
     const ct = currentChatContainer;
     if (!ct) return;
-    const params = currentLibraryId ? `?library_id=${currentLibraryId}&limit=30` : '?limit=30';
+    // 按 context 过滤，避免不同主题的对话混在一起
+    const ctx = encodeURIComponent(currentChatContext || '');
+    const params = currentLibraryId
+        ? `?library_id=${currentLibraryId}&limit=30`
+        : `?context=${ctx}&limit=30`;
     const data = await api('GET', `/api/trade/conversations${params}`);
     if (!data || !data.length) return;
     const container = ct.querySelector('#chat-messages');
@@ -1409,7 +1420,9 @@ async function loadChatHistory() {
         if (c.query) addMsg('user', c.query, filesRead, false);
         if (c.response) addMsg('assistant', c.response, null, false);
     });
-    container.scrollTop = container.scrollHeight;
+    // 恢复上次浏览位置，首次加载停在顶部
+    var savedPos = sessionStorage.getItem('scroll_' + currentChatContext);
+    container.scrollTop = savedPos ? parseInt(savedPos) : 0;
 }
 
 // ═════════════════════ SSE STREAMING ═════════════════════
@@ -1501,7 +1514,7 @@ async function sendMsg() {
         const r = await fetch('/api/trade/chat/stream', {
             method:'POST',
             headers:{'Content-Type':'application/json','X-Hermes-Session-Token':TOKEN,'X-Company-ID':String(currentCompanyId)},
-            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query}),
+            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query,context:currentChatContext}),
             signal:streamCtl.signal,
         });
         if (!r.ok) { progDiv.remove(); addMsg('assistant', `⚠️ 请求失败 (${r.status})`, null); sendBtn.disabled = false; return; }

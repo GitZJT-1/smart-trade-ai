@@ -56,6 +56,7 @@ def save(
     response: str = "",
     library_id: int | None = None,
     files_read: list[dict] | None = None,
+    context: str = "",
 ) -> dict:
     """保存一条对话记录，作用域限定到指定公司。返回新插入的行，以字典形式呈现。"""
     if company_id is None:
@@ -63,14 +64,15 @@ def save(
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO conversations (company_id, library_id, query, response, files_read) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO conversations (company_id, library_id, query, response, files_read, context) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (
                 company_id,
                 library_id,
                 query,
                 response,
                 json.dumps(files_read or [], ensure_ascii=False),
+                context,
             ),
         )
         new_id = cur.lastrowid
@@ -84,9 +86,25 @@ def save(
         return {
             "id": new_id, "company_id": company_id,
             "library_id": library_id, "query": query, "response": response,
-            "files_read": files_read or [], "created_at": None,
+            "files_read": files_read or [], "created_at": None, "context": context,
             "extra1": {}, "extra2": {}, "extra3": {},
         }
+    finally:
+        conn.close()
+
+
+def list_by_context(
+    company_id: int, context: str, limit: int = 50
+) -> list[dict]:
+    """返回指定公司内某个上下文（如 daily/lead/platform）最近的对话记录。"""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM conversations WHERE company_id = ? AND context = ? "
+            "ORDER BY id DESC LIMIT ?",
+            (company_id, context, limit),
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()
 
@@ -205,12 +223,13 @@ def save_with_context(
     library_name: str = "",
     customer_name: str = "",
     retain_to_memory: bool = True,
+    context: str = "",
 ) -> dict:
     """保存一条对话记录到 SQLite，并可选择同步到 Hindsight 长期记忆。
 
     这是 B2B 对话日志记录推荐使用的入口函数。
     """
-    result = save(company_id, query, response, library_id, files_read)
+    result = save(company_id, query, response, library_id, files_read, context=context)
 
     if retain_to_memory:
         # 只有当调用方要求保留到记忆时才执行，避免不必要的 I/O
@@ -376,6 +395,7 @@ def _row_to_dict(row) -> dict:
         "response": row["response"],
         "files_read": json.loads(row["files_read"]) if row["files_read"] else [],
         "created_at": row["created_at"],
+        "context": row["context"] if "context" in row.keys() else "",
     }
     # 安全解析 extra 列 — 仅当列存在于结果集中时才处理（get_recent 等函数不 SELECT 这些列）
     _row_keys = row.keys()

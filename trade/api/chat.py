@@ -180,6 +180,7 @@ async def trade_chat(
     conv = chat_memory.save_with_context(
         company_id=cid, library_id=payload.library_id, query=query,
         response=response, library_name=lib_name,
+        context=payload.context or "",
     )
     return {"response": response, "conversation": conv}
 
@@ -294,6 +295,7 @@ async def trade_chat_stream(
                         company_id=cid, library_id=payload.library_id,
                         query=query, response=result or "",
                         library_name=lib_name,
+                        context=payload.context or "",
                     )
                     if conv:
                         conv_id = conv.get("id")

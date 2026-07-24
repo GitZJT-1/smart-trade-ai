@@ -162,6 +162,7 @@ class ConversationSave(BaseModel):
     response: str = Field("", description="Agent 回复")
     files_read: list[dict] = Field(default_factory=list, description="读取的文件列表")
     library_name: str = Field("", description="文档库名称（用于上下文标注）")
+    context: str = Field("", description="聊天上下文 (daily/lead/platform/...)")
 
 
 class ConversationUpdate(BaseModel):
@@ -174,3 +175,4 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000, description="用户问题（1-10000 字符）")
     library_id: int | None = Field(None, description="关联的文档库 ID")
     customer_id: int | None = Field(None, description="关联的客户 ID")
+    context: str = Field("", description="聊天上下文 (daily/lead/platform/...)")

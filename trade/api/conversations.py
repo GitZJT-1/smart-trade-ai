@@ -52,6 +52,7 @@ def save_conversation(
         company_id=x_company_id, library_id=payload.library_id,
         query=payload.query, response=payload.response,
         files_read=payload.files_read, library_name=lib_name,
+        context=payload.context or "",
     )
 
 

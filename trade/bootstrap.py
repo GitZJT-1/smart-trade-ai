@@ -324,70 +324,92 @@ def load_env_and_set_yolo():
 # ── Skills 同步 ──────────────────────────────────────────────────────────
 
 
-def sync_b2b_skills():
-    """启动时从 GitHub 拉取最新 B2B skills 到 Hermes。
+def _local_skills_sync():
+    """仅做本地 hash 比对同步，不访问 GitHub。
 
-    每次启动都会检查并更新。如果 GitHub 不可达，降级为本地 hash 比对同步。
+    从项目目录（或 PyInstaller/运行时目录）复制 skills 到 Hermes，
+    比对外部哈希避免重复写入。速度远快于 GitHub 下载。
     """
     from hermes_constants import get_hermes_home
 
-    from trade.post_install import update_skills
-
-    try:
-        update_skills()
-    except Exception as e:
-        print(f"  GitHub skills update failed ({e}), falling back to local sync")
-
-        # 优先级：PyInstaller _MEIPASS > 运行时目录 > 开发目录
-        _meipass = getattr(sys, "_MEIPASS", None)
-        if _meipass:
-            _project_skills = Path(_meipass) / "skills"
-        else:
-            # 运行时目录优先（update_trade 同步后 skills 在此）
-            _trade_home = os.environ.get("TRADE_HOME", "").strip()
-            if not _trade_home:
-                if os.name == "nt":
-                    _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-                    _trade_home = str(Path(_local) / "trade")
-                else:
-                    _trade_home = str(Path.home() / ".trade")
-            _runtime_skills = Path(_trade_home) / "foreign-trade-assistant" / "skills"
-            if _runtime_skills.is_dir():
-                _project_skills = _runtime_skills
+    # 优先级：PyInstaller _MEIPASS > 运行时目录 > 开发目录
+    _meipass = getattr(sys, "_MEIPASS", None)
+    if _meipass:
+        _project_skills = Path(_meipass) / "skills"
+    else:
+        _trade_home = os.environ.get("TRADE_HOME", "").strip()
+        if not _trade_home:
+            if os.name == "nt":
+                _local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+                _trade_home = str(Path(_local) / "trade")
             else:
-                _project_root = Path(__file__).resolve().parent.parent
-                _project_skills = _project_root / "skills"
-        if not _project_skills.is_dir():
-            return
-
-        _hermes_skills = get_hermes_home() / "skills"
-        _hermes_skills.mkdir(parents=True, exist_ok=True)
-
-        synced = 0
-        for skill_dir in sorted(_project_skills.iterdir()):
-            if not skill_dir.is_dir() or not (
-                skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"
-            ):
-                continue
-            src = skill_dir / "SKILL.md"
-            if not src.is_file():
-                continue
-            dst_dir = _hermes_skills / skill_dir.name
-            dst = dst_dir / "SKILL.md"
-            src_hash = hashlib.sha256(src.read_bytes()).hexdigest()
-            if dst.is_file():
-                dst_hash = hashlib.sha256(dst.read_bytes()).hexdigest()
-                if src_hash == dst_hash:
-                    continue
-            dst_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-            synced += 1
-            print(f"  ↻ Updated skill: {skill_dir.name}")
-
-        if synced > 0:
-            print(f"  Skills synced: {synced} updated")
+                _trade_home = str(Path.home() / ".trade")
+        _runtime_skills = Path(_trade_home) / "foreign-trade-assistant" / "skills"
+        if _runtime_skills.is_dir():
+            _project_skills = _runtime_skills
         else:
-            print("  Skills: up-to-date")
+            _project_root = Path(__file__).resolve().parent.parent
+            _project_skills = _project_root / "skills"
+    if not _project_skills.is_dir():
+        return
+
+    _hermes_skills = get_hermes_home() / "skills"
+    _hermes_skills.mkdir(parents=True, exist_ok=True)
+
+    synced = 0
+    for skill_dir in sorted(_project_skills.iterdir()):
+        if not skill_dir.is_dir() or not (
+            skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"
+        ):
+            continue
+        src = skill_dir / "SKILL.md"
+        if not src.is_file():
+            continue
+        dst_dir = _hermes_skills / skill_dir.name
+        dst = dst_dir / "SKILL.md"
+        src_hash = hashlib.sha256(src.read_bytes()).hexdigest()
+        if dst.is_file():
+            dst_hash = hashlib.sha256(dst.read_bytes()).hexdigest()
+            if src_hash == dst_hash:
+                continue
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        synced += 1
+
+    if synced > 0:
+        print(f"  Skills synced: {synced} updated (local)")
+    else:
+        print("  Skills: up-to-date")
+
+
+def sync_b2b_skills():
+    """启动时从本地复制 skills 到 Hermes（仅 hash 比对，不访问网络）。
+
+    安装/升级时 install-trade-skills 已处理初始复制，
+    这里做增量同步确保运行时目录变更对齐。
+    后台 GitHub 同步由 app.py 在服务启动后异步触发。
+    """
+    _local_skills_sync()
+
+
+def background_github_skills_sync():
+    """后台线程：服务启动后从 GitHub 静默拉取最新 SKILL.md。
+
+    失败不影响服务运行，仅记录日志。
+    """
+    import threading
+    import time as _time
+
+    def _run():
+        _time.sleep(10)  # 等服务完全就绪
+        try:
+            from trade.post_install import update_skills
+            update_skills()
+        except Exception:
+            pass  # 静默失败，不影响主服务
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
 
 
 # ── 一键 setup ───────────────────────────────────────────────────────────

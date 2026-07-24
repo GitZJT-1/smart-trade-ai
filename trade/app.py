@@ -541,6 +541,10 @@ def main() -> None:
     if not args.no_gateway:
         _ensure_gateway_running()
 
+    # 后台静默从 GitHub 同步 skills，不阻塞服务启动
+    from trade.bootstrap import background_github_skills_sync
+    background_github_skills_sync()
+
     url = f"http://{args.host}:{args.port}/trade"
     print(f"\n  Foreign Trade Assistant → {url}")
     print(f"  Session token: {_SESSION_TOKEN[:8]}...（完整 token 已注入 API 页面）")

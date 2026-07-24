@@ -1002,22 +1002,24 @@ async function loadCronStatus(isPoll = false) {
         }
     }
 
-    // 增量追加已完成任务的 AI 输出（任意聊天视图都显示）
-    for (const t of completed) {
-        if (!t.output || _shownCronOutputs.has(t.name)) continue;
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message assistant msg-cron-output';
-        // 截断 cron 输出中的冗余管理指令
-        let cleanOutput = t.output || '';
-        const truncIdx = cleanOutput.search(/管理命令参考|##?\s*管理命令|crontab\s*命令参考/i);
-        if (truncIdx >= 0) cleanOutput = cleanOutput.substring(0, truncIdx).trimEnd();
-        msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(cleanOutput))}</div></div>`;
-        container.appendChild(msgDiv);
-        _shownCronOutputs.add(t.name);
-    }
-    if (completed.length) {
-        const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-        if (nearBottom) container.scrollTop = container.scrollHeight;
+    // 增量追加已完成任务的 AI 输出（仅今日简报视图，避免干扰其他对话）
+    if (isDailyView) {
+        for (const t of completed) {
+            if (!t.output || _shownCronOutputs.has(t.name)) continue;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message assistant msg-cron-output';
+            // 截断 cron 输出中的冗余管理指令
+            let cleanOutput = t.output || '';
+            const truncIdx = cleanOutput.search(/管理命令参考|##?\s*管理命令|crontab\s*命令参考/i);
+            if (truncIdx >= 0) cleanOutput = cleanOutput.substring(0, truncIdx).trimEnd();
+            msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(cleanOutput))}</div></div>`;
+            container.appendChild(msgDiv);
+            _shownCronOutputs.add(t.name);
+        }
+        if (completed.length) {
+            const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+            if (nearBottom) container.scrollTop = container.scrollHeight;
+        }
     }
 }
 

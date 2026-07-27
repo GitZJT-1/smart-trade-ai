@@ -1027,13 +1027,16 @@ async function loadCronStatus(isPoll = false) {
 
 let _lastHintContainer = null;
 
-function _ensureScrollHint(container) {
+function _ensureScrollHint(scrollContainer) {
     // 同一个容器不重复绑定 scroll 监听
-    if (container === _lastHintContainer) return;
-    _lastHintContainer = container;
-    container.style.position = 'relative';
+    if (scrollContainer === _lastHintContainer) return;
+    _lastHintContainer = scrollContainer;
 
-    // 创建浮标（全局唯一，跟随活跃容器）
+    // 找到不滚动的父容器作为浮标锚点（.chat-view）
+    const anchor = currentChatContainer;
+    if (!anchor) return;
+    anchor.style.position = 'relative';
+
     const _getHint = () => {
         let h = document.getElementById('scroll-hint');
         if (!h) {
@@ -1041,7 +1044,7 @@ function _ensureScrollHint(container) {
             h.id = 'scroll-hint';
             h.title = '回到底部';
             h.innerHTML = '▼';
-            h.style.cssText = 'position:absolute;right:16px;bottom:80px;width:36px;height:36px;'
+            h.style.cssText = 'position:absolute;right:16px;bottom:90px;width:36px;height:36px;'
                 + 'background:var(--primary);color:#fff;border-radius:50%;display:none;align-items:center;justify-content:center;'
                 + 'cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:10;transition:transform 0.15s;animation:pulseHint 2s infinite;';
             h.onmouseenter = () => h.style.transform = 'scale(1.1)';
@@ -1057,21 +1060,22 @@ function _ensureScrollHint(container) {
     };
 
     const _update = () => {
-        const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+        // 用户不在底部时显示向下箭头
+        const nearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 120;
         const hint = _getHint();
         if (nearBottom) {
             hint.style.display = 'none';
         } else {
-            if (hint.parentElement !== container) {
-                // 切换视图时把浮标移到新容器
+            // 挂到锚点容器（不滚动），使其固定悬浮
+            if (hint.parentElement !== anchor) {
                 if (hint.parentElement) hint.remove();
-                container.appendChild(hint);
+                anchor.appendChild(hint);
             }
             hint.style.display = 'flex';
         }
     };
 
-    container.addEventListener('scroll', _update, { passive: true });
+    scrollContainer.addEventListener('scroll', _update, { passive: true });
     _update();
 }
 
@@ -1398,10 +1402,28 @@ function addMsg(role, content, files, save, convId) {
     // 历史加载和手动浏览不强制滚动
 }
 
-async function loadChatHistory() {
+async function loadChatHistory(conversationId) {
     if (!currentCompanyId) return;
     const ct = currentChatContainer;
     if (!ct) return;
+    const container = ct.querySelector('#chat-messages');
+    if (!container) return;
+
+    // 如果传了指定 conversationId，只加载那一条
+    if (conversationId) {
+        const c = await api('GET', `/api/trade/conversations/${conversationId}`);
+        if (!c) return;
+        const emptyEl = container.querySelector('.empty-state');
+        if (emptyEl) emptyEl.remove();
+        container.innerHTML = '';
+        let filesRead = [];
+        try { filesRead = c.files_read ? JSON.parse(c.files_read) : []; } catch(e) { filesRead = []; }
+        if (c.query) addMsg('user', c.query, filesRead, false);
+        if (c.response) addMsg('assistant', c.response, null, false);
+        container.scrollTop = container.scrollHeight;
+        return;
+    }
+
     // 按 context 过滤，避免不同主题的对话混在一起
     const ctx = encodeURIComponent(currentChatContext || '');
     const params = currentLibraryId
@@ -1409,8 +1431,6 @@ async function loadChatHistory() {
         : `?context=${ctx}&limit=30`;
     const data = await api('GET', `/api/trade/conversations${params}`);
     if (!data || !data.length) return;
-    const container = ct.querySelector('#chat-messages');
-    if (!container) return;
     // Remove empty state
     const emptyEl = container.querySelector('.empty-state');
     if (emptyEl) emptyEl.remove();
@@ -2825,7 +2845,7 @@ function showConversationDetail(cid) {
             requestAnimationFrame(tryLoad);
             return;
         }
-        loadChatHistory();
+        loadChatHistory(cid);
     };
     requestAnimationFrame(tryLoad);
 }

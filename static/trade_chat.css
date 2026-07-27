@@ -177,14 +177,15 @@ body {
 .chat-input-inner textarea::placeholder { color: var(--text-muted); }
 .chat-input-inner button {
     height: 36px; width: 36px; min-width: 36px; border-radius: 50%;
-    background: var(--primary); color: #fff; border: none; font-size: 16px;
-    cursor: pointer; transition: all 0.2s var(--ease); white-space: nowrap;
-    display: flex; align-items: center; justify-content: center; padding: 0;
+    background: var(--primary); color: #fff; border: none; font-size: 20px;
+    font-weight: 700; cursor: pointer; transition: all 0.2s var(--ease); white-space: nowrap;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1; padding: 0 0 2px 0; margin: 0;
 }
 .chat-input-inner button:hover { background: var(--primary-dark); }
 .chat-input-inner button:active { transform: scale(0.95); }
 .chat-input-inner button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-#stop-btn { background: var(--accent-red) !important; color: #fff; border-radius: 999px; width: 36px; height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+#stop-btn { background: var(--accent-red) !important; color: #fff; border-radius: 50%; width: 36px; height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0 0 2px 0; margin: 0; font-size: 20px; font-weight: 700; }
 
 /* ── Drag & Drop ──────────────────────────────────────────────────────── */
 .drop-overlay {

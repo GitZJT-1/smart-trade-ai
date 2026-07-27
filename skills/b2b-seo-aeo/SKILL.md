@@ -1,6 +1,11 @@
 ---
 name: b2b-seo-aeo
 description: SEO + AEO 文章生成 — 针对 Google 搜索和 AI 搜索引擎（Perplexity/Gemini/ChatGPT）优化内容
+when_to_use:
+  - "Google SEO + AEO（Answer Engine Optimization）"
+  - "针对 AI 搜索（ChatGPT / Perplexity）优化内容"
+  - "用户提到「SEO」「AEO」「AI 搜索优化」"
+  - "不要用于：付费广告投放"
 triggers:
   - SEO文章
   - AEO文章

@@ -1,6 +1,11 @@
 ---
 name: b2b-skill-generator
 description: 根据用户需求描述自动生成符合 smart-trade-ai 规范的新 B2B Skill
+when_to_use:
+  - "用户要求「生成 skill」「创建 skill」「新增技能」"
+  - "用自然语言描述需求生成新 B2B Skill"
+  - "用户提到「做个新技能」「自动生成」"
+  - "不要用于：修改现有 skill"
 triggers:
   - 生成skill
   - 创建skill

@@ -1,6 +1,12 @@
 ---
 name: b2b-trade-compliance
 description: 外贸合规 & 规范校验 — 文化禁忌、缩写解释、ICC术语、翻译二审、投标招标、跨境电商上架
+when_to_use:
+  - "文化禁忌检查 / 缩写规范 / ICC 术语"
+  - "翻译二审 / 投标合规"
+  - "电商上架合规检查"
+  - "用户提到「合规」「翻译二审」「ICC 术语」"
+  - "不要用于：关税 / HS Code（用 b2b-customs-data）"
 triggers:
 category: compliance
 version: 1.0.0

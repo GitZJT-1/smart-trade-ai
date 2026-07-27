@@ -1,6 +1,11 @@
 ---
 name: b2b-short-video
 description: 外贸 B2B 短视频脚本生成 — TikTok/YouTube Shorts/Instagram Reels 等平台
+when_to_use:
+  - "生成 TikTok / Instagram Reels / YouTube Shorts 脚本"
+  - "短视频带货脚本与分镜"
+  - "用户提到「短视频脚本」「tiktok 带货」"
+  - "不要用于：长视频脚本"
 triggers:
   - 短视频
   - 视频脚本

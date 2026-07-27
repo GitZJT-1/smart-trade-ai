@@ -1,6 +1,12 @@
 ---
 name: b2b-doc-generation
 description: 商务文档生成 — 一键生成报价单/PI/合同/PPT（DOCX/XLSX/PPTX）
+when_to_use:
+  - "用户要求生成报价单 / PI / 合同 / 商业提案"
+  - "一键生成 DOCX / XLSX / PPTX 格式文档"
+  - "需要可下载的单证模板"
+  - "用户提到「做一份报价」「生成合同」「导出 PPT」"
+  - "不要用于：读取现有文档内容（用 b2b-document）"
 triggers:
   - 生成文档
   - 创建文档

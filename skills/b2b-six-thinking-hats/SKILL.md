@@ -1,6 +1,11 @@
 ---
 name: b2b-six-thinking-hats
 description: 六顶思考帽决策教练 — 用 Edward de Bono 的方法论辅助复杂外贸决策
+when_to_use:
+  - "用六顶思考帽做多角度分析"
+  - "团队决策 / 复杂问题拆解"
+  - "用户提到「六顶思考帽」「多角度分析」"
+  - "不要用于：单一视角结论性判断"
 triggers:
   - 决策分析
   - 思考帽

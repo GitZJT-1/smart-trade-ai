@@ -1,6 +1,10 @@
 ---
 name: auto-smtp-email
 description: "(已禁用) SMTP 邮件发送 — 此 skill 已被禁用，不会被系统触发"
+when_to_use:
+  - "配置自动 SMTP 发邮件"
+  - "用户提到「自动发邮件」「smtp 配置」"
+  - "不要用于：手动单封邮件（用 b2b-cold-outreach）"
 triggers:
   - 发邮件
   - 发送邮件

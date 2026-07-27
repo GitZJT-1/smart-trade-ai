@@ -1,6 +1,13 @@
 ---
 name: b2b-document
 description: 本地文档分析 — 读取 PDF/Word/Excel/PPT，AI 自动解析与提取关键数据
+when_to_use:
+  - "用户提供 PDF / Word / Excel / PPT 要求分析"
+  - "读取报价单 / 合同 / 产品规格书 / 装箱单"
+  - "提取文档关键数据生成结构化摘要"
+  - "对比多份文档的差异"
+  - "用户提到「分析文档」「看合同」「读报价」"
+  - "不要用于：生成新文档（用 b2b-doc-generation）"
 triggers:
   - 分析文档
   - 分析文件

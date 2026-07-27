@@ -1,6 +1,12 @@
 ---
 name: b2b-sales-pipeline
 description: 销售管线策略 — 客户旅程 5 阶段动作映射、30 天跟进时间表、KPI 追踪、客户状态分层与优化
+when_to_use:
+  - "客户旅程 5 阶段映射"
+  - "30 天跟进表 + KPI 追踪"
+  - "管线健康度看板"
+  - "用户提到「销售管线」「pipeline」「KPI」"
+  - "不要用于：单次客户跟进"
 triggers:
   - 销售推进
   - 跟进策略

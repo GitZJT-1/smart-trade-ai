@@ -1,6 +1,11 @@
 ---
 name: b2b-product-description
 description: 产品高转化描述生成器 — 基于 FAB 方法生成产品描述、销售资料、邮件内容
+when_to_use:
+  - "生成 Amazon / Shopify / 独立站产品描述"
+  - "针对不同平台调优文案风格"
+  - "用户提到「产品描述」「listing 文案」"
+  - "不要用于：产品选品（用 b2b-market-analysis）"
 triggers:
   - 产品描述
   - 产品介绍

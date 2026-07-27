@@ -1,6 +1,12 @@
 ---
 name: b2b-customer-mgmt
 description: 客户档案与分级管理 — A/B/C 分级、客户详情、文档库关联、CSV 批量导入
+when_to_use:
+  - "客户 A/B/C 分级管理"
+  - "客户详情面板 + 文档库关联"
+  - "CSV 批量导入 + 去重"
+  - "用户提到「客户管理」「分级」「导入客户」"
+  - "不要用于：单个客户深度画像（用 b2b-customer-intel）"
 triggers:
   - 客户管理
   - 客户档案

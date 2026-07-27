@@ -1,6 +1,13 @@
 ---
 name: b2b-lead-generation
 description: 多通道客户开发 — Google Maps + LinkedIn + Facebook 搜索、开发信生成、询盘回复、报价谈判
+when_to_use:
+  - "用户提到「找客户」「开发客户」「开发信」"
+  - "需要多通道搜索客户（Google Maps / LinkedIn / Facebook / 海关数据）"
+  - "生成询盘回复 / 报价谈判 / 跟进邮件"
+  - "分析 B2B 平台（阿里国际站 / 中国制造网）的潜在客户"
+  - "用户粘贴产品 / 公司资料要求找潜在买家"
+  - "不要用于：单一客户深度画像（用 b2b-customer-intel）"
 triggers:
   - 找客户
   - 开发客户

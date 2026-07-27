@@ -1,6 +1,11 @@
 ---
 name: b2b-reddit-engagement
 description: Reddit 外贸社区互动 — 通过专业评论建立信任、引流 B2B 客户
+when_to_use:
+  - "Reddit 帖子营销 / 评论引流"
+  - "生成符合 Reddit 文化的回复"
+  - "用户提到「Reddit 营销」「reddit 推广」"
+  - "不要用于：Facebook / LinkedIn（用对应 skill）"
 triggers:
   - Reddit
   - 红迪

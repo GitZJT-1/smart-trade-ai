@@ -1,6 +1,11 @@
 ---
 name: b2b-social-media
 description: 社媒营销 — Facebook/Instagram/TikTok/YouTube 内容策略与日历
+when_to_use:
+  - "生成 Facebook / Instagram / TikTok / YouTube 内容日历"
+  - "规划海外社媒运营策略"
+  - "用户提到「社媒运营」「Facebook 发帖」「TikTok 内容」"
+  - "不要用于：LinkedIn 运营（用 b2b-linkedin-marketing）"
 triggers:
   - 社媒营销
   - 社交媒体营销

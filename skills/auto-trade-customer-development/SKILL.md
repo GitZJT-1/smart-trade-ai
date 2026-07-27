@@ -1,6 +1,11 @@
 ---
 name: auto-trade-customer-development
 description: 全自动外贸客户开发编排器 — 一句话触发「搜索 → 背调 → 评分 → 写信 → 发送 → 入库 → 日志」端到端流水线
+when_to_use:
+  - "全自动客户开发流水线"
+  - "定时搜索 + 自动生成开发信 + 自动发送"
+  - "用户提到「自动开发客户」「流水线」"
+  - "不要用于：人工介入的高价值客户（用 b2b-lead-generation）"
 triggers:
   - 全自动客户开发
   - 一键开发客户

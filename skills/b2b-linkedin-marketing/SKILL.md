@@ -1,6 +1,11 @@
 ---
 name: b2b-linkedin-marketing
 description: LinkedIn 营销 — Profile 优化、内容策略、InMail 模板、Account IQ 深度分析
+when_to_use:
+  - "优化 LinkedIn 个人 Profile"
+  - "生成 LinkedIn 内容日历 / 文章 / InMail"
+  - "用户提到「LinkedIn 运营」「领英开发」"
+  - "不要用于：Facebook / Instagram / TikTok（用 b2b-social-media）"
 triggers:
   - LinkedIn营销
   - 领英营销

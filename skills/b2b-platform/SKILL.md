@@ -1,6 +1,11 @@
 ---
 name: b2b-platform
 description: B2B 平台诊断 — 阿里国际站/MIC/独立站产品页分析与优化建议
+when_to_use:
+  - "分析阿里国际站 / 中国制造网 / TradeKey 产品页面"
+  - "输出 B2B 平台产品优化建议"
+  - "用户提到「阿里国际站」「中国制造网」「平台诊断」"
+  - "不要用于：Amazon / eBay / Shopify（用各平台专用 skill）"
 triggers:
   - 网站诊断
   - 平台诊断

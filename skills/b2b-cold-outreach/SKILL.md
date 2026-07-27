@@ -1,6 +1,12 @@
 ---
 name: b2b-cold-outreach
 description: B2B 冷 outreach 邮件撰写（产品推广信、开发信、跟进信），基于公司产品数据与目标市场情报生成个性化邮件
+when_to_use:
+  - "生成个性化开发信 / 推广信 / 跟进信"
+  - "邮件语言匹配目标客户国家"
+  - "反垃圾规则 + 产品参数速查"
+  - "用户提到「冷邮件」「cold email」「推广信」"
+  - "不要用于：询盘回复（用 b2b-lead-generation）"
 triggers:
   - 开发信
   - 产品推广信

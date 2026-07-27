@@ -1,6 +1,11 @@
 ---
 name: b2b-inquiry-training
 description: 询盘回复与 Top Sales 训练 — 双AI对抗训练法，模拟买家场景反复打磨回复质量
+when_to_use:
+  - "双 AI 对抗训练（模拟买家 vs 生成回复）"
+  - "迭代打磨询盘回复至 9.5 分"
+  - "用户提到「询盘回复训练」「AI 模拟买家」"
+  - "不要用于：直接询盘回复（用 b2b-lead-generation）"
 triggers:
   - 询盘训练
   - 回复练习

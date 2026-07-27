@@ -1,6 +1,11 @@
 ---
 name: b2b-kol-imitation
 description: LinkedIn/社媒 KOL 风格模仿 — 分析行业意见领袖的内容风格并应用到自家品牌
+when_to_use:
+  - "用户指定 KOL / 网红要求模仿其风格"
+  - "生成「像 XXX」风格的文案"
+  - "用户提到「模仿 KOL」「学习 XXX 风格」"
+  - "不要用于：原创内容生成（用 b2b-social-media）"
 triggers:
   - 模仿风格
   - 学大V

@@ -1,6 +1,10 @@
 ---
 name: b2b-data-directory
 description: 数据目录管理 — 结构化知识库初始化、档案维护
+when_to_use:
+  - "结构化管理产品 / 客户 / 报价 / 合同 / 认证 / 物流知识库"
+  - "用户提到「数据目录」「知识库管理」"
+  - "不要用于：实时数据分析（用 b2b-market-analysis）"
 triggers:
 category: 系统工具
 version: 1.0.0

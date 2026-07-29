@@ -490,12 +490,4 @@ python server.py
 
 ---
 
-## 联系作者
-
-<img src="docs/wechat-contact.jpeg" alt="WeChat Contact" width="200">
-
-扫码添加微信，备注「Trade」。商务合作或技术支持请发邮件至 lauroge@gmail.com。
-
----
-
 Smart Trade AI — 外贸业务员的本地 AI 助手。

@@ -290,12 +290,5 @@ ruff check trade/ server.py  # Lint
 
 ---
 
-## Contact
-
-<img src="docs/wechat-contact.jpeg" alt="WeChat Contact" width="200">
-
-Scan to add on WeChat (note: "Trade"). For business or support, email lauroge@gmail.com.
-
----
 
 Smart Trade AI — an AI assistant for international trade professionals, running locally.

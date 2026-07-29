@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 34 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 35 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 34 Professional Skills
+## 35 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -198,6 +198,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Social Media Marketing | Generate Facebook / Instagram / TikTok / YouTube content calendars |
 | LinkedIn Operations | Profile optimization + content strategy + InMail templates |
 | Customs Data | Analyze import/export data, identify high-value buyers |
+| Tender Info | Multi-platform tender search, structured extraction, bid opportunity evaluation |
 | Lead Generation | Google Maps + LinkedIn + Facebook multi-channel customer discovery, one-click save |
 | Cold Outreach | Product promotion emails / cold emails / follow-ups based on company product data |
 | Email Intelligence | 120+ platform email registration check (holehe), social profile discovery |
@@ -262,10 +263,10 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      34 skill registry (pure data)
+├── skill_registry.py      35 skill registry (pure data)
 └── ... + 20 business modules
 
-skills/                    34 B2B skills (Markdown-driven)
+skills/                    35 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

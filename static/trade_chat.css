@@ -119,6 +119,9 @@ body {
     display: flex; flex-direction: column; gap: 0;
     scroll-behavior: smooth;
 }
+.msg-cron-output .cron-output-content {
+    padding-left: 40px;
+}
 .chat-messages > * {
     width: 98%; margin: 0 auto; padding: 0 24px;
 }

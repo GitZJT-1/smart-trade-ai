@@ -294,6 +294,32 @@ def get_customer_health_audit(cid: int = Depends(require_company)):
     return customer_module.health_audit(cid)
 
 
+def _strip_cron_output_prompt(content: str) -> str:
+    """去除 cron output 中的 prompt/指令部分，只保留实际生成的简报/报告内容。"""
+    # 优先找 ## Response 分隔符
+    response_marker = "\n## Response\n"
+    idx = content.find(response_marker)
+    if idx >= 0:
+        return content[idx + len(response_marker):].strip()
+
+    # 没有 ## Response 则找 ## Prompt 并跳过其后的全部指令内容
+    prompt_marker = "\n## Prompt\n"
+    prompt_idx = content.find(prompt_marker)
+    if prompt_idx >= 0:
+        # 跳过 ## Prompt 及其后的所有内容直到文件末尾
+        # 实际内容在最后，找 # 🌅 开头的主体
+        after_prompt = content[prompt_idx + len(prompt_marker):]
+        # 查找简报/报告标题行
+        import re as _re
+        heading = _re.search(r'^# [🌅📊📈📋📉📄]', after_prompt, _re.MULTILINE)
+        if heading:
+            return after_prompt[heading.start():].strip()
+        # 找不到特殊标题，返回 ## Prompt 之后的内容（仍包含 skill 内容，但至少去掉了头部元数据）
+        return after_prompt.strip()
+
+    return content.strip()
+
+
 def _find_cron_output(task_name: str, today: str) -> str | None:
     if not _CRON_OUTPUT.is_dir():
         return None
@@ -304,7 +330,7 @@ def _find_cron_output(task_name: str, today: str) -> str | None:
             try:
                 content = output_file.read_text(encoding="utf-8")
                 if task_name in content and today in output_file.stem[:10]:
-                    return content
+                    return _strip_cron_output_prompt(content)
             except Exception:
                 continue
     return None

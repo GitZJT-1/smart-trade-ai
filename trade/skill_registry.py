@@ -1213,6 +1213,30 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "15 维度结构化深度画像报告",
         "augment_prompt": "",
     },
+    # ── b2b-tender-info: 招标信息查询 ───────────────────────
+    {
+        "name": "b2b-tender-info",
+        "triggers": [
+            # Chinese
+            "招标", "投标", "招标信息", "招标查询", "招标机会",
+            "投标机会", "公开招标", "采购公告", "查招标", "找招标",
+            "招标监控", "招标汇总", "招标搜索", "海外招标", "国际招标",
+            # English
+            "tender", "bidding", "tender info", "tender search",
+            "RFP", "RFQ", "request for proposal", "open tender",
+            "public tender", "procurement", "bid opportunity",
+            # Fragments
+            "帮我查招标", "有什么招标", "招标项目", "标的",
+            "Tender Information", "bid", "tender opportunity",
+        ],
+        "aliases": [],
+        "input_fmt": "产品/品类名称 + 目标国家/区域（可选）+ 关键词语言（中英文）",
+        "output_fmt": (
+            "招标信息汇总报告：招标编号/标题/采购方/预算/截止日期/"
+            "资质要求/匹配度评估/可行性建议 + 来源URL标注"
+        ),
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

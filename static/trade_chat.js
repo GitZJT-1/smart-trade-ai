@@ -2,7 +2,7 @@
 let companies = [];
 let currentCompanyId = null;
 let currentView = 'chat';       // chat | customers | tasks | directory | history
-let currentChatContext = 'daily'; // daily | lead | platform | social | linkedin | customs | docs | docgen | osint
+let currentChatContext = 'daily'; // daily | lead | platform | social | linkedin | customs | tender | docs | docgen | osint
 let currentChatName = '今日简报';
 let currentLibraryId = null;
 let currentCustomerId = null;
@@ -579,6 +579,7 @@ const _ALL_SKILLS = [
     ]},{g:"平台与数据",items:[
         {n:"b2b-platform",d:"B2B 平台店铺诊断优化（阿里/MIC/独立站）",t:"平台诊断、阿里国际站、关键词优化、店铺诊断"},
         {n:"b2b-customs-data",d:"海关数据分析找采购商与市场趋势",t:"海关数据、进出口记录、找买家、customs data"},
+        {n:"b2b-tender-info",d:"招标信息查询整理 — 多平台搜索、结构化提取、投标机会评估",t:"招标、投标、查招标、tender、bid"},
     ]},{g:"客户与销售",items:[
         {n:"b2b-customer-intel",d:"单一客户深度画像 — 15 维度全方位情报档案",t:"客户画像、深度画像、送礼建议、回扣、了解客户"},
         {n:"b2b-customer-mgmt",d:"客户档案与分级管理（A/B/C 级、订单跟踪）",t:"客户管理、客户档案、客户分级、CRM"},
@@ -753,6 +754,7 @@ function renderChatViewInto(container, ctx, name) {
         social: '描述社媒需求，如「帮我规划本周 Facebook 内容日历」...',
         linkedin: '描述 LinkedIn 营销需求，如「优化我的 LinkedIn Profile」...',
         customs: '上传海关数据文件后，描述分析需求...',
+        tender: '输入公司/品类名称，如「查 STEEL DYNAMICS 的招标信息」或「找东南亚钢铁设备招标」...',
         docs: '在下方选择文档库后提问，或直接粘贴文件内容...',
         docgen: '描述要生成的文档：如「做一份欧洲客户的报价单PPT」...',
         osint: '输入邮箱/域名/公司名，我来做全面的背景调查...',
@@ -1010,6 +1012,9 @@ async function loadCronStatus(isPoll = false) {
             msgDiv.className = 'message assistant msg-cron-output';
             // 截断 cron 输出中的冗余管理指令
             let cleanOutput = t.output || '';
+            // 去除可能泄露的 prompt/指令内容（后端已做此清理，前端作为兜底）
+            const responseIdx = cleanOutput.search(/\n## Response\n/i);
+            if (responseIdx >= 0) cleanOutput = cleanOutput.substring(responseIdx + 14).trimStart();
             const truncIdx = cleanOutput.search(/管理命令参考|##?\s*管理命令|crontab\s*命令参考/i);
             if (truncIdx >= 0) cleanOutput = cleanOutput.substring(0, truncIdx).trimEnd();
             msgDiv.innerHTML = `<div class="bubble"><div class="bubble-meta"><span class="cron-badge" style="display:inline-block;padding:2px 8px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;margin-bottom:6px;">⏰ ${esc(t.name)} · ${esc(t.time)}</span></div><div class="cron-output-content">${DOMPurify.sanitize(marked.parse(cleanOutput))}</div></div>`;

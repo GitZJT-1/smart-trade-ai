@@ -1,6 +1,6 @@
 # Smart Trade AI
 
-[![Test](https://github.com/chefroger/smart-trade-ai/actions/workflows/test.yml/badge.svg)](https://github.com/chefroger/smart-trade-ai/actions/workflows/test.yml)
+[![Test](https://github.com/GitZJT-1/smart-trade-ai/actions/workflows/test.yml/badge.svg)](https://github.com/GitZJT-1/smart-trade-ai/actions/workflows/test.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
@@ -126,7 +126,7 @@ hermes
 
 2. 在 Hermes 对话框中直接粘贴下面这句话（中文即可）：
 
-> 请分析 https://github.com/chefroger/smart-trade-ai 这个 GitHub 仓库，并帮我安装
+> 请分析 https://github.com/GitZJT-1/smart-trade-ai 这个 GitHub 仓库，并帮我安装
 
 3. Hermes 会自动：访问仓库 README → 识别安装步骤 → `git clone` → `pip install` → `install-trade-skills` → 初始化数据库
 4. 安装完成后，**新开一个 PowerShell**（让 PATH 生效），启动 Trade：
@@ -164,7 +164,7 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 
 ### 想固定版本？从 Release 装
 
-访问 [Releases](https://github.com/chefroger/smart-trade-ai/releases) 下载最新版，或指定版本：
+访问 [Releases](https://github.com/GitZJT-1/smart-trade-ai/releases) 下载最新版，或指定版本：
 
 ```bash
 git clone --branch v0.4.4 https://github.com/chefroger/smart-trade-ai.git ~/.trade/smart-trade-ai
@@ -218,7 +218,7 @@ irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/ins
 hermes setup
 
 # 3. 安装 Smart Trade AI
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
+git clone --branch main https://github.com/GitZJT-1/smart-trade-ai.git $env:LOCALAPPDATA\trade\foreign-trade-assistant
 cd $env:LOCALAPPDATA\trade\foreign-trade-assistant; pip install -e "."; install-trade-skills
 
 python server.py
@@ -304,7 +304,7 @@ trade/                     B2B 业务层
 ├── skill_registry.py      35 个 skill 注册表（纯数据）
 ├── bootstrap.py            启动引导（Hermes 版本检查、env 加载、Skills 同步）
 ├── app.py                  FastAPI app factory
-└── ... + 34 个业务模块
+└── ... + 35 个业务模块
 
 skills/                    35 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
@@ -340,7 +340,7 @@ ruff check trade/ server.py  # 代码检查
 最快的方式是让 AI 帮你更新。打开终端，启动 Hermes，在对话框里输入：
 
 ```
-帮我更新trade，并重启trade，地址是https://github.com/chefroger/smart-trade-ai
+帮我更新trade，并重启trade，地址是https://github.com/GitZJT-1/smart-trade-ai
 ```
 
 Hermes 会自动执行 `git pull` → `pip install` → `install-trade-skills` → 数据库检查 → 重启 Trade。遇到报错它会自行排查重试，比手动操作更省心。

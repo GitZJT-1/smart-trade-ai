@@ -66,6 +66,9 @@
             <div class="nav-item" data-view="chat" data-chat-context="docgen" onclick="navToView('chat','docgen','文档生成')">
                 <span class="nav-icon">📄</span><span class="nav-label">文档生成</span>
             </div>
+            <div class="nav-item" data-view="chat" data-chat-context="bilingual" onclick="navToView('chat','bilingual','发货文件')">
+                <span class="nav-icon">📦</span><span class="nav-label">发货文件</span>
+            </div>
         </div>
 
         <div class="nav-section">
@@ -90,7 +93,7 @@
     <div class="sidebar-footer">
         <button id="system-update-btn" onclick="doTradeUpdate(event)" title="一键更新系统（git pull + skills + db）" hidden>⬆️ 系统更新</button>
         <button id="system-restart-btn" onclick="doRestartTrade(event)" title="重启 Trade 服务" hidden>🔄 重启</button>
-        <button id="skills-help-btn" onclick="showSkillsHelp()" title="查看所有 35 个技能和使用示例">📖 技能帮助</button>
+        <button id="skills-help-btn" onclick="showSkillsHelp()" title="查看所有 36 个技能和使用示例">📖 技能帮助</button>
         <button id="skills-update-btn" onclick="updateSkills(event)" title="从 GitHub 更新 B2B skills 到最新版本" hidden>🔄 Skills</button>
         <button id="upgrade-help-btn" onclick="showUpgradeHelp()" title="如何升级 Trade 系统">⬆️ 升级说明</button>
     </div>

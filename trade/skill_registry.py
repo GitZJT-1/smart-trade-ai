@@ -1237,6 +1237,28 @@ STOP RULE（防止无效搜索）:
         ),
         "augment_prompt": "",
     },
+    {
+        "name": "b2b-bilingual-doc-workflow",
+        "triggers": [
+            # Chinese
+            "发货文件", "发票", "箱单", "报关单", "拍品清单", "询价表",
+            "俄语合同", "规格书", "俄语翻译", "备件.xls", "图纸生成询价",
+            "俄英双语", "双语合同", "发货单据",
+            # English
+            "invoice", "packing list", "customs declaration",
+            "specification", "RFQ", "quotation",
+            # Fragments / Russian
+            "Список лотов", "Спецификация", "生成发票", "生成箱单",
+            "生成报关单", "备件询价",
+        ],
+        "aliases": [],
+        "input_fmt": "方式A：合同/规格书 PDF 路径 + 发货文件模板目录；方式B：拍品清单 XLS + 图纸 ZIP",
+        "output_fmt": (
+            "方式A：发票 docx + 箱单 docx + 报关单 xls（格式与模板一致，"
+            "信息来自合同）+ 三单校验报告；方式B：询价表 xls（俄语原品名+中文翻译+单重）"
+        ),
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -284,7 +284,7 @@ def update_trade() -> dict:
         trade_dir.parent.mkdir(parents=True, exist_ok=True)
         try:
             clone_result = subprocess.run(
-                ["git", "clone", "https://github.com/chefroger/smart-trade-ai.git",
+                ["git", "clone", "https://github.com/GitZJT-1/smart-trade-ai.git",
                  str(trade_dir)],
                 capture_output=True, text=True, timeout=300,
             )

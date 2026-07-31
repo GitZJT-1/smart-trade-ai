@@ -275,9 +275,9 @@ def update_skills() -> None:
         )
         sys.exit(1)
 
-    # GitHub raw 文件 URL 前缀
+    # GitHub raw 文件 URL 前缀（用户仓库 GitZJT-1/smart-trade-ai）
     RAW_BASE = (
-        "https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/skills"
+        "https://raw.githubusercontent.com/GitZJT-1/smart-trade-ai/main/skills"
     )
 
     updated = 0

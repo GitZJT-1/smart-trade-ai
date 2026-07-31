@@ -453,7 +453,7 @@ def create_app() -> FastAPI:
                 import urllib.request as _ur
                 try:
                     _req = _ur.Request(
-                        "https://api.github.com/repos/chefroger/smart-trade-ai/releases/latest",
+                        "https://api.github.com/repos/GitZJT-1/smart-trade-ai/releases/latest",
                         headers={"Accept": "application/vnd.github+json", "User-Agent": "Trade-Status/1.0"},
                     )
                     with _ur.urlopen(_req, timeout=5) as _resp:

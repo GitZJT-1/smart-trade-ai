@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch: # 手动触发：发布/部署前全量验证
 
 jobs:
   lint:
@@ -21,8 +22,36 @@ jobs:
           echo "✓ All files compile successfully"
       - run: ruff check trade/ server.py
 
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # 全量测试铁律（2026-07-31 用户定）：只有代码/配置/依赖/测试本体变更才跑全量。
+      # skill 文档（skills/）、README、docs/ 等非代码改动跳过全量测试矩阵。
+      - name: Detect code changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'trade/**'
+              - 'server.py'
+              - 'tradewin.py'
+              - 'pyproject.toml'
+              - 'requirements.txt'
+              - 'tests/**'
+              - '.github/workflows/test.yml'
+
+      - name: Skip notice (no code changes)
+        if: steps.filter.outputs.code == 'false' && github.event_name != 'workflow_dispatch'
+        run: echo "✓ 无代码变更（仅 skill/文档），跳过全量测试矩阵"
+
   test:
-    needs: lint
+    needs: [lint, detect]
+    if: needs.detect.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:

@@ -575,7 +575,7 @@ const _ALL_SKILLS = [
     ]},{g:"文档管理",items:[
         {n:"b2b-document",d:"本地文档分析与提取（PDF/Word/Excel 等）",t:"分析文档、读报价、看合同、analyze document"},
         {n:"b2b-doc-generation",d:"生成报价/合同/提案/PPT（DOCX/XLSX/PPTX）",t:"生成报价单、生成合同、做 PPT、generate doc"},
-        {n:"b2b-bilingual-doc-workflow",d:"俄/英双语发货文件 — 合同PDF→发票/箱单/报关单，拍品清单+图纸→询价表",t:"发货文件、生成发票、俄语合同、拍品清单、询价表、invoice、packing list"},
+        {n:"b2b-bilingual-doc-workflow",d:"俄/英双语文件处理 — 合同PDF→发票/箱单/报关单，拍品清单+图纸→询价表",t:"文件处理、发货文件、生成发票、俄语合同、拍品清单、询价表、invoice、packing list"},
         {n:"b2b-data-directory",d:"数据目录结构管理与初始化",t:"数据目录、数据结构、我的数据存在哪"},
     ]},{g:"平台与数据",items:[
         {n:"b2b-platform",d:"B2B 平台店铺诊断优化（阿里/MIC/独立站）",t:"平台诊断、阿里国际站、关键词优化、店铺诊断"},
@@ -758,7 +758,7 @@ function renderChatViewInto(container, ctx, name) {
         tender: '输入公司/品类名称，如「查 STEEL DYNAMICS 的招标信息」或「找东南亚钢铁设备招标」...',
         docs: '在下方选择文档库后提问，或直接粘贴文件内容...',
         docgen: '描述要生成的文档：如「做一份欧洲客户的报价单PPT」...',
-        bilingual: '上传合同/规格书 PDF 生成发货文件（发票/箱单/报关单），或上传拍品清单+图纸生成询价表...',
+        bilingual: '上传合同/规格书 PDF 生成发货单据（发票/箱单/报关单），或上传拍品清单+图纸生成询价表...',
         osint: '输入邮箱/域名/公司名，我来做全面的背景调查...',
     };
 

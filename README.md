@@ -92,7 +92,7 @@ Trade 的搜索和客户尽职调查功能依赖 Tavily 的 AI 搜索引擎。�
 手动安装 Trade 涉及 `git clone` + `pip install` + `install-trade-skills` 三个步骤，网络波动可能导致某一步失败。如果你已经成功安装了 **Hermes Agent 并配置好了 LLM**，但 Trade 安装遇到困难，可以直接把 Trade 的仓库地址告诉 Hermes，让它帮你完成安装：
 
 > 在 Hermes 对话中直接说：
-> 「帮我安装 Trade，仓库地址是 https://github.com/chefroger/smart-trade-ai.git」
+> 「帮我安装 Trade，仓库地址是 https://github.com/GitZJT-1/smart-trade-ai.git」
 
 Hermes 会自动完成 clone、安装依赖、注册 skills 等全部步骤，成功率远高于手动操作。
 
@@ -150,14 +150,14 @@ trade
 ### 方式 2：一键脚本（macOS / Linux）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/GitZJT-1/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 35 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 36 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
-> curl -fsSLO https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh
+> curl -fsSLO https://raw.githubusercontent.com/GitZJT-1/smart-trade-ai/main/scripts/install.sh
 > less install.sh       # 审查后
 > bash install.sh
 > ```
@@ -167,7 +167,7 @@ curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scrip
 访问 [Releases](https://github.com/GitZJT-1/smart-trade-ai/releases) 下载最新版，或指定版本：
 
 ```bash
-git clone --branch v0.4.4 https://github.com/chefroger/smart-trade-ai.git ~/.trade/smart-trade-ai
+git clone --branch v0.4.4 https://github.com/GitZJT-1/smart-trade-ai.git ~/.trade/smart-trade-ai
 cd ~/.trade/smart-trade-ai && pip install -e ".[docs]"
 install-trade-skills
 python server.py
@@ -186,7 +186,7 @@ cd ~/.hermes/hermes-agent && pip install -e "."
 hermes setup      # 按提示选择 provider、填入 API Key
 
 # 3. 安装 Smart Trade AI
-git clone --branch main https://github.com/chefroger/smart-trade-ai.git ~/.trade/foreign-trade-assistant
+git clone --branch main https://github.com/GitZJT-1/smart-trade-ai.git ~/.trade/foreign-trade-assistant
 cd ~/.trade/foreign-trade-assistant && pip install -e ".[docs]"
 
 # 4. 安装 skills 并启动
@@ -229,7 +229,7 @@ python server.py
 
 ---
 
-## 35 项专业能力
+## 36 项专业能力
 
 | 场景 | 能力 |
 |------|------|
@@ -250,6 +250,7 @@ python server.py
 | 邮箱情报 | 120+ 平台邮箱注册检测，识别企业 vs 个人邮箱 |
 | 文档分析 | 读取本地 PDF/Word/Excel/PPT，AI 自动解析 |
 | 商务文档生成 | 一键生成报价单、PI、合同（DOCX/XLSX/PPTX）+ 可下载单证模板 |
+| 文件处理 | 俄/英双语合同/规格书 → 发票/箱单/报关单（格式对齐模板、三单一致性校验），拍品清单+图纸 → 询价表 |
 | 市场分析 | 目标国认证要求/关税政策/关键词武器库/3 秒 Hook 等系统化市场进入策略 |
 | 数据目录 | 结构化知识库管理：产品/客户/报价/合同/认证/物流 |
 | 每日简报 | 实时汇率+大宗商品+市场新闻+客户跟进提醒 |
@@ -301,12 +302,12 @@ trade/                     B2B 业务层
 ├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
 ├── skill_router.py        Skill 自动匹配引擎
-├── skill_registry.py      35 个 skill 注册表（纯数据）
+├── skill_registry.py      36 个 skill 注册表（纯数据）
 ├── bootstrap.py            启动引导（Hermes 版本检查、env 加载、Skills 同步）
 ├── app.py                  FastAPI app factory
-└── ... + 35 个业务模块
+└── ... + 36 个业务模块
 
-skills/                    35 个 B2B skills（Markdown 驱动）
+skills/                    36 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
 server.py                  FastAPI 入口
 ```

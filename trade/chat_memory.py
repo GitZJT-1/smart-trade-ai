@@ -226,7 +226,7 @@ def save_with_context(
     *,
     library_name: str = "",
     customer_name: str = "",
-    retain_to_memory: bool = True,
+    retain_to_memory: bool = False,  # 默认关闭 Hermes 记忆同步（2026-07-31 用户定：SQLite 会话库已有完整记录，Q/A 日志堆积会撑爆 MEMORY.md 并破坏 § 分隔格式）
     context: str = "",
 ) -> dict:
     """保存一条对话记录到 SQLite，并可选择同步到 Hindsight 长期记忆。

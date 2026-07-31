@@ -327,6 +327,9 @@ def retain_to_hermes_memory(
         "",
     ]
     entry = "\n".join(entry_lines)
+    # 2026-07-31 用户定：Q/A 摘要必须按 Hermes 记忆的 § 分隔规范格式化为合法条目。
+    # 内容里若混入裸 § 会破坏文件结构，统一替换为 · 防御。
+    entry = entry.replace("§", "·").strip("\n")
 
     try:
         # 跨平台文件锁：fcntl.flock (Unix) / msvcrt.locking (Windows)
@@ -374,13 +377,14 @@ def retain_to_hermes_memory(
             if MEMORY_FILE.exists():
                 existing = MEMORY_FILE.read_text(encoding="utf-8")
             SECTION = "## Foreign Trade Assistant — B2B Trade Memory\n"
-            # 如果文件中还没有 B2B 记忆段落，则在文件开头创建
+            # 2026-07-31 用户定：条目之间用 § 分隔（Hermes 记忆规范），
+            # 新条目插到 SECTION 之后（最新在最前），与相邻条目以 § 行隔开。
             if SECTION not in existing:
-                content_str = SECTION + entry + "\n\n" + existing if existing else SECTION + entry
+                content_str = SECTION + entry + "\n§\n" + existing if existing else SECTION + entry + "\n"
             else:
                 # 如果已有段落，将新条目插入到段落标题之后（最新在最前）
                 idx_s = existing.find(SECTION) + len(SECTION)
-                content_str = existing[:idx_s] + entry + "\n\n" + existing[idx_s:]
+                content_str = existing[:idx_s] + entry + "\n§\n" + existing[idx_s:]
             MEMORY_FILE.write_text(content_str, encoding="utf-8")
         finally:
             # 释放文件锁，确保即使写入失败也会解锁

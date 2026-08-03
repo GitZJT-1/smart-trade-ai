@@ -149,12 +149,12 @@ injection_prompt: |
 
 | 项 | 状态 |
 |----|------|
-| 34 个 skill 目录 | ✅ |
-| 34 个 `SKILL.md` frontmatter 完整（name/description/triggers/category/version/author） | ✅ |
+| 37 个 skill 目录 | ✅ |
+| 37 个 `SKILL.md` frontmatter 完整（name/description/triggers/category/version/author） | ✅ |
 | 22 个含 `injection_prompt` | ✅ |
 | 12 个 body 直接是文档（无 injection_prompt） | ✅ |
-| 34 个含 `when_to_use`（Anthropic 推荐） | 🔄 待补 |
-| 34 个含 `scripts/` + `references/` + `assets/` 骨架目录 | 🔄 待补 |
+| 37 个含 `when_to_use`（Anthropic 推荐） | 🔄 待补 |
+| 37 个含 `scripts/` + `references/` + `assets/` 骨架目录 | 🔄 待补 |
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""给所有 34 个 skill 加 scripts/ references/ assets/ examples/ 骨架目录。
+"""给所有 37 个 skill 加 scripts/ references/ assets/ examples/ 骨架目录。
 每个骨架含 README.md（约定说明）+ .gitkeep（保留空目录）。
 """
 from pathlib import Path
@@ -71,7 +71,7 @@ def main():
             (sub_path / ".gitkeep").touch()
             created += 1
 
-    print(f"✅ 创建了 {created} 个骨架项（{len(SKELETON_DIRS)} 目录 × 34 skills = {34 * len(SKELETON_DIRS)}，部分已存在会跳过）")
+    print(f"✅ 创建了 {created} 个骨架项（{len(SKELETON_DIRS)} 目录 × 37 skills = {37 * len(SKELETON_DIRS)}，部分已存在会跳过）")
 
 
 if __name__ == "__main__":

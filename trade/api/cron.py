@@ -90,7 +90,12 @@ def get_today_cron():
 
 
 def _load_active_jobs():
-    """从 jobs.json 读取已激活的定时任务，提取 name 和 time。"""
+    """从 jobs.json 读取已激活的定时任务，提取 name 和 time。
+
+    自动过滤门控脚本（名称含"门控"或脚本以 _gate.py 结尾），
+    这些脚本在后台静默执行，不在 UI 中显示。
+    同时为被过滤的门控任务合成一个人类可读的"早安简报"条目。
+    """
     if not _JOBS_FILE.is_file():
         return []
     try:
@@ -100,13 +105,19 @@ def _load_active_jobs():
         return []
 
     tasks = []
+    has_gate_job = False
+
     job_list = data.get("jobs", [])
     if isinstance(job_list, list):
         for job in job_list:
             if not isinstance(job, dict):
                 continue
             name = job.get("name", job.get("task_name", ""))
-            # 从 cron 或调度信息中提取人类可读的时间
+            script = job.get("script", "") or ""
+            # 过滤门控脚本 — 静默执行，不在 UI 中显示
+            if script.endswith("_gate.py") or "门控" in name:
+                has_gate_job = True
+                continue
             schedule_display = _extract_time_display(job)
             if name:
                 tasks.append({"name": name, "time": schedule_display, "job_id": job.get("id", "")})
@@ -115,9 +126,19 @@ def _load_active_jobs():
             if not isinstance(job, dict):
                 continue
             name = job.get("task_name", job.get("name", ""))
+            script = job.get("script", "") or ""
+            if script.endswith("_gate.py") or "门控" in name:
+                has_gate_job = True
+                continue
             schedule_display = _extract_time_display(job)
             if name:
                 tasks.append({"name": name, "time": schedule_display, "job_id": job_id})
+
+    # 如果检测到门控脚本自动过滤了，但没有"早安简报"条目，
+    # 合成一个以便 UI 呈现（门控脚本产出的简报内容仍会被 _find_cron_output 匹配）
+    if has_gate_job and not any(t["name"] == "早安简报" for t in tasks):
+        tasks.append({"name": "早安简报", "time": "09:00"})
+
     return tasks
 
 
@@ -329,6 +350,9 @@ def _find_cron_output(task_name: str, today: str) -> str | None:
         for output_file in sorted(job_dir.glob("*.md"), reverse=True):
             try:
                 content = output_file.read_text(encoding="utf-8")
+                # 跳过门控脚本的输出 — 门控在后台静默执行，不在UI展示
+                if "门控" in content.split("\n")[0] if content else "":
+                    continue
                 if task_name in content and today in output_file.stem[:10]:
                     return _strip_cron_output_prompt(content)
             except Exception:

@@ -8,6 +8,42 @@ when_to_use:
   - "用户提到「合规」「翻译二审」「ICC 术语」"
   - "不要用于：关税 / HS Code（用 b2b-customs-data）"
 triggers:
+  - 文化禁忌
+  - 忌讳
+  - 这个客户那里忌讳什么
+  - 颜色禁忌
+  - 数字禁忌
+  - 手势禁忌
+  - 送礼禁忌
+  - 送礼注意
+  - 缩写
+  - 全称
+  - ETA
+  - ETD
+  - LC
+  - BL
+  - DP
+  - DA
+  - 外贸术语
+  - 贸易术语缩写
+  - Incoterms
+  - ICC
+  - 贸易术语
+  - FOB
+  - CIF
+  - EXW
+  - DDP
+  - DAP
+  - FCA
+  - 翻译二审
+  - 母语审阅
+  - 小语种翻译
+  - 投标
+  - 招标
+  - 标书
+  - 电商上架
+  - Amazon上架
+  - 合规检查
 category: compliance
 version: 1.0.0
 author: Foreign Trade Assistant

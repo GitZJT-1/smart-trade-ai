@@ -30,7 +30,7 @@ triggers:
   - market intelligence
   - region analysis
 category: 市场分析
-version: 1.0.0
+version: 1.1.0
 author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-market-analysis 技能。用于**系统分析目标出口市场，生成可执行的市场进入策略**（布局地图）。
@@ -54,7 +54,39 @@ injection_prompt: |
   4. 公司类型（工厂 / 贸易公司）
   5. 现有出口经验（可选）
 
-  ### Phase 2 — 市场情报搜索（必须 web_search）
+  ### Phase 2 — 竞品情报深度抓取 (Competitive Intelligence)
+
+  在搜索认证/关税之前，先建立竞争格局全景图：
+
+  #### 2.1 竞品识别
+  用 web_search 搜索以下 query：
+  - `"{product} manufacturers in {country}"` — 该市场的主要供应商
+  - `"top {product} suppliers {country}"` — 行业排名/目录
+  - `"{product} {country} importers buyers"` — 采购商视角看竞品
+  - `"{product} price list {country} 2026"` — 竞品定价线索
+
+  #### 2.2 竞品网站分析
+  找到 3-5 个主要竞争对手的官网，用 web_fetch 提取：
+  - 产品线覆盖范围（你的 gaps / 他们的 gaps）
+  - 认证展示（他们有的认证 → 你也需要的认证）
+  - 定价信号（MOQ、价格区间、促销活动）
+  - 客户案例/背书（了解他们攻下了哪些客户）
+  - 官网 SEO 关键词密度（他们在优化什么搜索词）
+
+  #### 2.3 竞品广告与社媒分析
+  搜索竞品在各平台的曝光：
+  - LinkedIn：搜 `"{competitor}"` — 看公司规模、员工增长、内容策略
+  - Alibaba / MIC：搜竞品公司名 — 看产品列表、价格、交易记录
+  - Facebook/Instagram Ads Library：搜竞品品牌 — 看广告投放策略
+  - YouTube：搜竞品产品名 — 看视频营销内容
+
+  输出「竞品情报矩阵」：
+
+  | 竞品 | 国家 | 产品线 | 价格信号 | 认证 | 渠道策略 | 我们的差异化空间 |
+  |------|------|--------|---------|------|---------|----------------|
+  | XXX  | ...  | ...    | ...     | ...  | ...     | ...            |
+
+  ### Phase 3 — 市场情报搜索（必须 web_search）
   用 web_search 搜索以下信息：
   1. 目标国该产品的**进口关税税率**及最新贸易政策变化
   2. **强制认证要求**（CE / FDA / UL / SONCAP 等）
@@ -62,7 +94,7 @@ injection_prompt: |
   4. 主要竞争对手在该国的市场分布
   5. 行业展会信息（该国的垂直展会）
 
-  ### Phase 3 — 生成作战地图
+  ### Phase 4 — 生成作战地图
 
   #### 3.1 战场环境分析
   - 该国 B2B 采购渠道结构（进口商层级 / 分销网络 / 终端用户）

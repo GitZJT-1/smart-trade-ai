@@ -153,7 +153,7 @@ trade
 curl -fsSL https://raw.githubusercontent.com/GitZJT-1/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 36 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 39 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
@@ -302,12 +302,12 @@ trade/                     B2B 业务层
 ├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
 ├── skill_router.py        Skill 自动匹配引擎
-├── skill_registry.py      36 个 skill 注册表（纯数据）
+├── skill_registry.py      39 个 skill 注册表（纯数据）
 ├── bootstrap.py            启动引导（Hermes 版本检查、env 加载、Skills 同步）
 ├── app.py                  FastAPI app factory
-└── ... + 36 个业务模块
+└── ... + 39 个业务模块
 
-skills/                    36 个 B2B skills（Markdown 驱动）
+skills/                    39 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
 server.py                  FastAPI 入口
 ```

@@ -226,6 +226,9 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Product Description | FAB method product selling points & sales kits (catalog/website/email embedded) |
 | Decision Coach | Six Thinking Hats methodology for trade decisions (supplier selection, exhibition, payment terms) |
 | Onboarding Wizard | 2-step guided setup: create company → paste customer URL → auto OSINT + cold email |
+| Inquiry Meeting | Weekly inquiry review: per-rep analysis, key inquiry deep-dive, follow-up action plan |
+| Sales Playbook | Turn top sales experience into SOPs / scripts / onboarding path / pitfall checklist |
+| Business Proposal | 3-tier proposal comparison + ROI analysis + implementation roadmap for clients |
 | Skill Generator | Describe what you need, auto-generates a new B2B skill + registers it |
 | Auto Customer Dev | One-click end-to-end pipeline: search → vet → score → email → save → log |
 | ~~Auto SMTP Email~~ | ~~Preview-then-send via SMTP — disabled, AI does not send emails on behalf of users~~ |

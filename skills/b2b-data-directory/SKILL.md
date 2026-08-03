@@ -6,6 +6,24 @@ when_to_use:
   - "用户提到「数据目录」「知识库管理」"
   - "不要用于：实时数据分析（用 b2b-market-analysis）"
 triggers:
+  - 数据目录
+  - 公司档案
+  - 产品目录
+  - 客户目录
+  - 初始化
+  - 数据结构
+  - trade目录
+  - 数据初始化
+  - data directory
+  - company profile
+  - product catalog
+  - customer directory
+  - initialization
+  - data structure
+  - 我的公司
+  - 公司信息
+  - 产品列表
+  - 客户数据存在哪
 category: 系统工具
 version: 1.0.0
 author: Foreign Trade Assistant

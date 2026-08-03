@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""给所有 34 个 SKILL.md 加 when_to_use 字段。
+"""给所有 37 个 SKILL.md 加 when_to_use 字段。
 
 策略：
 - 从 description 提炼"何时用"

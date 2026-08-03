@@ -106,7 +106,7 @@ Hermes will handle cloning, installing dependencies, and registering skills auto
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-The script handles: Python check → Hermes Agent → Smart Trade AI → 34 skills → database init.
+The script handles: Python check → Hermes Agent → Smart Trade AI → 37 skills → database init.
 
 > **Prefer to review before running?**
 > ```bash
@@ -190,7 +190,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 
 ---
 
-## 34 Professional Skills
+## 37 Professional Skills
 
 | Skill | Description |
 |------|------|
@@ -262,10 +262,10 @@ trade/                     B2B business layer
 ├── api/                   FastAPI routes (10 business domains)
 ├── osint/                 Client due diligence module (6-layer verification)
 ├── skill_router.py        Skill auto-matching engine
-├── skill_registry.py      34 skill registry (pure data)
+├── skill_registry.py      37 skill registry (pure data)
 └── ... + 20 business modules
 
-skills/                    34 B2B skills (Markdown-driven)
+skills/                    37 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

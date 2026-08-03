@@ -587,6 +587,9 @@ const _ALL_SKILLS = [
         {n:"b2b-exhibition",d:"展会全流程管理 — 展前邀约、展中跟进、展后转化",t:"展会、参展、广交会、trade show"},
         {n:"b2b-product-description",d:"产品描述生成器 — FAB 方法生成产品卖点与销售资料",t:"产品描述、产品文案、Sales Kit、product description"},
         {n:"b2b-trade-ops",d:"外贸履约与售后沟通（催款/索赔/展会/验厂/物流/售后）",t:"催款、索赔、展会、验厂、节日问候、物流"},
+        {n:"b2b-inquiry-meeting",d:"询盘分析会主持 — 周度复盘/逐人点评/重点询盘/跟进行动表",t:"询盘分析会、询盘复盘、周会、业务员复盘"},
+        {n:"b2b-sales-playbook",d:"销冠经验封装器 — SOP/话术库/新人路线/避坑清单/钩子武器库",t:"销冠经验、销售SOP、话术库、新人培训"},
+        {n:"b2b-guarantee-proposal",d:"商业提案生成器 — 三档方案/ROI分析/实施路线图",t:"商业提案、战略建议书、ROI分析、方案建议书"},
     ]},{g:"合规与支持",items:[
         {n:"b2b-trade-compliance",d:"外贸合规检查 — 文化禁忌/缩写/Incoterms/翻译二审/投标",t:"文化禁忌、Incoterms、翻译二审、Amazon上架检查"},
         {n:"b2b-onboarding",d:"新公司全套部署方案（公司介绍/产品/营销/竞品分析）",t:"新公司、部署、全套方案、怎么开始、首次设置"},

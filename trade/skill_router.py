@@ -16,7 +16,7 @@ import re
 import threading
 
 # ─────────────────────────────────────────────────────────────────────────────
-# mtime 缓存：OrderedDict LRU（上限 128，远大于 34 个 skill）
+# mtime 缓存：OrderedDict LRU（上限 128，远大于 37 个 skill）
 # ─────────────────────────────────────────────────────────────────────────────
 from collections import OrderedDict
 from pathlib import Path

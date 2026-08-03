@@ -1,49 +1,14 @@
 ---
 name: b2b-trade-compliance
-description: 外贸合规 & 规范校验 — 文化禁忌、缩写解释、ICC术语、翻译二审、投标招标、跨境电商上架
+description: 外贸合规 & 规范校验 — 文化禁忌、缩写解释、ICC术语、翻译二审、投标招标、供应商注册、跨境电商上架
 when_to_use:
   - "文化禁忌检查 / 缩写规范 / ICC 术语"
   - "翻译二审 / 投标合规"
+  - "供应商注册 / 客户门户入驻 / 填写注册表"
   - "电商上架合规检查"
   - "用户提到「合规」「翻译二审」「ICC 术语」"
   - "不要用于：关税 / HS Code（用 b2b-customs-data）"
 triggers:
-  - 文化禁忌
-  - 忌讳
-  - 这个客户那里忌讳什么
-  - 颜色禁忌
-  - 数字禁忌
-  - 手势禁忌
-  - 送礼禁忌
-  - 送礼注意
-  - 缩写
-  - 全称
-  - ETA
-  - ETD
-  - LC
-  - BL
-  - DP
-  - DA
-  - 外贸术语
-  - 贸易术语缩写
-  - Incoterms
-  - ICC
-  - 贸易术语
-  - FOB
-  - CIF
-  - EXW
-  - DDP
-  - DAP
-  - FCA
-  - 翻译二审
-  - 母语审阅
-  - 小语种翻译
-  - 投标
-  - 招标
-  - 标书
-  - 电商上架
-  - Amazon上架
-  - 合规检查
 category: compliance
 version: 1.0.0
 author: Foreign Trade Assistant
@@ -57,6 +22,7 @@ injection_prompt: |
   - 翻译 / 小语种 / 二审 / 母语者 / 阿拉伯语 / 西班牙语 → Phase 4
   - 投标 / 招标 / 标书 / tender / bid → Phase 5
   - 上架 / Amazon / 违禁词 / 关键词 / 属性筛选 → Phase 6
+  - 供应商注册 / 门户入驻 / supplier registration / Oracle/Ariba 注册 → Phase 7
 
   ## 核心规则
   1. 本 skill 主要用于**检查已有内容**而非生成新内容
@@ -307,6 +273,49 @@ We expect the BL (Bill of Lading) by Friday. The ETA (Estimated Time of Arrival)
 
 ---
 
+## Phase 7: 供应商注册 / 客户门户入驻 (Supplier Registration)
+
+**铁律**：先核实注册渠道再动手；必填字段缺失时绝不编造，列清单请用户补齐。
+
+### 注册渠道核实（第一步，最易踩坑）
+
+用户口中的平台名可能不准确（如「Oracle 注册」实际是官网网页表单）。动手前必须核实：
+
+1. **抓取客户官网 supplier / supply-chain / contact 页面**，确认注册入口类型：
+   - 官网网页表单（如 Primetals：`/en/contact-us/new-supplier`）→ 提取全部字段（含 `*` 必填标记）
+   - 第三方门户（Oracle / Ariba / 自建 eProc 平台）→ 通常需要客户先发**邀请邮件**（含注册链接/验证码），无邀请则无法自助注册
+2. **查邮箱**：用 IMAP 脚本搜索「客户名 / supplier registration / oracle / portal」等关键词，确认是否已收到邀请邮件（企业邮箱 IMAP 可查，见 references 中的脚本要点）
+3. **查客户台账**：确认是否已有该客户的注册进度记录（避免重复注册或覆盖已有进度）
+
+### 填表规范
+
+- 用草稿/已有资料逐项对照表单字段，生成**字段映射清单**（字段名 → 填写值 → 状态 ✅/🔴）
+- 🔴 必填缺失项（营业额+币种 / 公司邮箱 / 电话 / DUNS / 认证编号等）**列清单请用户提供，禁止编造或占位**
+- 附件要求注意：大小限制（如 ≤3MB）、格式（PDF/JPEG/PNG）、是否需勾选隐私声明
+- 语言：全部英文填写（除非表单明确要求其他语言）
+- Request/补充说明字段：写产品线 + 制造能力 + 贸易术语（带 Incoterms 2020）+ 附件清单
+
+### 跟进节奏
+
+| 时间点 | 动作 |
+|--------|------|
+| 提交当天 | 记录提交日期 + 保存截图 |
+| 第 7 个工作日 | 无回复 → 发第一封跟进邮件（模板见 templates/） |
+| 第 14 个工作日 | 仍无回复 → LinkedIn 联系采购/供应链团队 |
+| 收到门户邀请邮件 | 按邮件链接完成门户注册（Oracle/Ariba 流程） |
+
+### 常见失误
+
+- **不核实渠道**：用户说「Oracle 注册」就直接按 Oracle 流程做，实际官网是网页表单 → 全盘白做
+- **编造必填项**：营业额/DUNS/邮箱等缺失时自己填 → 客户评估直接淘汰
+- **漏查邀请邮件**：门户类注册没有邀请链接根本无法提交，先查邮箱
+- **不更新台账**：注册进度应同步到客户台账，团队其他人才能接力
+
+📎 实战案例：`references/primetals-supplier-registration.md`（Primetals 注册核查全过程）
+📎 跟进邮件模板：`templates/supplier-registration-followup-email.md`
+
+---
+
 ## Quality Gate Checklist — 合规检查 30 秒自检
 
 ### P1 — 文化禁忌
@@ -338,3 +347,10 @@ We expect the BL (Bill of Lading) by Friday. The ETA (Estimated Time of Arrival)
 - [ ] 是否检查了目标市场违禁词（疗效、效果承诺、竞品对比）？
 - [ ] 是否标注了所需的认证/合规标志？
 - [ ] 属性筛选是否符合平台要求（尺寸/颜色/材质变体）？
+
+### P7 — 供应商注册
+- [ ] 注册渠道是否已核实（官网表单 vs Oracle/Ariba 门户 vs 邀请邮件）？
+- [ ] 是否已查邮箱确认邀请邮件情况？
+- [ ] 必填字段是否有真实值（无编造/占位）？缺失项是否列清单请用户补齐？
+- [ ] 附件是否满足大小/格式/隐私声明要求？
+- [ ] 提交后是否规划了第 7/14 个工作日跟进？

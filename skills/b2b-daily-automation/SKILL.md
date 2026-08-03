@@ -28,11 +28,12 @@ author: Foreign Trade Assistant
 
 ### 执行步骤
 
-1. 使用 `web_search` 搜索以下信息（逐项搜索，每项至少 2 次不同关键词）：
-   - 当日美元/欧元/英镑兑人民币汇率（搜索 "USD CNY exchange rate today 2026"）
-   - 当日金价、铜价、铝价、原油价（搜索 "gold price today" / "copper LME price" / "crude oil price today"）
-   - 目标市场新闻（搜索每个目标市场的 top business news today）
-   - 如果用户配置了产品行业（如 "电力金具"），搜索该行业的今日新闻
+1. 使用 `web_search` 搜索以下信息（**必须合并搜索、控制轮次，全程最多 4 次**）：
+   - 汇率合并为 1 次：USD/EUR/GBP→CNY 一次搜索（如 "USD EUR GBP to CNY exchange rate today 2026"）
+   - 大宗商品合并为 1 次：金/铜/铝/原油一次搜索（如 "gold copper aluminum crude oil price today 2026"）
+   - 目标市场新闻合并为 1 次：各目标市场 top business news 尽量一次搜索，必要时追加 1 次
+   - 如果用户配置了产品行业（如 "电力金具"），可并入新闻搜索关键词，不额外开新搜索
+   - **禁止逐项重复搜索**（每条数据一次搜索是 8+ 次轮次的主要来源，实测拖慢全程至 ~180s）
 
 2. 从数据库查询：
    - 昨日对话记录中的客户互动
@@ -464,3 +465,23 @@ After each task execution:
 4. **Ignoring analytics**: Track what's working and optimize timing/content
 5. **Losing personal touch**: Automation handles routine; personal relationships need human contact
 6. **Not following up on generated leads**: If you generate an inquiry response but don't follow up, automation is wasted
+
+## 🔧 Cron 执行诊断（慢 / 卡死 / 重复触发排查）
+
+当定时任务执行过慢、无输出、或状态异常时，按以下路径排查（完整手册含 SQL 与日志 grep 命令见 `references/cron-execution-diagnostics.md`）：
+
+**数据源（HERMES_HOME = `%LOCALAPPDATA%\hermes`）**
+- `cron/executions.db`（SQLite 表 `executions`）— 查同任务全部记录：耗时、状态、是否重复触发
+- `cron/jobs.json` — `last_run_at` / `last_status` / `fire_claim` / `repeat`
+- `logs/agent.log` — 按 session 模式 `cron_{job_id}_{yyyyMMdd_HHmmss}` 过滤，逐条看 `API call #N: latency=Xs` 与 `tool xxx completed (Xs)`
+- `hermes cron status` — Gateway 存活 + ticker heartbeat
+
+**关键判定（2026-08-03 早安简报实测验证）**
+1. **慢的根因**：API latency 大头 = 模型服务端波动（DeepSeek 单次 49.7s/69.6s 正常发生过，占全程 66%），不是本地问题；web_search 次数多会放大总轮次
+2. **僵尸执行**：`status=running` 且 `finished_at` 为空，但 `tasklist` 查不到对应 PID → 进程已死、DB 未回收，需手动修正状态
+3. **重复触发**：同任务多条 `source=direct` 记录 + `fire_claim` 出现 = 手动触发与调度器 claim 叠加 → 已设 schedule 的任务平时不要手动触发
+4. **幽灵任务（任务消失 / 前端不显示）**：executions.db 有 `source=builtin` 执行记录但 jobs.json 里已无该 job_id → 注册表被覆盖丢失。调度器每 tick 重读 jobs.json，丢失后**永不再触发**（死亡而非隐藏）。Trade AI 前端 `/api/cron/jobs` 直接读 jobs.json，所以前端不显示 = 注册表里没有，不是前端 bug。处理：用相同参数重建 + `hermes cron list` 验证。完整案例见 `references/cron-execution-diagnostics.md` 第 8 节
+
+**优化方向**：早安简报把 8 次 web_search 合并为 3-4 次（汇率/大宗/新闻各一次），减少模型多轮决策，总耗时可从 ~180s 显著下降
+
+**⚠️ 铁律：创建/编辑任何 cron 任务后，必须跑一次 `hermes cron list` 验证注册已持久化**（2026-08-03 实测：no_agent 任务重建后曾被后续 jobs.json 写入覆盖丢失，导致邮箱监控静默停摆）

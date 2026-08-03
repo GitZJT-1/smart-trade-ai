@@ -1,6 +1,6 @@
 ---
 name: b2b-tender-info
-description: B2B 线上投标信息查询整理 — 多平台招标信息搜索、结构化整理、投标机会评估
+description: 招标信息查询整理 — 多平台搜索、结构化提取、投标机会评估
 when_to_use:
   - "用户提到「投标」「招标」「tender」「bid」「招标信息」「找招标」"
   - "用户想按行业/国家/品类查找公开招标项目"
@@ -9,29 +9,41 @@ when_to_use:
   - "用户想对比多个招标项目的优劣、预算范围、截止时间"
   - "不要用于：投标文件/标书撰写（那属于文档生成，建议用其他 combo）"
 triggers:
+  - 招标
+  - 投标
   - 招标信息
   - 招标查询
-  - 投标
-  - tender
   - 招标机会
   - 投标机会
   - 公开招标
-  - bidding
   - 采购公告
-  - RFP
-  - RFQ
-  - 招标平台
   - 查招标
   - 找招标
   - 招标监控
   - 招标汇总
   - 招标搜索
-  - tender search
-  - tender info
   - 海外招标
   - 国际招标
+  - 帮我查招标
+  - 有什么招标
+  - 招标项目
+  - 标的
+  - tender
+  - bidding
+  - tender info
+  - tender search
+  - RFP
+  - RFQ
+  - request for proposal
+  - open tender
+  - public tender
+  - procurement
+  - bid opportunity
+  - Tender Information
+  - bid
+  - tender opportunity
 category: 客户开发
-version: 1.0.0
+version: 1.1.0
 author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-tender-info 技能。用于**查询、筛选、整理 B2B 线上招标信息**，帮助外贸业务员发现并评估投标机会。
@@ -202,3 +214,22 @@ injection_prompt: |
   - web_search 结果中如果混入了商业新闻而非招标公告，需人工鉴别排除
   - 预算金额如果以外币标价，换算为 USD 供参考，并列明原始币种
 ---
+
+# B2B 招标信息查询整理
+
+## 概述
+
+通过 web_search 从公开招标平台（dgMarket/UNGM/TED/ADB 等国际平台 + 国别平台）实时搜索、筛选、整理 B2B 招标信息，帮助外贸业务员发现并评估投标机会。所有信息必须标注来源 URL 和发布日期，禁止编造。
+
+## 输入
+
+- 产品/品类名称 + 目标国家/区域（可选）
+- 预算范围 / 招标类型 / 截止时间（可选）
+- 关键词语言（中英文各一套）
+
+## 输出
+
+- 招标信息汇总报告：招标编号/标题/采购方/预算/截止日期/资质要求/匹配度评估/可行性建议
+- 每条含来源 URL + 发布日期 + [确切]/[推断] 标注
+- 投标机会评估（高/中/低匹配度 + 紧迫性 + 可行性提示）
+- 建议行动（优先跟进 / 关注备选 / 设置定期监控）

@@ -21,7 +21,7 @@ triggers:
   - 查公司
   # ... (see skill_registry.py for full list)
 category: 客户开发
-version: 1.0.0
+version: 1.1.0
 author: Foreign Trade Assistant
 ---
 ---|------|---------|
@@ -75,6 +75,46 @@ author: Foreign Trade Assistant
   | buying_cycle_signals | News / LinkedIn 近期动态 | "扩张期（最近招聘）" / "稳定" / "收缩（裁员）" |
 
   缺失字段标为 [未观察到]，不要瞎猜。
+
+  ════════════════════════════════════════
+  Phase 2.5: 公开情报深度挖掘 (Deep Web Intelligence)
+  ════════════════════════════════════════
+  在进入技术验证之前，先用 web_search 和 web_fetch 从第三方来源挖掘情报：
+
+  ### 2.5.1 新闻与媒体报道
+  用 web_search 搜索以下 query（每个至少执行 1 次）：
+  - `"{company name}" news` — 最近新闻报道
+  - `"{company name}" investment funding acquisition` — 融资/并购动态
+  - `"{company name}" expansion new market` — 市场扩张信号
+  - `"{company name}" lawsuit dispute scandal` — 负面信息/法律纠纷
+  - `"{company name}" annual report revenue` — 财报/营收信息
+
+  对每条有价值的新闻链接，用 web_fetch 提取全文，提取：
+  - 公司发展阶段信号（融资轮次/新工厂/裁员/扩张）
+  - 关键人事变动（CEO/采购总监更换 = 关系重建窗口）
+  - 合作伙伴/客户提及
+  - 财务数据（营收规模/增长率）→ 推断采购能力
+
+  ### 2.5.2 招聘信息分析
+  用 web_search 搜索 `"{company name}" hiring careers jobs`：
+  - 大量招聘销售/市场人员 → 业务扩张期，采购需求增加
+  - 招聘质检/合规人员 → 对供应商质量要求提升
+  - 招聘供应链/采购人员 → 可能在优化供应商结构
+  - 冻结招聘/裁员 → 预算紧缩，对价格更敏感
+
+  输出到报告中「采购周期信号」字段。
+
+  ### 2.5.3 社交媒体情报
+  搜索目标公司在社媒上的动态：
+  - LinkedIn Company Page — 员工规模变化、近期动态
+  - Twitter/X — 客户投诉/行业互动
+  - Facebook/Instagram — B2C 品牌如果有，反映市场活跃度
+  - YouTube — 产品演示/工厂参观视频（直接了解产品线和品质）
+
+  ### 2.5.4 行业位置分析
+  - 搜索 `"{industry} market report {company name}"` — 了解该公司在行业中的位置
+  - 搜索 `"top {industry} companies {country}"` — 看该公司是否出现在行业排名中
+  - 搜索 `"{company name} vs"` — 找竞品对比文章
 
   ════════════════════════════════════════
   Phase 3: 深度背调 (Deep Verification)

@@ -1213,6 +1213,52 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "15 维度结构化深度画像报告",
         "augment_prompt": "",
     },
+    # ── b2b-inquiry-meeting: 询盘分析会主持 ──────────────────────
+    {
+        "name": "b2b-inquiry-meeting",
+        "triggers": [
+            "开询盘分析会", "准备询盘复盘", "这周询盘拿出来看一下",
+            "周五开询盘会", "分析业务员询盘跟进", "逐个点评业务员询盘",
+            "复盘客服接待质量", "哪些询盘有问题", "询盘复盘会",
+            "销售周会材料", "每周询盘总结",
+            "inquiry review meeting", "weekly sales review",
+            "sales team meeting",
+        ],
+        "aliases": ["b2b-inquiry-training", "b2b-lead-generation"],
+        "input_fmt": "周期范围（本周/上周/最近N天）+ 询盘数据来源",
+        "output_fmt": "询盘总览 + 逐业务员复盘 + 重点询盘逐条分析 + 主持提问清单 + 下周跟进行动表",
+        "augment_prompt": "",
+    },
+    # ── b2b-sales-playbook: 销冠经验封装器 ──────────────────────
+    {
+        "name": "b2b-sales-playbook",
+        "triggers": [
+            "销冠经验", "销售知识库", "销售SOP", "话术库",
+            "新人培训", "销售技巧", "跟进话术", "谈判话术",
+            "异议处理", "逼单技巧", "客户激活", "谈单流程",
+            "sales playbook", "sales knowledge base", "sales SOP",
+            "objection handling", "sales training",
+        ],
+        "aliases": ["b2b-inquiry-training", "b2b-lead-generation"],
+        "input_fmt": "行业/产品线 + 客户画像 + 具体场景（首回/报价/异议/逼单/激活/售后）",
+        "output_fmt": "六大模块知识体系（能力图谱/SOP/话术库/新人路线/避坑清单/钩子武器库）",
+        "augment_prompt": "",
+    },
+    # ── b2b-guarantee-proposal: 商业提案生成器 ──────────────────
+    {
+        "name": "b2b-guarantee-proposal",
+        "triggers": [
+            "商业提案", "战略建议书", "商业计划书", "投资回报分析",
+            "方案建议书", "客户提案", "保效方案", "ROI分析",
+            "增长方案", "市场进入方案", "品牌升级方案",
+            "business proposal", "strategic proposal",
+            "ROI analysis", "growth plan", "investment proposal",
+        ],
+        "aliases": ["b2b-market-analysis", "b2b-onboarding"],
+        "input_fmt": "客户公司/产品/市场/规模 + 行业白皮书或市场数据 + 预算范围",
+        "output_fmt": "三档方案对比表 + 推荐方案说明书 + ROI 分析 + 实施路线图",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

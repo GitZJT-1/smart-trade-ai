@@ -17,7 +17,7 @@ layout: default
 <div style="text-align:center; padding:2rem 1rem 1rem;">
   <h1 style="font-size:2.4rem; margin-bottom:0.2em;">Smart Trade AI</h1>
   <p style="font-size:1.2rem; color:#58a6ff; margin:0;">外贸业务员的本地 AI 助手</p>
-  <p style="color:#8b949e;">Windows 版安装教程 · 不需要懂技术，跟着步骤走，20 分钟装好</p>
+  <p style="color:#8b949e;">Windows / macOS 安装教程 · 不需要懂技术，跟着步骤走，20 分钟装好</p>
 </div>
 
 <div style="text-align:center; margin:1rem 0;">
@@ -40,7 +40,115 @@ layout: default
 
 ---
 
-## 第一步：确保科学上网已启动
+## macOS 安装
+
+如果你用的是 Mac 电脑，按以下步骤操作。
+
+### 第一步：确保科学上网已启动
+
+这个工具需要从 GitHub 下载代码。在开始之前，**必须先打开你的科学上网工具**（VPN / Clash / V2Ray 等），确保网络通畅。
+
+**验证方法：** 打开浏览器，在地址栏输入 `github.com`，回车。如果页面能正常打开，说明网络没问题，可以继续。
+
+### 第二步：注册 DeepSeek 并获取 API Key
+
+1. 用浏览器打开 **platform.deepseek.com**
+2. 点击「注册」，用手机号注册一个账号
+3. 登录后，点击「**充值**」，**充值 10 元以上**（按用量扣费，10 块钱能用很久）
+4. 在左侧菜单找到「**API Keys**」，点击进入
+5. 点击「**创建 API Key**」，名称填 `trade`，点确定
+6. 页面上会显示一串字符（以 `sk-` 开头）——这就是你的 **DeepSeek API Key**
+7. **立刻复制保存**，关掉后就再也看不到了
+
+### 第三步：注册 Tavily 并获取 API Key（建议）
+
+Tavily 是联网搜索引擎，让 AI 能搜索实时信息。
+
+1. 用浏览器打开 **tavily.com**
+2. 点击「Sign Up」，**用 Gmail 邮箱注册**
+3. 登录后进入 Dashboard，在 API Keys 区域找到你的 Key（以 `tvly-` 开头）
+4. **复制保存**到记事本里
+
+> Tavily 每月有 1000 次免费搜索额度，个人使用足够了。不注册不影响对话功能，但搜索和客户背调质量会受明显影响。
+
+### 第四步：安装 Hermes Agent（AI 引擎）
+
+Hermes Agent 是驱动 AI 的底层引擎，Trade 基于它运行。
+
+打开「终端」（在 Launchpad 或 Spotlight 搜索"终端"），粘贴以下命令：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+```
+
+等待几分钟，看到「安装完成」提示即可。
+
+> 如果安装过程中卡在 "Installing Node.js dependencies (browser tools)"，按 `Ctrl+C` 终止，不影响 Trade 使用。
+
+### 第五步：配置 Hermes（大模型 + 搜索）
+
+在终端输入：
+
+```bash
+hermes setup
+```
+
+出现交互配置界面后：
+1. 用键盘 **上下方向键** 选择「**DeepSeek**」→ 按回车
+2. 选择模型时，选「**deepseek-v4-flash**」→ 按回车
+3. 粘贴你的 **DeepSeek API Key** → 按回车
+4. 搜索服务选「**Tavily**」→ 按回车
+5. 粘贴你的 **Tavily API Key** → 按回车
+
+看到「配置成功」提示就完成了。
+
+### 第六步：验证 Hermes 是否正常
+
+在终端输入：
+
+```bash
+hermes
+```
+
+等它启动后，在对话框里输入 `hello`，按回车。如果 AI 正常回复了，说明大模型配置成功。按 `Ctrl+C` 退出。
+
+### 第七步：让 AI 帮你安装 Trade
+
+重新启动 Hermes（输入 `hermes`），在聊天框里**复制粘贴**下面这句话：
+
+```
+请帮我安装 trade，地址是 https://github.com/chefroger/smart-trade-ai
+```
+
+AI 会自己去 GitHub 查看项目说明，然后自动执行所有安装命令。遇到报错它会自己排查重试，你只需要等它装完。
+
+装完后，关闭终端，重新打开一个，输入：
+
+```bash
+trade
+```
+
+浏览器会自动打开 Trade 界面。如果没有自动打开，手动访问 **http://127.0.0.1:9119/trade**。
+
+### 第八步：设置 Trade 开机自启（可选）
+
+如果希望开机后 Trade 自动运行，在终端执行：
+
+```bash
+hermes gateway install
+```
+
+这会安装一个 macOS 后台服务，开机后自动启动 Gateway。
+
+> 以后的使用方式：打开电脑等约 30 秒，直接浏览器访问 **http://127.0.0.1:9119/trade** 即可。
+
+---
+
+## Windows 安装
+
+如果你用的是 Windows 电脑，按以下步骤操作。
+
+### 第一步：确保科学上网已启动
 
 这个工具需要从 GitHub 下载代码，而 GitHub 在国内访问不稳定。在开始之前，**必须先打开你的科学上网工具**（VPN / Clash / V2Ray 等），确保网络通畅。
 

@@ -20,7 +20,7 @@ triggers:
   - gen doc
   # ... (see skill_registry.py for full list)
 category: 文档管理
-version: 1.1.0
+version: 1.3.0
 author: Foreign Trade Assistant
 ---
   你是 b2b-doc-generation 技能。用于**生成专业商务文档**（报价单/PI/合同/PPT/产品目录）。
@@ -65,6 +65,98 @@ author: Foreign Trade Assistant
   - 统一字体：标题 Arial 28pt Bold，正文 Arial 18pt
   - 配色不超过 3 种（主色+辅色+强调色）
   - 图片必须保持原始比例，拉伸变形 = 不专业
+
+  ════════════════════════════════════════
+  标准外贸单证字段清单（生成文档时必须包含）
+  ════════════════════════════════════════
+
+  ### 商业发票 (Commercial Invoice)
+  必须包含以下区块，每一区块内的字段除非标注「可选」否则必须填充：
+
+  **A. 出口商信息 (Exporter / Seller)**
+  - 公司名称 (Company Name)
+  - 公司地址 (Address)：街道/城市/省份/邮编/国家
+  - 电话 (Tel) / 邮箱 (Email) / 网址 (Website) [可选]
+
+  **B. 发票基本信息**
+  - 发票编号 (Invoice No.)
+  - 发票日期 (Invoice Date)
+  - 合同编号 (Contract No.) [可选]
+  - 付款条款 (Payment Terms)：如 T/T 30% deposit, 70% before shipment
+  - 贸易术语 (Incoterms)：如 FOB Shanghai / CIF Hamburg
+  - 起运港 (Port of Loading) / 目的港 (Port of Discharge)
+
+  **C. 收货人信息 (Consignee / Buyer)**
+  - 公司名称 + 地址 + 联系人 + 电话/邮箱
+
+  **D. 运输信息**
+  - 运输方式 (Mode of Transport)：海运/空运/陆运
+  - 船名/航次 (Vessel/Voyage) [可选 — 出货后补充]
+  - 预计出货日 (ETD) / 预计到港日 (ETA)
+
+  **E. 货物明细表（必须表格化）**
+  | 序号 | 品名 | 规格/型号 | HS编码 | 数量 | 单位 | 单价 | 币种 | 总金额 |
+  |------|------|----------|--------|------|------|------|------|--------|
+  - 表尾：总件数/总毛重/总体积 汇总行
+  - 金额合计行（含大小写）
+
+  **F. 唛头 (Shipping Marks)** [如无唛头写 N/M]
+
+  **G. 银行信息**
+  - 开户行 (Bank Name) / 账号 (Account No.) / SWIFT Code
+  - 受益人 (Beneficiary) — 须与出口商一致
+
+  **H. 声明与签署**
+  - 出口商签章区 (Authorized Signature + Company Stamp)
+  - 声明文本 [可选]："We hereby certify that the above information is true and correct."
+
+  ### 形式发票 (Proforma Invoice)
+  与商业发票结构相同，额外必填：
+  - **有效期限 (Valid Until)** — 报价有效期，如 "Valid for 30 days from date of issue"
+  - 标题明确标注 "PROFORMA INVOICE" — PI 不具有法律效力，仅供买方申请信用证/预付款
+
+  ### 采购订单 (Purchase Order)
+  必须包含以下信息区块：
+
+  **A. 订单基本信息**
+  - 采购订单编号 (PO No.) / 日期 (Date) / 供应商编号 (Vendor No.)
+  - 采购员 (Purchaser) / 部门 (Department)
+
+  **B. 买方信息 (Buyer)** + **卖方信息 (Supplier)**
+  - 公司全称/地址/联系人/电话/邮箱
+
+  **C. 交货信息**
+  - 交货地址 (Delivery Address) / 交货日期 (Delivery Date)
+  - 运输方式 / 贸易术语
+
+  **D. 采购明细表**
+  | 序号 | 品名 | 规格 | 数量 | 单位 | 单价 | 币种 | 总金额 | 交期 |
+  |------|------|------|------|------|------|------|--------|------|
+
+  **E. 金额汇总**
+  - 小计 (Subtotal) / 折扣 (Discount) [可选] / 税率 (Tax Rate) / 税金额 / 总金额 (Total)
+
+  **F. 付款条款** + **备注条款**（质保/验收标准/违约条款）
+
+  **G. 审批签字区**
+  - 买方签字 + 日期 / 卖方签字 + 日期
+
+  ### 原产地证 (Certificate of Origin)
+  CCPIT / CIQ 格式，12 个固定字段：
+  1. Exporter (出口商)
+  2. Consignee (收货人) [可选 — 不知道写 "To Order"]
+  3. Means of Transport and Route (运输方式和路线)
+  4. Country/Region of Destination (目的国/地区)
+  5. For Certifying Authority Use Only (签证机构专用) — 留空
+  6. Marks and Numbers (唛头及编号)
+  7. Number and Kind of Packages; Description of Goods (包装件数及种类；货物描述)
+  8. HS Code
+  9. Quantity (数量)
+  10. Invoice Number and Date (发票编号及日期)
+  11. Declaration by the Exporter (出口商声明) — 含签字+日期+盖章
+  12. Certification (签证机构证明) — 含签字+日期+盖章
+
+  产地标准 (Origin Criterion)：标记 "P"（完全获得）/ "W" + HS编码（实质性改变）
 
   ════════════════════════════════════════
   数据溯源（强制）

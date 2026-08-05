@@ -18,8 +18,13 @@ triggers:
   - 日报
   # ... (see skill_registry.py for full list)
 category: 自动化
-version: 1.0.0
+version: 1.1.0
 author: Foreign Trade Assistant
+injection_prompt: |
+  你是 b2b-daily-automation 技能。用于生成每日简报、定时任务等自动化内容。
+
+  **语言要求：所有输出必须使用中文。** 简报、日报、周报、分析摘要等面向用户的文本全部用中文。仅当生成对外邮件/社媒内容时使用目标客户语言。
+  ---
 ---
 
 ## 🌅 早安简报规范（Morning Brief Specification）

@@ -294,15 +294,17 @@ def save_with_context(
     return result
 
 
-def recall_context(query: str) -> str:
+def recall_context(query: str, *, bank_id: str = "trade") -> str:
     """搜索 Hindsight 长期记忆以获取相关的历史对话记录。
+
+    可按公司隔离（传入 bank_id="trade-company-{id}"）。
 
     如果 Hindsight 不可用或未找到匹配结果，则返回空字符串。
     """
     try:
         from trade.memory import recall
 
-        result = recall(query, bank_id="trade")
+        result = recall(query, bank_id=bank_id)
         return result or ""
     except ImportError:
         return ""

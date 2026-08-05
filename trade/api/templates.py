@@ -9,8 +9,9 @@ from __future__ import annotations
 import io
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from trade.api.deps import require_company
 from trade.database import get_connection
 from trade.templates import generate_templates
 
@@ -19,15 +20,18 @@ router = APIRouter(tags=["templates"])
 
 
 @router.get("/templates/download")
-def download_templates():
+def download_templates(
+    x_company_id: int = Depends(require_company),
+):
     """下载完整的管理表格 Excel（10 张工作表）。"""
     wb = generate_templates()
 
-    # 尝试预填充管线客户名
+    # 尝试预填充管线客户名（限定当前公司）
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT id, name FROM customers ORDER BY id DESC LIMIT 100"
+            "SELECT id, name FROM customers WHERE company_id = ? ORDER BY id DESC LIMIT 100",
+            (x_company_id,),
         ).fetchall()
         ws = wb["7-管线看板"]
         for i, r in enumerate(rows):

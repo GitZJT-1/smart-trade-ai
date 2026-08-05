@@ -24,6 +24,8 @@ _FORBIDDEN_DIRS = [
     Path("/var"),
     Path("/tmp"),
     Path("/root"),
+    Path.home(),                     # 禁止指向整个家目录
+    Path("/"),                       # 禁止指向根目录
 ]
 
 

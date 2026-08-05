@@ -133,6 +133,12 @@ async def bulk_import_customers(
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="请上传 .csv 格式的文件")
 
+    # 预检文件大小，拒绝超大 CSV 防止内存耗尽
+    _MAX_CSV_BYTES = 10 * 1024 * 1024  # 10MB
+    f_size = getattr(file, "size", None)
+    if f_size is not None and f_size > _MAX_CSV_BYTES:
+        raise HTTPException(status_code=413, detail="CSV 文件过大（上限 10MB）")
+
     content = await file.read()
     try:
         text = content.decode("utf-8-sig")  # utf-8-sig 兼容 BOM 头

@@ -337,7 +337,7 @@ function showLicenseExpired(msg) {
 
 async function showActivateModal() {
     // 关掉现有弹窗
-    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+    _removeDynamicModals();
 
     // 获取申请码
     var reqCode = '';
@@ -377,7 +377,7 @@ async function doActivate() {
             msg.textContent = data.message;
             msg.style.color = 'var(--accent-green)';
             setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+                _removeDynamicModals();
                 loadLicenseStatus();
             }, 1500);
         } else {
@@ -399,7 +399,7 @@ function _clearRuntimeCaches() {
             for (const k of Object.keys(viewCache)) delete viewCache[k];
         }
         // 仅清理与服务端 schema 强耦合的会话状态，保留 trade_cid（公司选择）
-        const preserveKeys = new Set(['trade_cid']);
+        const preserveKeys = new Set(['trade_cid', '_trade_reload_state']);
         const ssKeys = [];
         for (let i = 0; i < sessionStorage.length; i++) ssKeys.push(sessionStorage.key(i));
         ssKeys.forEach(k => { if (!preserveKeys.has(k)) sessionStorage.removeItem(k); });
@@ -657,6 +657,14 @@ function toast(msg) {
     c.appendChild(t); setTimeout(() => t.remove(), 3000);
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+// 安全移除动态弹窗（跳过静态模版弹窗避免误删 HTML 中的 modal-backdrop 骨架）
+const _STATIC_MODAL_IDS = new Set(['company-modal','customer-modal','library-modal','upgrade-help-modal','skills-help-modal']);
+function _removeDynamicModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(function(e) {
+        if (!_STATIC_MODAL_IDS.has(e.id)) e.remove();
+    });
+}
 
 // ═════════════════════ NAVIGATION ═════════════════════
 // 视图缓存：{ viewKey: { element, rendered, context } }
@@ -1189,7 +1197,7 @@ async function _uploadToWorkDir(files, subdir) {
 }
 
 function _showDropModal(files) {
-    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+    _removeDynamicModals();
     _pendingDropFiles = files;
 
     const totalSize = files.reduce((s, f) => s + f.size, 0);
@@ -1501,9 +1509,22 @@ async function sendMsg() {
         const div = ensureProgress();
         const el = document.createElement('div');
         el.className = `tool-item ${status}`; el.id = `tool-${tcId}`;
-        el.innerHTML = `<span class="tool-icon">${status==='running'?'◌':status==='done'?'✓':'✗'}</span>
-            <div class="tool-body"><div class="tool-name">${fmtTool(name)}</div>
-            <div class="tool-detail">${detail||''}</div></div>`;
+        // 安全构建 DOM：textContent 防止工具参数中的 HTML 注入
+        const icon = document.createElement('span');
+        icon.className = 'tool-icon';
+        icon.textContent = status === 'running' ? '◌' : status === 'done' ? '✓' : '✗';
+        const body = document.createElement('div');
+        body.className = 'tool-body';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'tool-name';
+        nameEl.textContent = fmtTool(name);
+        const detailEl = document.createElement('div');
+        detailEl.className = 'tool-detail';
+        detailEl.textContent = detail || '';
+        body.appendChild(nameEl);
+        body.appendChild(detailEl);
+        el.appendChild(icon);
+        el.appendChild(body);
         div.appendChild(el); container.scrollTop = container.scrollHeight;
         toolEls[tcId] = el;
     }
@@ -1850,9 +1871,18 @@ async function showCustomerDetail(cid) {
                 </div>`).join('') : '<p style="color:var(--text-muted);font-size:12px;">暂无关联对话。点击下方按钮开始和此客户对话。</p>'}
             </div>
         </div>
-        <button class="btn btn-primary" style="width:100%;" onclick="closeCustomerDetail();startChatWithCustomer(${c.id}, '${esc(c.name)}')">💬 和此客户开始对话</button>
+        <button class="btn btn-primary" style="width:100%;" data-chat-cust-id="${c.id}" data-chat-cust-name="${esc(c.name)}">💬 和此客户开始对话</button>
     </div>`;
     document.body.appendChild(backdrop);
+
+    // 绑定安全的事件监听（避免 onclick 中的 XSS 注入）
+    backpack.querySelector('[data-chat-cust-id]').addEventListener('click', function() {
+        closeCustomerDetail();
+        startChatWithCustomer(
+            parseInt(this.getAttribute('data-chat-cust-id')),
+            this.getAttribute('data-chat-cust-name')
+        );
+    });
 
     // Load library options for linking
     const allLibs = await api('GET', '/api/trade/libraries') || [];
@@ -2705,6 +2735,14 @@ async function loadDirectoryTree() {
     $('dir-tree').innerHTML = `<div style="font-weight:600;margin-bottom:8px;color:var(--text-secondary);">~/.trade/${esc(slug)}/</div>` +
         renderTreeItems(tree, 0);
 
+    // 委托事件：文件树点击（避免 onclick 中直接拼接文件名导致 XSS）
+    $('dir-tree').onclick = function(e) {
+        var el = e.target.closest && e.target.closest('[data-file-click]');
+        if (el && el.getAttribute('data-file-click') === 'preview') {
+            previewFile(el.getAttribute('data-file-name'));
+        }
+    };
+
     // Also load agent identity preview if available
     const identity = await api('GET', `/api/trade/companies/${currentCompanyId}/agent-identity`);
     if (identity?.agent_identity_md) {
@@ -2716,7 +2754,10 @@ async function loadDirectoryTree() {
 function renderTreeItems(items, depth) {
     return items.map(item => {
         const indent = depth * 20;
-        return `<div class="dir-tree-item ${item.type}" style="padding-left:${indent}px;" onclick="${item.type==='file'?`previewFile('${esc(item.name)}')`:'void(0)'}">
+        const attrs = item.type === 'file'
+            ? `data-file-name="${esc(item.name)}" data-file-click="preview"`
+            : '';
+        return `<div class="dir-tree-item ${item.type}" style="padding-left:${indent}px;" ${attrs}>
             <span class="tree-icon">${item.icon}</span> ${esc(item.name)}
         </div>` + (item.children ? renderTreeItems(item.children, depth+1) : '');
     }).join('');
@@ -2890,7 +2931,22 @@ async function onboardingStartOSINT() {
         var el = document.createElement('div');
         el.className = 'tool-item ' + status;
         el.id = 'onb-tool-' + tcId;
-        el.innerHTML = '<span class="tool-icon">' + (status==='running'?'◌':status==='done'?'✓':'✗') + '</span><div class="tool-body"><div class="tool-name">' + fmtTool(name) + '</div><div class="tool-detail">' + (detail||'') + '</div></div>';
+        // 安全构建 DOM：textContent 防止注入
+        var icon = document.createElement('span');
+        icon.className = 'tool-icon';
+        icon.textContent = status === 'running' ? '◌' : status === 'done' ? '✓' : '✗';
+        var body = document.createElement('div');
+        body.className = 'tool-body';
+        var nameEl = document.createElement('div');
+        nameEl.className = 'tool-name';
+        nameEl.textContent = fmtTool(name);
+        var detailEl = document.createElement('div');
+        detailEl.className = 'tool-detail';
+        detailEl.textContent = detail || '';
+        body.appendChild(nameEl);
+        body.appendChild(detailEl);
+        el.appendChild(icon);
+        el.appendChild(body);
         div.appendChild(el);
         resultsArea.scrollTop = resultsArea.scrollHeight;
         toolEls[tcId] = el;

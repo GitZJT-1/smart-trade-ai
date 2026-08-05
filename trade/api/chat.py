@@ -57,12 +57,12 @@ def _cleanup_rate_limit_dicts():
             for cid in stale:
                 _last_skill_per_company.pop(cid, None)
 
-_cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
-_cleanup_thread.start()
-
 # 进程内 skill 缓存：记录每个 company 上次使用的 skill 名称，用于跳过重复注入
 _last_skill_per_company: dict[int, str] = {}
 _skill_cache_lock = threading.Lock()
+
+_cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
+_cleanup_thread.start()
 
 
 def _check_chat_rate_limit(company_id: int) -> bool:

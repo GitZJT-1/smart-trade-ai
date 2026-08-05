@@ -2,7 +2,7 @@
 
 > 本规范参考 [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) 与 [agentskills.io/specification](https://agentskills.io/specification) 的目录结构，同时保留 smart-trade-ai 的项目惯例。
 
-**适用范围**：smart-trade-ai 仓库下 `skills/` 目录的 34 个 skill。
+**适用范围**：smart-trade-ai 仓库下 `skills/` 目录的 37 个 skill。
 
 ---
 

@@ -71,7 +71,26 @@ Tavily 是联网搜索引擎，让 AI 能搜索实时信息。
 
 > Tavily 每月有 1000 次免费搜索额度，个人使用足够了。不注册不影响对话功能，但搜索和客户背调质量会受明显影响。
 
-### 第四步：安装 Hermes Agent（AI 引擎）
+### 第四步：检查 Python 架构（M 芯片 Mac 必须看）
+
+如果你是 M1/M2/M3/M4 芯片的 Mac，先确认 Python 是原生 arm64 版本：
+
+```bash
+python3 -c "import platform; print(platform.machine())"
+```
+
+如果输出 `arm64`，继续下一步。如果输出 `x86_64`，说明你用的是 Rosetta 转译的 Python，**必须先换成原生版本**：
+
+```bash
+# 安装原生 arm64 Python
+brew install python@3.11
+# 确保用 Homebrew 的 Python
+export PATH="/opt/homebrew/bin:$PATH"
+```
+
+> 如果用 Rosetta Python，Hermes 的 C 扩展会加载失败，导致 Trade 无法启动。
+
+### 第五步：安装 Hermes Agent（AI 引擎）
 
 Hermes Agent 是驱动 AI 的底层引擎，Trade 基于它运行。
 
@@ -85,7 +104,7 @@ curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scri
 
 > 如果安装过程中卡在 "Installing Node.js dependencies (browser tools)"，按 `Ctrl+C` 终止，不影响 Trade 使用。
 
-### 第五步：配置 Hermes（大模型 + 搜索）
+### 第六步：配置 Hermes（大模型 + 搜索）
 
 在终端输入：
 
@@ -102,7 +121,7 @@ hermes setup
 
 看到「配置成功」提示就完成了。
 
-### 第六步：验证 Hermes 是否正常
+### 第七步：验证 Hermes 是否正常
 
 在终端输入：
 
@@ -112,7 +131,7 @@ hermes
 
 等它启动后，在对话框里输入 `hello`，按回车。如果 AI 正常回复了，说明大模型配置成功。按 `Ctrl+C` 退出。
 
-### 第七步：让 AI 帮你安装 Trade
+### 第八步：让 AI 帮你安装 Trade
 
 重新启动 Hermes（输入 `hermes`），在聊天框里**复制粘贴**下面这句话：
 
@@ -130,7 +149,7 @@ trade
 
 浏览器会自动打开 Trade 界面。如果没有自动打开，手动访问 **http://127.0.0.1:9119/trade**。
 
-### 第八步：设置 Trade 开机自启（可选）
+### 第九步：设置 Trade 开机自启（可选）
 
 如果希望开机后 Trade 自动运行，在终端执行：
 
@@ -426,6 +445,7 @@ Trade 会持续更新，新版本增加功能和修复问题。最简单的方�
 | 开机后访问 127.0.0.1:9119/trade 打不开 | Trade 自启还没跑完，等 30 秒再试。若仍不行，打开 `%LOCALAPPDATA%\trade\trade-autostart.log` 看错误日志；或按 `Win+R` 输入 `taskmgr` 回车，看进程里有没有 `python.exe`，没有就手动运行第十步的 VBS 脚本 |
 | 定时任务（每日简报等）不执行 | 第九步的 Hermes Gateway 没装好或没运行。重新执行 `hermes gateway install`，再到 `services.msc` 确认服务状态 |
 | 提示「Filename too long」 | 第五步的长路径设置没做。回到 5.2 执行那行命令，然后**重启电脑** |
+| M 芯片 Mac 启动 Trade 报错 (Mach-O / 422) | 用了 Rosetta 转译的 Python。按 macOS 第四步检查 Python 架构，切换到原生 arm64 Python |
 
 ---
 

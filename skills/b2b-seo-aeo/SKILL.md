@@ -25,7 +25,6 @@ triggers:
   - AEO article
   - blog post
   - content marketing
-  - pillar page
   - topic cluster
   - search engine optimization
   - answer engine optimization

@@ -1,6 +1,9 @@
 ---
 name: b2b-sales-playbook
 description: 销冠经验封装器 — 将资深业务员的隐性经验转化为新人可复用的标准化SOP、话术库和知识体系
+when_to_use:
+  - "用户提到「销冠经验」「销售SOP」「话术库」"
+  - "需要将资深业务员经验整理成新人培训材料"
 triggers:
   - 销冠经验
   - 销售知识库

@@ -1,6 +1,9 @@
 ---
 name: b2b-guarantee-proposal
 description: 商业提案生成器 — 多Agent协作生成战略建议书/商业计划书/投资回报方案
+when_to_use:
+  - "用户需要生成商业提案/战略建议书/ROI分析"
+  - "客户谈判中需要正式提案文档"
 triggers:
   - 商业提案
   - 战略建议书

@@ -14,10 +14,12 @@
 <!-- ═════════════════════ SIDEBAR ═════════════════════ -->
 <aside class="sidebar">
     <div class="sidebar-header">
-        <div class="logo">📦 Trade<span>AI</span></div>
-        <div class="lang-switch">
-            <button id="lang-zh" class="lang-btn active" onclick="switchLang('zh')">中</button>
-            <button id="lang-en" class="lang-btn" onclick="switchLang('en')">EN</button>
+        <div class="logo-row">
+            <div class="logo">📦 Trade<span>AI</span></div>
+            <select id="lang-select" aria-label="Language" onchange="switchLang(this.value)" class="lang-select">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+            </select>
         </div>
         <div class="company-select">
             <div class="csel-row">

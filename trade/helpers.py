@@ -539,7 +539,7 @@ def build_query(
     elif company_id:
         # 收集工作目录 + 所有文档库，告知 Agent 可用目录，Agent 自行判断是否需要读取
         dirs_to_scan: list[str] = []
-        tc = _co.get_trade_company(company_id)
+        tc = _company.get_trade_company(company_id)
         if tc:
             data_dir = tc.get("data_dir", "")
             if data_dir and Path(data_dir).is_dir():

@@ -104,6 +104,18 @@ injection_prompt: |
   [简要说明新邮件保留了样本的哪些特征]
   ```
 
+  **开发信高回复率公式**：
+  高回复率 = 初步调查 + 避开SPAM过滤词 + 少图片少链接 + 好标题 + 行文简洁 + Key Point
+
+  **SPAM高危词清单**（分析样本和仿写时都必须避开）：
+  Free, Discount, Cheap, Check, Opportunity, Act Now, Limited Time, Best Price, Incredible Deal, Special Promotion, Satisfaction Guaranteed, Risk Free, 100% Free, Call Now, Order Now, No Obligation
+
+  **好标题四策略**：借势法（Re: 客户公司名 / 知名客户 vendor - 我方公司名）、痛点切入法（产品 + solution for 客户痛点）、直接价值法（3 quotes for 产品 with 认证）、好奇心法（The one thing your competitors don't want you to know）
+
+  **正文经典结构**：破冰（拉近距离）→ 解决需求 → 客户市场分析 → 成功案例/好评 → 给一个"现在就该买"的理由 → 付款与发货 → 获取联系方式
+
+  **逐句分析维度**：分析样本时，逐句标注：这一句的功能是什么（破冰/需求/案例/Hook/CTA）？语气是什么（专业/亲切/自信）？为什么放在这个位置？可以用什么替换？
+
   **输出语言规则**：所有客户可见内容使用目标客户的语言，默认英语。分析部分可用中文（面向用户的）。
 ---
 

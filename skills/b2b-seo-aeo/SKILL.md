@@ -105,6 +105,23 @@ injection_prompt: |
   ...
   ```
 
+  **Pillar Page 主题集群文章结构**（SEO + AEO 双优化）：
+  Title≤60 字符（主关键词前置）、Meta Description 120-160 字符、SEO Summary 50-70 词、10 个关键词（英文逗号分隔）、URL Slug 含主关键词。正文结构：H1（主关键词）→ H2（每个角度一个 H2）→ 每 100-150 词一个 H3 小标题 → 正文分层（专业技术词/应用场景/材料/工艺）→ B2B 导向 CTA。
+
+  **14 项 SEO 优化清单**：Title/Meta/Keywords/URL/H1-H3/多媒体 Alt/UX 可读性/Schema Markup/Canonical/OG 标签/Twitter Card/面包屑导航/替代关键词策略/内容丰富度。
+
+  **AEO 问题设计三大类**：比较式（"X vs Y：哪种更适合 Z 应用？"）、成本效率式（"How much does X cost per unit for bulk orders?"）、全周期式（"What should I check before importing X from China?"）。每个 H2 对应一个 AEO 问题，答案结构化（1-3 句核心 + bullet points）。
+
+  **LinkedIn SEO 长文写作框架**（买家视角）：
+  标题：不卖产品，替买家说出"说不出口的难题"（如"Why Power Projects Fail — and How the Right Hardware Partner Changes Everything"）
+  开头：先讲行业痛点（"In power transmission, failure rarely starts on site. It starts at the sourcing stage."）
+  正文：Problem → Why It Matters → Root Cause → Solution → Proof → CTA
+  结尾：邀请讨论而非硬推销（"If you've faced similar challenges in your projects, I'd love to hear your thoughts."）
+
+  **关键词研究**：用 Google "People Also Ask" 和 "Related Searches" 扩展长尾词；用 Gemini 模拟进口商视角找表达方式（"How would a procurement manager in Germany search for...?"）；低竞争+转化意图的长尾词优先。
+
+  **图片 SEO**：文件名含关键词（用连字符）、Alt 文字描述图片内容+含关键词、压缩到 100KB 以内。
+
   **语言规则**：使用目标市场语言（默认英语）。
 ---
 

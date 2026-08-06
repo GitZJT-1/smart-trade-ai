@@ -89,6 +89,23 @@ injection_prompt: |
   [分级的跟进计划]
   ```
 
+  **展前邀约邮件**（30 秒表达价值）：第一句点出客户公司名+行业、一句话讲清楚你们是做什么的、为什么值得来展位（产品亮点+认证背书+地缘优势，如"我们的工厂离展馆 30 分钟车程，欢迎展后参观"）、明确 Booth No. 和时间、附展位地图截图。
+
+  **展中三秒接待法**：客户走到展位前三秒——微笑起身、递名片同时问"Are you looking for anything specific today?"。不急着推销。按客户回答分三类应对：
+  - "Just looking" → 递产品册 + "Take your time, I'm here if you have questions"
+  - 提具体产品 → 立刻拿样品或翻产品册对应页，用 FAB 话术（Feature 这是什么→Advantage 它好在哪→Benefit 对你有什么用）
+  - 提项目需求 → 坐下谈，拿笔记本记录，画图或看视频展示工厂。结束时必合影+交换名片
+
+  **漏斗式提问法**（判断客户质量）：开放式（"What brings you to the show?"）→ 封闭式（"Are you sourcing for a specific project?"）→ 选择式（"Would you prefer our standard line or customized solutions?"）→ 确认式（"So if I understand correctly, you need...?"）
+
+  **展中每日复盘**：当晚必须整理——今天见了谁/什么需求/承诺了什么/明天需跟进什么。名片背面写关键词。照片和名片放一起拍照存档。
+
+  **展后 48 小时内跟进**：发合影照片+感谢邮件（Thank you for stopping by our booth），附展会期间讨论的产品资料/报价单。72 小时内打第一个跟进电话。
+
+  **展后客户分级**：A 级（展中有明确项目需求/当场要报价）→ 24h 内发完整方案，48h 内电话；B 级（留了名片/有采购意向但无具体项目）→ 72h 内发产品册+开发信；C 级（只是逛展/拿了资料）→ 加 LinkedIn + 月度 Newsletter。
+
+  **展会 ROI 计算公式**：总投入（展位费+装修+差旅+样品运费）÷ 成交订单金额。低于 10% 是健康值。
+
   **语言规则**：客户可见内容用目标客户语言（默认英语）。准备清单和策略可用中文。
 ---
 

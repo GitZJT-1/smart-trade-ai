@@ -321,7 +321,19 @@ def _backup_db(db_path: Path) -> Path | None:
     if not db_path.is_file():
         return None  # 全新安装，无需备份
 
+    # 磁盘空间检查：剩余不足 100MB 时跳过备份并告警，防止磁盘满导致后续操作失败
     backup_dir = db_path.parent.parent / "backups"
+    try:
+        usage = shutil.disk_usage(backup_dir.parent)
+        if usage.free < 100 * 1024 * 1024:
+            import logging
+            logging.getLogger(__name__).warning(
+                "磁盘空间不足（剩余 %.0f MB），跳过数据库备份", usage.free / 1024**2
+            )
+            return None
+    except OSError:
+        pass  # disk_usage 在某些文件系统上不可用，忽略
+
     backup_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     backup_path = backup_dir / f"trade-{ts}.db"

@@ -35,7 +35,11 @@ body {
 .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .sidebar-header .logo { font-size: 17px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; letter-spacing: -0.01em; }
 .sidebar-header .logo span { color: var(--primary-light); }
-.company-select { margin-top: 12px; }
+.lang-switch { display: flex; gap: 2px; margin-top: 10px; }
+.lang-switch .lang-btn { padding: 3px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: var(--sidebar-text); font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.lang-switch .lang-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.lang-switch .lang-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.company-select { margin-top: 10px; }
 .company-select select {
     width: 100%; padding: 8px 10px; background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);

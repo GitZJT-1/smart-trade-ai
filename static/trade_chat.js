@@ -10,6 +10,115 @@ let _currentConvId = null;       // 当前 AI 回复的 conversation_id，用于
 let editingCustomerData = null; // for customer detail panel
 let _onboardingStep = 1;          // 1 = welcome card, 2 = OSINT input + results
 let _onboardingInputText = '';    // user-entered company name/website
+let currentLang = 'zh';           // zh | en
+
+// ═════════════════════ I18N ═════════════════════
+const I18N = {
+    zh: {
+        'nav.daily': '今日简报', 'nav.lead': '客户开发', 'nav.platform': '网站诊断',
+        'nav.social': '社媒营销', 'nav.linkedin': 'LinkedIn', 'nav.customs': '海关数据',
+        'nav.customers': '客户管理', 'nav.docs': '文档库', 'nav.docgen': '文档生成',
+        'nav.osint': '客户背调', 'nav.tasks': '定时任务', 'nav.history': '对话记录',
+        'nav.workbench': '📊 工作台', 'nav.outreach': '🔍 获客引流',
+        'nav.sales': '👤 销售转化', 'nav.tools': '🛠️ 工具', 'nav.hist': '💬 历史',
+        'company.select': '— 选择公司 —', 'company.add': '添加公司',
+        'chat.placeholder.daily': '输入任何问题，或说「早安简报」开始今天的工作...',
+        'chat.placeholder.lead': '说三个信息：卖什么？卖到哪？找什么客户？',
+        'chat.placeholder.platform': '粘贴任何网站链接（B2B平台/公司官网/独立站），我来全面诊断优化...',
+        'chat.placeholder.social': '描述社媒需求，如「帮我规划本周 Facebook 内容日历」...',
+        'chat.placeholder.linkedin': '描述 LinkedIn 营销需求，如「优化我的 LinkedIn Profile」...',
+        'chat.placeholder.customs': '上传海关数据文件后，描述分析需求...',
+        'chat.placeholder.docs': '在下方选择文档库后提问，或直接粘贴文件内容...',
+        'chat.placeholder.docgen': '描述要生成的文档：如「做一份欧洲客户的报价单PPT」...',
+        'chat.placeholder.osint': '输入邮箱/域名/公司名，我来做全面的背景调查...',
+        'chat.clr': '🗑️ 清屏', 'chat.library': '— 选择文档库 —',
+        'chat.library.add': '添加文档库',
+        'customer.title': '客户管理', 'customer.add': '添加客户',
+        'customer.import': '📥 CSV导入', 'customer.search': '搜索客户...',
+        'task.title': '定时任务',
+        'history.title': '对话记录',
+    },
+    en: {
+        'nav.daily': 'Daily Briefing', 'nav.lead': 'Lead Generation', 'nav.platform': 'Site Audit',
+        'nav.social': 'Social Media', 'nav.linkedin': 'LinkedIn', 'nav.customs': 'Customs Data',
+        'nav.customers': 'Customers', 'nav.docs': 'Documents', 'nav.docgen': 'Doc Generator',
+        'nav.osint': 'Due Diligence', 'nav.tasks': 'Tasks', 'nav.history': 'History',
+        'nav.workbench': '📊 Workspace', 'nav.outreach': '🔍 Outreach',
+        'nav.sales': '👤 Sales', 'nav.tools': '🛠️ Tools', 'nav.hist': '💬 History',
+        'company.select': '— Select Company —', 'company.add': 'Add Company',
+        'chat.placeholder.daily': 'Ask anything, or say "Morning briefing" to start...',
+        'chat.placeholder.lead': 'What do you sell? Where? Who are you looking for?',
+        'chat.placeholder.platform': 'Paste any website URL for a full audit...',
+        'chat.placeholder.social': 'Describe your social media needs...',
+        'chat.placeholder.linkedin': 'Describe your LinkedIn marketing needs...',
+        'chat.placeholder.customs': 'Upload customs data then describe your analysis needs...',
+        'chat.placeholder.docs': 'Select a document library below, or paste file content...',
+        'chat.placeholder.docgen': 'Describe the document: e.g. "Create a quotation PPT for EU client"...',
+        'chat.placeholder.osint': 'Enter email/domain/company name for background check...',
+        'chat.clr': '🗑️ Clear', 'chat.library': '— Select Library —',
+        'chat.library.add': 'Add Library',
+        'customer.title': 'Customers', 'customer.add': 'Add Customer',
+        'customer.import': '📥 Import CSV', 'customer.search': 'Search customers...',
+        'task.title': 'Scheduled Tasks',
+        'history.title': 'Chat History',
+    }
+};
+
+function t(key) { return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.zh[key] || key); }
+
+function switchLang(lang) {
+    if (lang === currentLang) return;
+    currentLang = lang;
+    try { localStorage.setItem('trade_lang', lang); } catch(_) {}
+    document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    // 重新渲染当前视图以应用新语言
+    if (currentView === 'chat') {
+        navToView('chat', currentChatContext, t('nav.' + currentChatContext));
+    } else {
+        navToView(currentView);
+    }
+    // 更新侧边栏导航文字
+    _updateSidebarLabels();
+}
+
+function initLang() {
+    try { currentLang = localStorage.getItem('trade_lang') || 'zh'; } catch(_) { currentLang = 'zh'; }
+    document.getElementById('lang-' + currentLang).classList.add('active');
+    _updateSidebarLabels();
+}
+
+function _updateSidebarLabels() {
+    // 更新 nav-section-title（按顺序对应 5 个 section）
+    var sectionKeys = ['nav.workbench', 'nav.outreach', 'nav.sales', 'nav.tools', 'nav.hist'];
+    document.querySelectorAll('.nav-section-title').forEach(function(el, i) {
+        if (i < sectionKeys.length) el.textContent = t(sectionKeys[i]);
+    });
+    // 更新 nav-item 文字（通过 data-chat-context 和 data-view 映射）
+    var ctxMap = {
+        'daily': 'nav.daily', 'lead': 'nav.lead', 'platform': 'nav.platform',
+        'social': 'nav.social', 'linkedin': 'nav.linkedin', 'customs': 'nav.customs',
+        'docs': 'nav.docs', 'docgen': 'nav.docgen', 'osint': 'nav.osint',
+    };
+    var viewMap = { 'customers': 'nav.customers', 'tasks': 'nav.tasks', 'history': 'nav.history' };
+    document.querySelectorAll('.nav-item').forEach(function(el) {
+        var ctx = el.getAttribute('data-chat-context');
+        var view = el.getAttribute('data-view');
+        var key = (ctx && ctxMap[ctx]) || (view && viewMap[view]);
+        if (key) {
+            var label = el.querySelector('.nav-label');
+            if (label) label.textContent = t(key);
+            // 更新 onclick 中的第三个参数（视图名称）
+            if (ctx && view === 'chat') {
+                el.setAttribute('onclick', "navToView('chat','" + ctx + "','" + t(key) + "')");
+            }
+        }
+    });
+    // 更新当前聊天名称
+    if (currentView === 'chat') {
+        currentChatName = t('nav.' + currentChatContext);
+    }
+}
 let _onboardingOsinResponse = ''; // accumulated AI response text
 let _onboardingStreamCtl = null;  // AbortController for SSE stream
 
@@ -1540,7 +1649,7 @@ async function sendMsg() {
         const r = await fetch('/api/trade/chat/stream', {
             method:'POST',
             headers:{'Content-Type':'application/json','X-Hermes-Session-Token':TOKEN,'X-Company-ID':String(currentCompanyId)},
-            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query,context:currentChatContext}),
+            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query,context:currentChatContext,language:currentLang}),
             signal:streamCtl.signal,
         });
         if (!r.ok) { progDiv.remove(); addMsg('assistant', `⚠️ 请求失败 (${r.status})`, null); sendBtn.disabled = false; return; }
@@ -3203,6 +3312,9 @@ async function saveCompanyIdentity() {
 
 // ═════════════════════ INIT ═════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+    // 初始化语言
+    initLang();
+
     // 检测是否刚完成系统升级（页面 reload 后显示 toast）
     try {
         if (sessionStorage.getItem('_trade_upgrade_done')) {

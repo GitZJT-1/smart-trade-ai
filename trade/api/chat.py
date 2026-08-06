@@ -124,7 +124,7 @@ async def trade_chat(
 
     full_query, skill_hint = build_query(
         cid, payload.library_id, query, customer_id=payload.customer_id,
-        last_skill_name=last_skill,
+        last_skill_name=last_skill, language=payload.language or "zh",
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
@@ -215,7 +215,7 @@ async def trade_chat_stream(
 
     full_query, skill_hint = build_query(
         cid, payload.library_id, query, customer_id=payload.customer_id,
-        last_skill_name=last_skill,
+        last_skill_name=last_skill, language=payload.language or "zh",
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存

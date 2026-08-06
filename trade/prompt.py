@@ -27,6 +27,13 @@ LANGUAGE_POLICY_BLOCK = """# Language Policy
 - **Avoid mixing languages in the same response.** If you are replying to the user's question, use Chinese throughout. If you are outputting an English email template, put it in a clearly separated block and annotate it in Chinese.
 - **Technical terms, model numbers, and SKU codes stay in their original form** — do not translate product codes."""
 
+LANGUAGE_POLICY_BLOCK_EN = """# Language Policy
+- **All chat responses, explanations, and analysis communicated to the user MUST be in English.** This includes answering questions, explaining reasoning, providing suggestions, summarizing data, and any other interactive dialogue.
+- **The ONLY exception is content explicitly generated for external use**, such as cold emails, LinkedIn posts, WhatsApp messages, quotations, contracts, or presentation slides. These must be written in the language of the target audience. Any commentary, explanation, or summary that accompanies the generated content should also be in English.
+- **Single language per document**: A generated quotation, contract, or slide deck must be in ONE language throughout. Do not produce mixed-language documents.
+- **Avoid mixing languages in the same response.** If you are replying to the user's question, use English throughout. If you are outputting content in another language, put it in a clearly separated block and annotate it in English.
+- **Technical terms, model numbers, and SKU codes stay in their original form** — do not translate product codes."""
+
 COMPANY_ISOLATION_BLOCK = """# Data Isolation — READ BEFORE ANY DATA ACCESS
 You are working for a specific company. **NEVER mix data across companies.**
 

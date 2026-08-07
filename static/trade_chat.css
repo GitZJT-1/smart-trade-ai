@@ -35,7 +35,29 @@ body {
 .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .sidebar-header .logo { font-size: 17px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; letter-spacing: -0.01em; }
 .sidebar-header .logo span { color: var(--primary-light); }
-.company-select { margin-top: 12px; }
+.logo-row { display: flex; align-items: center; justify-content: space-between; }
+.lang-select {
+    padding: 2px 4px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    color: var(--sidebar-text);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%2394A3B8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    padding-right: 18px;
+    transition: all .15s;
+}
+.lang-select:hover { border-color: rgba(255,255,255,0.2); color: var(--sidebar-text-active); }
+.lang-select:focus { border-color: var(--primary); color: #fff; }
+.lang-select option { background: var(--sidebar-bg); color: #E2E8F0; }
+.company-select { margin-top: 10px; }
 .company-select select {
     width: 100%; padding: 8px 10px; background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);

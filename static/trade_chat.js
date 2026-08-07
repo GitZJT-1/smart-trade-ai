@@ -10,6 +10,551 @@ let _currentConvId = null;       // 当前 AI 回复的 conversation_id，用于
 let editingCustomerData = null; // for customer detail panel
 let _onboardingStep = 1;          // 1 = welcome card, 2 = OSINT input + results
 let _onboardingInputText = '';    // user-entered company name/website
+let currentLang = 'zh';           // zh | en
+
+// ═════════════════════ I18N ═════════════════════
+const I18N = {
+    zh: {
+        // nav
+        'nav.daily':'今日简报','nav.lead':'客户开发','nav.platform':'网站诊断',
+        'nav.social':'社媒营销','nav.linkedin':'LinkedIn','nav.customs':'海关数据',
+        'nav.customers':'客户管理','nav.docs':'文档库','nav.docgen':'文档生成',
+        'nav.osint':'客户背调','nav.tasks':'定时任务','nav.history':'对话记录',
+        'nav.workbench':'📊 工作台','nav.outreach':'🔍 获客引流',
+        'nav.sales':'👤 销售转化','nav.tools':'🛠️ 工具','nav.hist':'💬 历史',
+        // company
+        'company.select':'— 选择公司 —','company.add':'添加公司',
+        // chat placeholders
+        'chat.ph.daily':'输入任何问题，或说「早安简报」开始今天的工作...',
+        'chat.ph.lead':'说三个信息：卖什么？卖到哪？找什么客户？',
+        'chat.ph.platform':'粘贴任何网站链接（B2B平台/公司官网/独立站），我来全面诊断优化...',
+        'chat.ph.social':'描述社媒需求，如「帮我规划本周 Facebook 内容日历」...',
+        'chat.ph.linkedin':'描述 LinkedIn 营销需求，如「优化我的 LinkedIn Profile」...',
+        'chat.ph.customs':'上传海关数据文件后，描述分析需求...',
+        'chat.ph.docs':'在下方选择文档库后提问，或直接粘贴文件内容...',
+        'chat.ph.docgen':'描述要生成的文档：如「做一份欧洲客户的报价单PPT」...',
+        'chat.ph.osint':'输入邮箱/域名/公司名，我来做全面的背景调查...',
+        'chat.clr':'🗑️ 清屏','chat.library':'— 选择文档库 —','chat.lib.add':'添加文档库',
+        // footer buttons
+        'footer.update':'⬆️ 系统更新','footer.restart':'🔄 重启',
+        'footer.skills':'📖 技能帮助','footer.skills_update':'🔄 Skills',
+        'footer.upgrade':'⬆️ 升级说明',
+        // modals - company
+        'modal.co.title':'🏢 公司设置','modal.co.tab_list':'公司列表','modal.co.tab_identity':'Agent 身份',
+        'modal.co.add_title':'添加新公司','modal.co.name':'公司名称 *','modal.co.name_ph':'例如：我的外贸公司',
+        'modal.co.slug_ph':'自动生成','modal.co.slug_tt':'由系统根据公司名称自动生成',
+        'modal.co.contact':'联系人','modal.co.contact_ph':'姓名',
+        'modal.co.email':'邮箱','modal.co.website':'网站',
+        'modal.co.identity_desc':'配置当前选中公司的 AI Agent 身份。系统会在对话时注入此内容。',
+        'modal.co.identity_label':'Agent 身份 (Markdown)',
+        'modal.co.identity_ph':'粘贴 agent-identity.md 内容...',
+        'modal.co.create':'创建公司','modal.co.save':'保存',
+        // modals - customer
+        'modal.cust.title':'添加客户','modal.cust.title_edit':'编辑客户',
+        'modal.cust.name':'公司名称 *','modal.cust.name_ph':'客户公司名称',
+        'modal.cust.contact':'联系人','modal.cust.contact_ph':'联系人姓名',
+        'modal.cust.title_f':'职位','modal.cust.country':'国家','modal.cust.country_ph':'如 Italy',
+        'modal.cust.email':'邮箱','modal.cust.phone':'电话',
+        'modal.cust.whatsapp':'WhatsApp','modal.cust.linkedin':'LinkedIn URL',
+        'modal.cust.website':'公司网站','modal.cust.tier':'客户等级',
+        'modal.cust.tier_none':'未分级',
+        'modal.cust.buyer':'买家类型','modal.cust.buyer_none':'未设置',
+        'modal.cust.category':'主营品类','modal.cust.category_ph':'客户主营产品或行业',
+        'modal.cust.backup_email':'备用邮箱','modal.cust.score':'匹配度',
+        'modal.cust.score_none':'未评分','modal.cust.note':'备注 / 跟进项目',
+        'modal.cust.note_ph':'该联系人负责的项目、需求、注意事项等',
+        'modal.cust.follow':'AI 跟进建议','modal.cust.follow_ph':'AI 基于客户画像自动生成的跟进策略...',
+        // modals - library
+        'modal.lib.title':'📁 添加文档库',
+        'modal.lib.desc':'将本地文件夹关联为文档库，Agent 可通过 read_file 读取其中的文件。',
+        'modal.lib.name':'库名称 *','modal.lib.name_ph':'例如：产品报价库',
+        'modal.lib.path':'文件夹路径 *','modal.lib.path_ph':'/Users/xxx/Documents/客户资料',
+        'modal.lib.path_hint':'📌 Mac: 文件夹上右键 → Option键 → 复制路径名',
+        'modal.lib.notes':'描述','modal.lib.notes_ph':'可选',
+        'modal.lib.create':'添加',
+        // modals - upgrade help
+        'modal.upgrade.title':'⬆️ 如何升级 Trade',
+        'modal.upgrade.p1':'通过 <strong>Hermes</strong>（AI 助手）来升级 Trade 是最简单的方式。Hermes 会自动执行所有更新命令，遇到报错会自行排查重试。',
+        'modal.upgrade.steps':'操作步骤',
+        'modal.upgrade.li1':'打开终端：<br><b>macOS</b> — 在 Launchpad 搜索「终端」<br><b>Windows</b> — 按 <code>Win+R</code>，输入 <code>powershell</code>，回车',
+        'modal.upgrade.li2':'输入 <code>hermes</code> 并回车，启动 Hermes',
+        'modal.upgrade.li3':'在 Hermes 对话框中输入以下内容并回车：',
+        'modal.upgrade.cmd':'帮我更新trade，并重启trade，地址是https://github.com/chefroger/smart-trade-ai',
+        'modal.upgrade.p2':'等待执行完毕，看到「重启完成」提示后，刷新浏览器页面（<kbd>Ctrl+Shift+R</kbd>）即可。',
+        'modal.upgrade.p3':'如果 <code>hermes</code> 命令找不到，说明 Hermes Agent 未安装。请先参考安装说明安装 Hermes。',
+        // modals - skills help
+        'modal.skills.title':'📖 全部 37 个技能速查',
+        'modal.skills.desc':'在聊天框输入关键词，Trade 自动匹配合适的技能。点击复制图标可复制快速启动提示词。',
+        // common
+        'btn.close':'关闭','btn.cancel':'取消','btn.save':'保存','btn.ok':'确定',
+        // license
+        'license.expired':'已到期','license.expiring':'即将到期','license.trial':'试用',
+        'license.active':'已激活','license.req_code':'申请码',
+        'license.activate_btn':'🔑 输入激活码','license.days_left':'剩余 {n} 天',
+        // toast
+        'toast.copied':'已复制','toast.saved':'已保存','toast.deleted':'已删除',
+        'toast.updated':'已更新','toast.error':'操作失败','toast.network':'网络错误',
+        'toast.no_company':'请先选择公司','toast.csv_ok':'成功导入 {n} 个客户',
+        // customer view
+        'customer.title':'客户管理','customer.add':'添加客户',
+        'customer.import':'📥 CSV导入','customer.search':'搜索客户...',
+        'customer.detail.save':'💾 保存修改',
+        'customer.detail.libs':'📁 关联文档库','customer.detail.orders':'📦 订单',
+        'customer.detail.add_order':'+ 新增订单','customer.detail.convs':'💬 最近对话',
+        'customer.detail.no_convs':'暂无关联对话。点击下方按钮开始和此客户对话。',
+        'customer.detail.chat_btn':'💬 和此客户开始对话',
+        'customer.detail.basic':'基本信息',
+        'customer.detail.link_lib':'— 选择文档库 —',
+        'customer.detail.link_btn':'关联',
+        // tasks
+        'task.title':'定时任务','task.no_active':'暂无已激活的定时任务。请从上方模板库钩选后点击「批量生成」。',
+        'task.run_now':'▶ 立即执行','task.template':'📋 任务模板库',
+        'task.batch':'批量生成','task.running':'● 运行中','task.paused':'○ 已暂停',
+        // history
+        'history.title':'对话记录',
+        'history.no_records':'暂无对话记录',
+        // orders
+        'order.title':'新增订单','order.edit_title':'编辑订单',
+        'order.no':'订单号','order.product':'产品名称 *','order.qty':'数量',
+        'order.unit':'单位','order.price':'单价','order.currency':'币种',
+        'order.amount':'总金额','order.status':'状态','order.delivery':'交货日期',
+        'order.payment':'付款方式','order.notes':'备注',
+        // onboarding
+        'onb.welcome':'欢迎使用 Trade AI Assistant！',
+        'onb.welcome_desc':'我是你的 AI 外贸助手，让我帮你快速上手。',
+        'onb.start_btn':'🚀 开始',
+        'onb.step1_done':'✓ 了解 Trade','onb.step2_active':'● 开发客户',
+        'onb.step2_title':'试试对目标客户做背调',
+        'onb.step2_desc':'输入客户公司名或官网，AI 将自动搜索公开信息并生成开发信',
+        'onb.analyze_btn':'开始分析','onb.stop_btn':'🛑 停止',
+        'onb.skip':'跳过引导，直接开始',
+        // misc
+        'misc.thinking':'正在思考...','misc.loading':'加载中...',
+        'misc.no_data':'暂无数据','misc.empty':'暂无内容',
+        'misc.loading_orders':'加载订单...',
+        'misc.file_preview':'文件内容通过 Agent 对话中的 read_file 工具访问。在侧边栏中选择对应功能入口后，Agent 会自动读取相关文件。',
+        'misc.drop_title':'📁 拖放文件到此处',
+        'misc.drop_subdir':'上传到子目录：','misc.drop_total':'共 {n} 个文件',
+        'misc.drop_confirm':'确认上传','misc.drop_too_many':'... 还有 {n} 个文件',
+        // customer detail panel fields
+        'cust.field.name':'客户名称','cust.field.title':'联系人职位','cust.field.tier':'等级',
+        'cust.field.website':'公司网站',
+        'cust.field.tier_none':'未分级','cust.field.buyer':'买家类型','cust.field.buyer_none':'未设置',
+        'cust.field.country':'国家','cust.field.category':'主营品类','cust.field.score':'匹配度',
+        'cust.field.score_none':'未评分','cust.field.email':'邮箱','cust.field.phone':'电话',
+        'cust.field.backup_email':'备用邮箱','cust.field.contact':'联系方式','cust.field.note':'备注',
+        'cust.field.follow':'AI 跟进建议','cust.field.no_orders':'暂无订单，点击「新增订单」添加。',
+        'cust.field.order_fail':'订单加载失败',
+        // order modal
+        'order.cust_label':'客户 *','order.cust_select':'-- 选择客户 --',
+        'order.status_quoting':'报价中','order.status_ordered':'已下单','order.status_shipped':'已出货','order.status_done':'已完成',
+        'order.btn_delete':'🗑 删除','order.confirm_delete':'确定删除此订单？',
+        'order.created':'订单已创建','order.updated':'订单已更新','order.deleted':'订单已删除',
+        // history
+        'hist.delete_title':'删除此对话','hist.confirm_delete':'确定删除这条对话记录？此操作不可恢复。',
+        'hist.deleted':'对话已删除','hist.delete_fail':'删除失败',
+        // toast
+        'toast.input_required':'请填写库名称和文件夹路径','toast.lib_added':'文档库「{name}」已添加',
+        'toast.lib_add_fail':'添加失败','toast.saved':'已保存','toast.deleted':'已删除',
+        'toast.cust_product_required':'请选择客户并填写品名','toast.select_library':'请选择文档库',
+        'toast.complete_onboarding':'请先完成新手引导','toast.enter_company':'请输入公司名或网址',
+        'toast.wizard_product':'请先告诉我你卖什么产品','toast.wizard_market':'请告诉我目标市场',
+        'toast.activate_fail':'激活失败','toast.network_retry':'网络错误，请重试',
+        'toast.request_timeout':'请求超时',
+        'toast.imported':'已导入 {n} 个文件到「{dir}」','toast.import_fail':'导入失败',
+        // wizard
+        'wiz.step1_title':'先告诉我：你卖什么产品？','wiz.step1_desc':'随便说就行，"LED灯""五金""纺织品"都可以',
+        'wiz.step1_ph':'例如：LED工矿灯、不锈钢螺丝、全棉T恤...',
+        'wiz.step1_btn':'下一步：卖到哪里去？ →','wiz.step1_indicator':'● 卖什么',
+        'wiz.step2_title':'想卖到哪个国家或地区？','wiz.step2_desc':'比如"德国""美国""中东""东南亚"，可以写多个',
+        'wiz.step2_ph':'例如：德国、美国、中东...',
+        'wiz.step2_btn':'下一步：找什么类型？ →','wiz.step2_indicator':'● 卖到哪',
+        'wiz.step3_title':'想找什么类型的客户？','wiz.step3_indicator':'● 找谁',
+        'wiz.type_distributor':'批发商 / 分销商','wiz.type_distributor_desc':'大量采购再分销到本地市场',
+        'wiz.type_oem':'品牌商 / OEM 工厂','wiz.type_oem_desc':'贴牌生产，长期大单',
+        'wiz.type_retailer':'零售商 / 连锁店','wiz.type_retailer_desc':'小批量多频次采购',
+        'wiz.type_any':'都行，帮我一起找','wiz.type_any_desc':'让 AI 自动判断最合适的类型',
+        'wiz.launch_btn':'🚀 开始找客户！','wiz.back':'← 返回修改','wiz.skip':'跳过向导',
+        'wiz.step_done':'✓ 卖什么','wiz.step2_done':'✓ 卖到哪',
+        'wiz.searching':'正在帮你找客户...','wiz.searching_desc':'自动多通道搜索中，请稍候',
+        'wiz.type_names.distributor':'批发商/分销商','wiz.type_names.oem':'品牌商/OEM工厂',
+        'wiz.type_names.retailer':'零售商/连锁店','wiz.type_names.any':'所有类型',
+        // onboarding
+        'onb.welcome_title':'欢迎使用 Trade AI','onb.welcome_desc2':'Trade 可以帮你<strong>自动搜索客户背景信息（OSINT）</strong>，并基于你的产品定位<strong>撰写专业 B2B 开发信</strong>。',
+        'onb.feat1':'海关数据 · 社媒分析 · 官网诊断','onb.feat2':'AI 写开发信 · 跟进序列 · 报价单',
+        'onb.feat3':'7x24 自动获客 · 定时任务调度',
+        'onb.start_btn':'🚀 开发第一个客户','onb.skip_btn':'跳过引导，直接开始',
+        // upgrade/restart button states
+        'sys.updating':'⏳ 更新中...','sys.restarting':'⏳ 重启中...',
+        'sys.update_done_restart':'✅ 系统更新完成！正在重启...',
+        'sys.update_done':'✅ 更新完成。请点击"🔄 重启"以应用新版本。',
+        'sys.update_fail':'❌ 更新失败: ','sys.update_unknown':'⚠️ 更新结果未知，请检查网络后重试',
+        'sys.update_network':'⚠️ 更新请求失败，请检查网络连接后重试',
+        'sys.restart_toast':'🔄 正在重启 Trade 服务...',
+        'sys.restart_ok':'✅ 重启命令已发送，页面将在几秒后刷新',
+        'sys.restart_fail':'❌ 重启失败: ',
+        'sys.restart_wait':'🔄 服务正在重启，页面即将刷新...',
+        'sys.restart_timeout':'⚠️ 服务重启超时，请手动刷新页面',
+        'sys.skills_updating':'⏳ 更新中...',
+        'sys.skills_ok':'✅ Skills 更新完成！已同步最新版本',
+        'sys.skills_fail':'❌ 更新失败: ',
+        'sys.skills_error':'❌ 更新出错: ',
+        // skills help
+        'skills.copied':'提示词已复制: ',
+        // import button
+        'import.importing':'导入中...','import.confirm':'确认导入',
+        // guidance bar
+        'guide.rest':'当前时段暂无安排',
+        'guide.progress':'今日进度',
+    },
+    en: {
+        'nav.daily':'Daily Briefing','nav.lead':'Lead Gen','nav.platform':'Site Audit',
+        'nav.social':'Social','nav.linkedin':'LinkedIn','nav.customs':'Customs',
+        'nav.customers':'Customers','nav.docs':'Documents','nav.docgen':'Doc Gen',
+        'nav.osint':'Due Diligence','nav.tasks':'Tasks','nav.history':'History',
+        'nav.workbench':'📊 Workspace','nav.outreach':'🔍 Outreach',
+        'nav.sales':'👤 Sales','nav.tools':'🛠️ Tools','nav.hist':'💬 History',
+        'company.select':'— Select Company —','company.add':'Add',
+        'chat.ph.daily':'Ask anything, or say "Morning briefing" to start...',
+        'chat.ph.lead':'What do you sell? Where? Who are you looking for?',
+        'chat.ph.platform':'Paste any website URL for a full audit...',
+        'chat.ph.social':'Describe your social media needs...',
+        'chat.ph.linkedin':'Describe your LinkedIn marketing needs...',
+        'chat.ph.customs':'Upload customs data, then describe your analysis needs...',
+        'chat.ph.docs':'Select a library below, or paste file content...',
+        'chat.ph.docgen':'Describe the document: e.g. "Create a quotation PPT for EU client"...',
+        'chat.ph.osint':'Enter email/domain/company name for background check...',
+        'chat.clr':'🗑️ Clear','chat.library':'— Select Library —','chat.lib.add':'Add Library',
+        'footer.update':'⬆️ Update','footer.restart':'🔄 Restart',
+        'footer.skills':'📖 Skills Help','footer.skills_update':'🔄 Skills',
+        'footer.upgrade':'⬆️ Upgrade Guide',
+        'modal.co.title':'🏢 Company Settings','modal.co.tab_list':'Companies','modal.co.tab_identity':'Agent Identity',
+        'modal.co.add_title':'Add Company','modal.co.name':'Company Name *','modal.co.name_ph':'e.g. My Trading Co.',
+        'modal.co.slug_ph':'Auto-generated','modal.co.slug_tt':'Auto-generated from company name',
+        'modal.co.contact':'Contact','modal.co.contact_ph':'Name',
+        'modal.co.email':'Email','modal.co.website':'Website',
+        'modal.co.identity_desc':'Configure the AI Agent identity for this company. Injected into every conversation.',
+        'modal.co.identity_label':'Agent Identity (Markdown)',
+        'modal.co.identity_ph':'Paste agent-identity.md content...',
+        'modal.co.create':'Create Company','modal.co.save':'Save',
+        'modal.cust.title':'Add Customer','modal.cust.title_edit':'Edit Customer',
+        'modal.cust.name':'Company Name *','modal.cust.name_ph':'Customer company name',
+        'modal.cust.contact':'Contact','modal.cust.contact_ph':'Contact name',
+        'modal.cust.title_f':'Title','modal.cust.country':'Country','modal.cust.country_ph':'e.g. Italy',
+        'modal.cust.email':'Email','modal.cust.phone':'Phone',
+        'modal.cust.whatsapp':'WhatsApp','modal.cust.linkedin':'LinkedIn URL',
+        'modal.cust.website':'Website','modal.cust.tier':'Tier',
+        'modal.cust.tier_none':'None',
+        'modal.cust.buyer':'Buyer Type','modal.cust.buyer_none':'Not set',
+        'modal.cust.category':'Main Category','modal.cust.category_ph':'Customer main product category',
+        'modal.cust.backup_email':'Backup Email','modal.cust.score':'Match Score',
+        'modal.cust.score_none':'Not rated',
+        'modal.cust.note':'Notes','modal.cust.note_ph':'Projects, requirements, notes...',
+        'modal.cust.follow':'AI Follow-up','modal.cust.follow_ph':'AI-generated follow-up strategy...',
+        'modal.lib.title':'📁 Add Library',
+        'modal.lib.desc':'Link a local folder as a document library. Agent can read files via read_file.',
+        'modal.lib.name':'Library Name *','modal.lib.name_ph':'e.g. Product Quotes',
+        'modal.lib.path':'Folder Path *','modal.lib.path_ph':'/Users/xxx/Documents/clients',
+        'modal.lib.path_hint':'📌 Mac: Right-click folder → Hold Option → Copy path',
+        'modal.lib.notes':'Description','modal.lib.notes_ph':'Optional',
+        'modal.lib.create':'Add',
+        'modal.upgrade.title':'⬆️ How to Upgrade Trade',
+        'modal.upgrade.p1':'The easiest way is to let <strong>Hermes</strong> (AI assistant) handle it. It runs all commands and retries on errors.',
+        'modal.upgrade.steps':'Steps',
+        'modal.upgrade.li1':'Open terminal:<br><b>macOS</b> — Launchpad → Terminal<br><b>Windows</b> — <code>Win+R</code> → <code>powershell</code>',
+        'modal.upgrade.li2':'Type <code>hermes</code> and press Enter to launch Hermes',
+        'modal.upgrade.li3':'In the Hermes dialog, paste the following:',
+        'modal.upgrade.cmd':'Help me update Trade and restart it. Repo: https://github.com/chefroger/smart-trade-ai',
+        'modal.upgrade.p2':'Wait for completion, then refresh the page (<kbd>Ctrl+Shift+R</kbd>).',
+        'modal.upgrade.p3':'If <code>hermes</code> is not found, Hermes Agent is not installed. See install guide first.',
+        'modal.skills.title':'📖 All 37 Skills Reference',
+        'modal.skills.desc':'Type keywords in chat — Trade auto-matches the right skill. Click copy icon for quick prompts.',
+        'btn.close':'Close','btn.cancel':'Cancel','btn.save':'Save','btn.ok':'OK',
+        'license.expired':'Expired','license.expiring':'Expiring Soon','license.trial':'Trial',
+        'license.active':'Active','license.req_code':'Request Code',
+        'license.activate_btn':'🔑 Enter Activation Code','license.days_left':'{n} days left',
+        'toast.copied':'Copied','toast.saved':'Saved','toast.deleted':'Deleted',
+        'toast.updated':'Updated','toast.error':'Error','toast.network':'Network Error',
+        'toast.no_company':'Please select a company first','toast.csv_ok':'Imported {n} customers',
+        'customer.title':'Customers','customer.add':'Add Customer',
+        'customer.import':'📥 Import CSV','customer.search':'Search...',
+        'customer.detail.save':'💾 Save',
+        'customer.detail.libs':'📁 Linked Libraries','customer.detail.orders':'📦 Orders',
+        'customer.detail.add_order':'+ New Order','customer.detail.convs':'💬 Recent Conversations',
+        'customer.detail.no_convs':'No conversations. Click below to start chatting with this customer.',
+        'customer.detail.chat_btn':'💬 Chat with this Customer',
+        'customer.detail.basic':'Basic Info',
+        'customer.detail.link_lib':'— Select Library —',
+        'customer.detail.link_btn':'Link',
+        'task.title':'Scheduled Tasks','task.no_active':'No active tasks. Check templates above and click "Batch Generate".',
+        'task.run_now':'▶ Run Now','task.template':'📋 Task Templates',
+        'task.batch':'Batch Generate','task.running':'● Running','task.paused':'○ Paused',
+        'history.title':'Chat History',
+        'history.no_records':'No chat history',
+        'order.title':'New Order','order.edit_title':'Edit Order',
+        'order.no':'Order No.','order.product':'Product *','order.qty':'Qty',
+        'order.unit':'Unit','order.price':'Unit Price','order.currency':'Currency',
+        'order.amount':'Total','order.status':'Status','order.delivery':'Delivery',
+        'order.payment':'Payment Terms','order.notes':'Notes',
+        'onb.welcome':'Welcome to Trade AI Assistant!',
+        'onb.welcome_desc':"I'm your AI trade assistant. Let me help you get started.",
+        'onb.start_btn':'🚀 Get Started',
+        'onb.step1_done':'✓ About Trade','onb.step2_active':'● Find Customers',
+        'onb.step2_title':'Try a background check on a prospect',
+        'onb.step2_desc':'Enter a company name or website — AI will search public info and generate an outreach email',
+        'onb.analyze_btn':'Start Analysis','onb.stop_btn':'🛑 Stop',
+        'onb.skip':'Skip tutorial',
+        'misc.thinking':'Thinking...','misc.loading':'Loading...',
+        'misc.no_data':'No data','misc.empty':'Nothing here yet',
+        'misc.loading_orders':'Loading orders...',
+        'misc.file_preview':'File content is accessed via the read_file tool during Agent conversations. Select a feature in the sidebar and the Agent will automatically read relevant files.',
+        'misc.drop_title':'📁 Drop files here',
+        'misc.drop_subdir':'Upload to:','misc.drop_total':'{n} files total',
+        'misc.drop_confirm':'Confirm Upload','misc.drop_too_many':'... {n} more files',
+        'cust.field.name':'Customer Name','cust.field.title':'Title','cust.field.tier':'Tier',
+        'cust.field.website':'Website',
+        'cust.field.tier_none':'None','cust.field.buyer':'Buyer Type','cust.field.buyer_none':'Not Set',
+        'cust.field.country':'Country','cust.field.category':'Main Category','cust.field.score':'Match Score',
+        'cust.field.score_none':'Not Rated','cust.field.email':'Email','cust.field.phone':'Phone',
+        'cust.field.backup_email':'Backup Email','cust.field.contact':'Contact Info','cust.field.note':'Notes',
+        'cust.field.follow':'AI Follow-up','cust.field.no_orders':'No orders yet. Click "+ New Order" to add.',
+        'cust.field.order_fail':'Failed to load orders',
+        'order.cust_label':'Customer *','order.cust_select':'-- Select Customer --',
+        'order.status_quoting':'Quoting','order.status_ordered':'Ordered','order.status_shipped':'Shipped','order.status_done':'Completed',
+        'order.btn_delete':'🗑 Delete','order.confirm_delete':'Delete this order?',
+        'order.created':'Order created','order.updated':'Order updated','order.deleted':'Order deleted',
+        'hist.delete_title':'Delete','hist.confirm_delete':'Delete this conversation? This cannot be undone.',
+        'hist.deleted':'Conversation deleted','hist.delete_fail':'Delete failed',
+        'toast.input_required':'Please fill in library name and path','toast.lib_added':'Library "{name}" added',
+        'toast.lib_add_fail':'Failed to add','toast.saved':'Saved','toast.deleted':'Deleted',
+        'toast.cust_product_required':'Please select customer and fill in product name','toast.select_library':'Please select a library',
+        'toast.complete_onboarding':'Please complete the tutorial first','toast.enter_company':'Please enter a company name or URL',
+        'toast.wizard_product':'What do you sell?','toast.wizard_market':'Which market?',
+        'toast.activate_fail':'Activation failed','toast.network_retry':'Network error, please retry',
+        'toast.request_timeout':'Request timeout',
+        'toast.imported':'Imported {n} files to "{dir}"','toast.import_fail':'Import failed',
+        'wiz.step1_title':'First: what do you sell?','wiz.step1_desc':'Anything works — "LED lights", "hardware", "textiles"...',
+        'wiz.step1_ph':'e.g. LED high bay lights, stainless steel bolts...',
+        'wiz.step1_btn':'Next: which markets? →','wiz.step1_indicator':'● What',
+        'wiz.step2_title':'Which country or region?','wiz.step2_desc':'e.g. "Germany", "US", "Middle East", "Southeast Asia"',
+        'wiz.step2_ph':'e.g. Germany, US, Middle East...',
+        'wiz.step2_btn':'Next: what type of customer? →','wiz.step2_indicator':'● Where',
+        'wiz.step3_title':'What type of customer?','wiz.step3_indicator':'● Who',
+        'wiz.type_distributor':'Wholesaler / Distributor','wiz.type_distributor_desc':'Bulk purchase for local distribution',
+        'wiz.type_oem':'Brand / OEM Factory','wiz.type_oem_desc':'OEM production, long-term large orders',
+        'wiz.type_retailer':'Retailer / Chain Store','wiz.type_retailer_desc':'Small batch, high frequency',
+        'wiz.type_any':'Any type works','wiz.type_any_desc':'Let AI decide the best fit',
+        'wiz.launch_btn':'🚀 Find Customers!','wiz.back':'← Back','wiz.skip':'Skip',
+        'wiz.step_done':'✓ Products','wiz.step2_done':'✓ Markets',
+        'wiz.searching':'Searching for customers...','wiz.searching_desc':'Multi-channel search in progress',
+        'wiz.type_names.distributor':'Wholesaler/Distributor','wiz.type_names.oem':'Brand/OEM',
+        'wiz.type_names.retailer':'Retailer/Chain','wiz.type_names.any':'All Types',
+        'onb.welcome_title':'Welcome to Trade AI','onb.welcome_desc2':'Trade can <strong>auto-research customer backgrounds (OSINT)</strong> and <strong>write professional B2B outreach emails</strong> based on your products.',
+        'onb.feat1':'Customs data · Social media · Website audit','onb.feat2':'AI cold emails · Follow-up · Quotations',
+        'onb.feat3':'24/7 auto lead gen · Scheduled tasks',
+        'onb.start_btn':'🚀 Find First Customer','onb.skip_btn':'Skip, start directly',
+        'sys.updating':'⏳ Updating...','sys.restarting':'⏳ Restarting...',
+        'sys.update_done_restart':'✅ Update complete! Restarting...',
+        'sys.update_done':'✅ Update complete. Click "🔄 Restart" to apply.',
+        'sys.update_fail':'❌ Update failed: ','sys.update_unknown':'⚠️ Update result unknown, check network',
+        'sys.update_network':'⚠️ Update request failed, check network',
+        'sys.restart_toast':'🔄 Restarting Trade...',
+        'sys.restart_ok':'✅ Restart command sent, page will refresh soon',
+        'sys.restart_fail':'❌ Restart failed: ',
+        'sys.restart_wait':'🔄 Service restarting, page will refresh...',
+        'sys.restart_timeout':'⚠️ Restart timeout, please refresh manually',
+        'sys.skills_updating':'⏳ Updating...',
+        'sys.skills_ok':'✅ Skills updated!',
+        'sys.skills_fail':'❌ Update failed: ',
+        'sys.skills_error':'❌ Update error: ',
+        'skills.copied':'Prompt copied: ',
+        'import.importing':'Importing...','import.confirm':'Confirm Upload',
+        'guide.rest':'No task scheduled now',
+        'guide.progress':"Today's Progress",
+    }
+};
+
+function t(key, params) {
+    var s = (I18N[currentLang] && I18N[currentLang][key]) || (I18N.zh && I18N.zh[key]) || key;
+    if (params) { for (var k in params) s = s.replace('{'+k+'}', params[k]); }
+    return s;
+}
+
+function switchLang(lang) {
+    if (lang === currentLang) return;
+    currentLang = lang;
+    try { localStorage.setItem('trade_lang', lang); } catch(_) {}
+    // 完整刷新 UI
+    _applyLanguage();
+}
+
+function initLang() {
+    try { currentLang = localStorage.getItem('trade_lang') || 'zh'; } catch(_) { currentLang = 'zh'; }
+    var sel = document.getElementById('lang-select');
+    if (sel) sel.value = currentLang;
+    _applyLanguage();
+}
+
+function _applyLanguage() {
+    // 1. 侧边栏
+    _updateSidebarLabels();
+    // 2. 公司选择器
+    var cs = document.getElementById('company-select');
+    if (cs && cs.options[0]) cs.options[0].text = t('company.select');
+    var addBtn = document.querySelector('.csel-row button');
+    if (addBtn) { addBtn.title = t('company.add'); addBtn.textContent = '+'; }
+    // 3. Footer 按钮
+    var map = {
+        'system-update-btn': 'footer.update', 'system-restart-btn': 'footer.restart',
+        'skills-help-btn': 'footer.skills', 'skills-update-btn': 'footer.skills_update',
+        'upgrade-help-btn': 'footer.upgrade',
+    };
+    for (var id in map) { var b = document.getElementById(id); if (b) b.textContent = t(map[id]); }
+    // 4. 静态 modal 文本更新
+    _updateStaticModals();
+    // 5. 重新渲染当前视图
+    if (currentView === 'chat') {
+        navToView('chat', currentChatContext, t('nav.' + currentChatContext));
+    } else {
+        navToView(currentView);
+    }
+    // 6. 更新页面标题
+    document.title = currentLang === 'en' ? 'Trade AI Assistant' : 'Trade AI Assistant — 智能外贸销售助手';
+}
+
+function _updateSidebarLabels() {
+    var sectionKeys = ['nav.workbench', 'nav.outreach', 'nav.sales', 'nav.tools', 'nav.hist'];
+    document.querySelectorAll('.nav-section-title').forEach(function(el, i) {
+        if (i < sectionKeys.length) el.textContent = t(sectionKeys[i]);
+    });
+    var ctxMap = {
+        'daily':'nav.daily','lead':'nav.lead','platform':'nav.platform',
+        'social':'nav.social','linkedin':'nav.linkedin','customs':'nav.customs',
+        'docs':'nav.docs','docgen':'nav.docgen','osint':'nav.osint',
+    };
+    var viewMap = {'customers':'nav.customers','tasks':'nav.tasks','history':'nav.history'};
+    document.querySelectorAll('.nav-item').forEach(function(el) {
+        var ctx = el.getAttribute('data-chat-context');
+        var view = el.getAttribute('data-view');
+        var key = (ctx && ctxMap[ctx]) || (view && viewMap[view]);
+        if (key) {
+            var label = el.querySelector('.nav-label');
+            if (label) label.textContent = t(key);
+            if (ctx && view === 'chat') {
+                el.setAttribute('onclick', "navToView('chat','"+ctx+"','"+t(key)+"')");
+            }
+        }
+    });
+    if (currentView === 'chat') currentChatName = t('nav.' + currentChatContext);
+}
+
+function _updateStaticModals() {
+    // Company modal
+    var cm = document.getElementById('company-modal');
+    if (cm) {
+        var h3 = cm.querySelector('h3'); if (h3) h3.textContent = t('modal.co.title');
+        var tb1 = document.getElementById('tab-btn-companies'); if (tb1) tb1.textContent = t('modal.co.tab_list');
+        var tb2 = document.getElementById('tab-btn-identity'); if (tb2) tb2.textContent = t('modal.co.tab_identity');
+        var h4 = cm.querySelector('#tab-companies h4'); if (h4) h4.textContent = t('modal.co.add_title');
+        var lbls = cm.querySelectorAll('label');
+        lbls.forEach(function(l) {
+            var f = l.getAttribute('for');
+            if (f === 'co-name') l.textContent = t('modal.co.name');
+            else if (f === 'co-contact-name') l.textContent = t('modal.co.contact');
+            else if (f === 'co-contact-email') l.textContent = t('modal.co.email');
+            else if (f === 'co-website') l.textContent = t('modal.co.website');
+            else if (f === 'identity-editor') l.textContent = t('modal.co.identity_label');
+        });
+        var inps = cm.querySelectorAll('input');
+        inps.forEach(function(inp) {
+            if (inp.id === 'co-name') inp.placeholder = t('modal.co.name_ph');
+            else if (inp.id === 'co-slug') { inp.placeholder = t('modal.co.slug_ph'); inp.title = t('modal.co.slug_tt'); }
+            else if (inp.id === 'co-contact-name') inp.placeholder = t('modal.co.contact_ph');
+        });
+        var ta = cm.querySelector('#identity-editor'); if (ta) ta.placeholder = t('modal.co.identity_ph');
+        var btns = cm.querySelectorAll('.form-actions button');
+        btns.forEach(function(b) {
+            if (b.textContent.includes('创建') || b.textContent.includes('Create')) b.textContent = t('modal.co.create');
+            else if (b.textContent.includes('保存') || b.textContent.includes('Save')) b.textContent = t('btn.save');
+            else if (b.textContent.includes('关闭') || b.textContent.includes('Close')) b.textContent = t('btn.close');
+        });
+    }
+    // Customer modal
+    var cum = document.getElementById('customer-modal');
+    if (cum) {
+        var ch3 = cum.querySelector('h3'); if (ch3 && !ch3.textContent.includes('编辑') && !ch3.textContent.includes('Edit')) ch3.textContent = t('modal.cust.title');
+        var clbls = cum.querySelectorAll('label');
+        clbls.forEach(function(l) {
+            var f = l.getAttribute('for');
+            var m = {'cust-name':'modal.cust.name','cust-contact':'modal.cust.contact','cust-title':'modal.cust.title_f',
+                'cust-country':'modal.cust.country','cust-email':'modal.cust.email','cust-phone':'modal.cust.phone',
+                'cust-whatsapp':'modal.cust.whatsapp','cust-linkedin':'modal.cust.linkedin','cust-website':'modal.cust.website',
+                'cust-tier':'modal.cust.tier','cust-buyer-type':'modal.cust.buyer','cust-main-category':'modal.cust.category',
+                'cust-backup-email':'modal.cust.backup_email','cust-match-score':'modal.cust.score',
+                'cust-note':'modal.cust.note','cust-follow-up-note':'modal.cust.follow'};
+            if (m[f]) l.textContent = t(m[f]);
+        });
+        var cpls = cum.querySelectorAll('input[placeholder]');
+        cpls.forEach(function(inp) {
+            if (inp.id === 'cust-name') inp.placeholder = t('modal.cust.name_ph');
+            else if (inp.id === 'cust-contact') inp.placeholder = t('modal.cust.contact_ph');
+            else if (inp.id === 'cust-country') inp.placeholder = t('modal.cust.country_ph');
+        });
+        var cta = cum.querySelector('#cust-note'); if (cta) cta.placeholder = t('modal.cust.note_ph');
+        var cfa = cum.querySelector('#cust-follow-up-note'); if (cfa) cfa.placeholder = t('modal.cust.follow_ph');
+        var csels = cum.querySelectorAll('select');
+        csels.forEach(function(s) {
+            if (s.id === 'cust-tier' && s.options[0]) s.options[0].text = t('modal.cust.tier_none');
+            if (s.id === 'cust-buyer-type' && s.options[0]) s.options[0].text = t('modal.cust.buyer_none');
+            if (s.id === 'cust-match-score' && s.options[0]) s.options[0].text = t('modal.cust.score_none');
+        });
+        var cbtns = cum.querySelectorAll('.form-actions button');
+        cbtns.forEach(function(b) {
+            if (b.textContent.includes('取消') || b.textContent.includes('Cancel')) b.textContent = t('btn.cancel');
+            else if (b.textContent.includes('保存') || b.textContent.includes('Save')) b.textContent = t('btn.save');
+        });
+    }
+    // Library modal
+    var lm = document.getElementById('library-modal');
+    if (lm) {
+        var lh3 = lm.querySelector('h3'); if (lh3) lh3.textContent = t('modal.lib.title');
+        var lp = lm.querySelector('p'); if (lp) lp.textContent = t('modal.lib.desc');
+        var llbls = lm.querySelectorAll('label');
+        llbls.forEach(function(l) {
+            var f = l.getAttribute('for');
+            if (f === 'lib-name') l.textContent = t('modal.lib.name');
+            else if (f === 'lib-path') l.textContent = t('modal.lib.path');
+            else if (f === 'lib-desc') l.textContent = t('modal.lib.notes');
+        });
+        var lips = lm.querySelectorAll('input');
+        lips.forEach(function(inp) {
+            if (inp.id === 'lib-name') inp.placeholder = t('modal.lib.name_ph');
+            else if (inp.id === 'lib-path') inp.placeholder = t('modal.lib.path_ph');
+            else if (inp.id === 'lib-desc') inp.placeholder = t('modal.lib.notes_ph');
+        });
+        var lhint = lm.querySelector('.hint'); if (lhint) lhint.textContent = t('modal.lib.path_hint');
+        var lbtns = lm.querySelectorAll('.form-actions button');
+        lbtns.forEach(function(b) {
+            if (b.textContent.includes('取消') || b.textContent.includes('Cancel')) b.textContent = t('btn.cancel');
+            else if (b.textContent.includes('添加') || b.textContent.includes('Add')) b.textContent = t('modal.lib.create');
+        });
+    }
+    // Upgrade help modal
+    var um = document.getElementById('upgrade-help-modal');
+    if (um) {
+        var uh3 = um.querySelector('h3'); if (uh3) uh3.textContent = t('modal.upgrade.title');
+        var btns = um.querySelectorAll('.form-actions button');
+        btns.forEach(function(b) { b.textContent = t('btn.close'); });
+    }
+    // Skills help modal
+    var sm = document.getElementById('skills-help-modal');
+    if (sm) {
+        var sh3 = sm.querySelector('h3'); if (sh3) sh3.textContent = t('modal.skills.title');
+        var sp = sm.querySelector('p'); if (sp) sp.textContent = t('modal.skills.desc');
+        var sbtns = sm.querySelectorAll('.form-actions button');
+        sbtns.forEach(function(b) { b.textContent = t('btn.close'); });
+    }
+}
 let _onboardingOsinResponse = ''; // accumulated AI response text
 let _onboardingStreamCtl = null;  // AbortController for SSE stream
 
@@ -140,14 +685,14 @@ function wizardNext() {
     if (_wizardStep === 1) {
         var inp = document.getElementById('wizard-product-input');
         _wizardAnswers.product = (inp?.value || '').trim();
-        if (!_wizardAnswers.product) { toast('请先告诉我你卖什么产品'); return; }
+        if (!_wizardAnswers.product) { toast(t('toast.wizard_product')); return; }
         _wizardStep = 2;
         updateWizardCard(wizardRenderStep2());
         setTimeout(function() { var el = document.getElementById('wizard-market-input'); if (el) el.focus(); }, 200);
     } else if (_wizardStep === 2) {
         var inp2 = document.getElementById('wizard-market-input');
         _wizardAnswers.market = (inp2?.value || '').trim();
-        if (!_wizardAnswers.market) { toast('请告诉我目标市场'); return; }
+        if (!_wizardAnswers.market) { toast(t('toast.wizard_market')); return; }
         _wizardStep = 3;
         updateWizardCard(wizardRenderStep3());
     }
@@ -243,7 +788,7 @@ async function api(method, path, body) {
         if (!r.ok) {
             const err = await r.json().catch(() => ({}));
             const msg = err.detail || `请求失败 (${r.status})`;
-            if (r.status === 401) toast('请先选择公司');
+            if (r.status === 401) toast(t('toast.no_company'));
             else if (r.status === 402) showLicenseExpired(msg);
             else if (r.status === 404) toast(msg);
             else if (r.status === 409) toast(msg);
@@ -253,7 +798,7 @@ async function api(method, path, body) {
         return r.json();
     } catch(e) {
         clearTimeout(tid);
-        if (e.name === 'AbortError') { toast('请求超时'); return null; }
+        if (e.name === 'AbortError') { toast(t('toast.request_timeout')); return null; }
         throw e;
     }
 }
@@ -267,97 +812,70 @@ async function loadLicenseStatus() {
         const bar = document.getElementById('license-bar');
         if (!bar) return;
 
+        var _daysLeft = (typeof data.days_remaining === 'number') ? data.days_remaining : 999;
+        var _bgColor = _daysLeft <= 7 ? '#FEF3C7' : '#DBEAFE';
+        if (data.status === 'expired' || data.status === 'tampered') _bgColor = '#FEE2E2';
+        var reqCodeHtml = data.request_code
+            ? ' · ' + t('license.req_code') + ': <code style="background:' + _bgColor + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(t(\'toast.copied\'))">' + esc(data.request_code) + '</code>'
+            : '';
+
         if (data.status === 'expired') {
-            bar.style.display = 'block';
-            bar.style.background = '#FEF2F2';
-            bar.style.color = '#991B1B';
-            var expiredHtml = '⚠️ 试用期已到期 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;">输入激活码</a>';
-            if (data.request_code) {
-                expiredHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = expiredHtml;
+            bar.style.display = 'block'; bar.style.background = '#FEF2F2'; bar.style.color = '#991B1B';
+            bar.innerHTML = '⚠️ ' + t('license.expired') + ' · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;">' + t('license.activate_btn') + '</a>' + reqCodeHtml;
         } else if (data.status === 'active' && data.days_remaining <= 7) {
-            // 已激活但快到期（7天内）：显示黄色/红色警告 + 申请码 + 续期按钮
             bar.style.display = 'block';
             bar.style.background = data.days_remaining === 0 ? '#FEF2F2' : '#FFFBEB';
             bar.style.color = data.days_remaining === 0 ? '#991B1B' : '#92400E';
-            var activeWarn = '✅ 已激活 · 有效期至 ' + (data.expires_at||'').slice(0,10) + ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining===0?'#DC2626':'#D97706') + ';text-decoration:underline;font-weight:600;">续期激活</a>';
-            if (data.request_code) {
-                activeWarn += ' · 申请码: <code style="background:' + (data.days_remaining===0?'#FEE2E2':'#FEF3C7') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = activeWarn;
+            bar.innerHTML = '✅ ' + t('license.active') + ' · ' + t('license.expiring') + (data.expires_at ? ' ' + data.expires_at.slice(0, 10) : '') + ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining===0?'#DC2626':'#D97706') + ';text-decoration:underline;font-weight:600;">' + t('license.activate_btn') + '</a>' + reqCodeHtml;
         } else if (data.status === 'active') {
-            bar.style.display = 'block';
-            bar.style.background = '#F0FDF4';
-            bar.style.color = '#166534';
-            bar.innerHTML = `✅ 已激活${data.expires_at ? ' · 有效期至 ' + data.expires_at.substring(0,10) : ''}`;
+            bar.style.display = 'block'; bar.style.background = '#F0FDF4'; bar.style.color = '#166534';
+            bar.innerHTML = '✅ ' + t('license.active') + (data.expires_at ? ' · ' + t('license.expiring') + ' ' + data.expires_at.substring(0, 10) : '');
         } else if (data.status === 'trial') {
             bar.style.display = 'block';
-            if (data.days_remaining <= 7) {
-                // 快到期：橙色警告
-                bar.style.background = '#FFFBEB';
-                bar.style.color = '#92400E';
-            } else {
-                // 正常试用：蓝色信息
-                bar.style.background = '#EFF6FF';
-                bar.style.color = '#1E40AF';
-            }
-            var trialHtml = `⏳ 试用剩余 ${data.days_remaining} 天 · <a href="#" onclick="showActivateModal()" style="color:${data.days_remaining <= 7 ? '#D97706' : '#2563EB'};text-decoration:underline;">输入激活码</a>`;
-            if (data.request_code) {
-                trialHtml += ' · 申请码: <code style="background:' + (data.days_remaining <= 7 ? '#FEF3C7' : '#DBEAFE') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = trialHtml;
+            bar.style.background = data.days_remaining <= 7 ? '#FFFBEB' : '#EFF6FF';
+            bar.style.color = data.days_remaining <= 7 ? '#92400E' : '#1E40AF';
+            bar.innerHTML = '⏳ ' + t('license.trial') + ' ' + t('license.days_left', {n: data.days_remaining}) + ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining <= 7 ? '#D97706' : '#2563EB') + ';text-decoration:underline;">' + t('license.activate_btn') + '</a>' + reqCodeHtml;
         } else if (data.status === 'tampered') {
-            bar.style.display = 'block';
-            bar.style.background = '#FEF2F2';
-            bar.style.color = '#991B1B';
-            var tamperedHtml = '⚠️ 许可证数据异常 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;font-weight:600;">重新激活</a>';
-            if (data.request_code) {
-                tamperedHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = tamperedHtml;
+            bar.style.display = 'block'; bar.style.background = '#FEF2F2'; bar.style.color = '#991B1B';
+            bar.innerHTML = '⚠️ License Error · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;font-weight:600;">Reactivate</a>' + reqCodeHtml;
         }
-    } catch(e) { /* license API 不可用时静默 */ }
+    } catch(e) {}
 }
 
 function showLicenseExpired(msg) {
     const div = document.createElement('div');
     div.className = 'modal-backdrop';
-    div.innerHTML = `<div class="modal" style="text-align:center;max-width:420px;">
-        <h3>⏰ ${esc(msg) || '试用期已到期'}</h3>
-        <p style="margin:8px 0;color:var(--text-secondary);">请联系 Roger Lococo 获取激活码继续使用</p>
-        <img src="/static/wechat-contact.jpeg" alt="微信扫码联系" style="width:200px;border-radius:8px;margin:8px 0;">
-        <p style="font-size:11px;color:var(--text-muted);">微信扫码 · 备注「Trade」</p>
-        <p style="font-size:11px;color:var(--text-muted);">📧 lauroge@gmail.com</p>
-        <button class="btn btn-primary" onclick="showActivateModal()">🔑 输入激活码</button>
-        <button class="btn" onclick="this.closest('.modal-backdrop').remove()" style="margin-top:8px;">关闭</button>
-    </div>`;
+    div.innerHTML = '<div class="modal" style="text-align:center;max-width:420px;">' +
+        '<h3>⏰ ' + esc(msg || t('license.expired')) + '</h3>' +
+        '<p style="margin:8px 0;color:var(--text-secondary);">' + (currentLang==='en'?'Contact Roger Lococo for activation':'请联系 Roger Lococo 获取激活码继续使用') + '</p>' +
+        '<img src="/static/wechat-contact.jpeg" alt="WeChat QR" style="width:200px;border-radius:8px;margin:8px 0;">' +
+        '<p style="font-size:11px;color:var(--text-muted);">' + (currentLang==='en'?'WeChat QR · Note "Trade"':'微信扫码 · 备注「Trade」') + '</p>' +
+        '<p style="font-size:11px;color:var(--text-muted);">📧 lauroge@gmail.com</p>' +
+        '<button class="btn btn-primary" onclick="showActivateModal()">' + t('license.activate_btn') + '</button>' +
+        '<button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()" style="margin-top:8px;">' + t('btn.close') + '</button>' +
+    '</div>';
     document.body.appendChild(div);
 }
 
 async function showActivateModal() {
-    // 关掉现有弹窗
-    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-
-    // 获取申请码
+    _removeDynamicModals();
     var reqCode = '';
     try {
         var s = await fetch('/api/trade/license/status');
         var sd = await s.json();
         reqCode = sd.request_code || '';
     } catch(e) {}
-
     const div = document.createElement('div');
     div.className = 'modal-backdrop';
-    div.innerHTML = `<div class="modal" style="text-align:center;">
-        <h3>🔑 激活 Trade Assistant</h3>
-        <p style="margin:8px 0;color:var(--text-secondary);">请将下方申请码发送给作者获取激活码</p>
-        ${reqCode ? `<div style="background:var(--bg-secondary);padding:10px 14px;border-radius:var(--radius-sm);font-family:monospace;font-size:16px;letter-spacing:2px;margin:8px 0;cursor:pointer;user-select:all;" onclick="navigator.clipboard.writeText(this.textContent);toast('申请码已复制')" title="点击复制">${reqCode}</div>` : ''}
-        <input type="text" id="activate-code-input" aria-label="激活码" placeholder="粘贴作者提供的激活码" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:monospace;font-size:14px;text-align:center;text-transform:uppercase;margin:12px 0;">
-        <button class="btn btn-primary" onclick="doActivate()" style="margin-top:8px;">✅ 激活</button>
-        <button class="btn" onclick="this.closest('.modal-backdrop').remove()">取消</button>
-        <p id="activate-msg" style="margin-top:10px;font-size:12px;"></p>
-    </div>`;
+    div.innerHTML = '<div class="modal" style="text-align:center;">' +
+        '<h3>🔑 ' + (currentLang==='en'?'Activate Trade Assistant':'激活 Trade Assistant') + '</h3>' +
+        '<p style="margin:8px 0;color:var(--text-secondary);">' + (currentLang==='en'?'Send the code below to the author to get an activation code':'请将下方申请码发送给作者获取激活码') + '</p>' +
+        (reqCode ? '<div style="background:var(--bg-secondary);padding:10px 14px;border-radius:var(--radius-sm);font-family:monospace;font-size:16px;letter-spacing:2px;margin:8px 0;cursor:pointer;user-select:all;" onclick="navigator.clipboard.writeText(this.textContent);toast(t(\'toast.copied\'))" title="' + (currentLang==='en'?'Click to copy':'点击复制') + '">' + reqCode + '</div>' : '') +
+        '<input type="text" id="activate-code-input" aria-label="Activation code" placeholder="' + (currentLang==='en'?'Paste activation code':'粘贴作者提供的激活码') + '" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:monospace;font-size:14px;text-align:center;text-transform:uppercase;margin:12px 0;">' +
+        '<button class="btn btn-primary" onclick="doActivate()" style="margin-top:8px;">✅ ' + (currentLang==='en'?'Activate':'激活') + '</button>' +
+        '<button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()">' + t('btn.cancel') + '</button>' +
+        '<p id="activate-msg" style="margin-top:10px;font-size:12px;"></p>' +
+    '</div>';
     document.body.appendChild(div);
     setTimeout(() => document.getElementById('activate-code-input')?.focus(), 100);
 }
@@ -366,7 +884,7 @@ async function doActivate() {
     const input = document.getElementById('activate-code-input');
     const msg = document.getElementById('activate-msg');
     const code = input.value.trim();
-    if (!code) { msg.textContent = '请输入激活码'; msg.style.color = 'var(--accent-red)'; return; }
+    if (!code) { msg.textContent = currentLang === 'en' ? 'Please enter the activation code' : '请输入激活码'; msg.style.color = 'var(--accent-red)'; return; }
     try {
         const r = await fetch('/api/trade/license/activate', {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -377,15 +895,15 @@ async function doActivate() {
             msg.textContent = data.message;
             msg.style.color = 'var(--accent-green)';
             setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+                _removeDynamicModals();
                 loadLicenseStatus();
             }, 1500);
         } else {
-            msg.textContent = data.error || '激活失败';
+            msg.textContent = data.error || t('toast.activate_fail');
             msg.style.color = 'var(--accent-red)';
         }
     } catch(e) {
-        msg.textContent = '网络错误，请重试';
+        msg.textContent = t('toast.network_retry');
         msg.style.color = 'var(--accent-red)';
     }
 }
@@ -399,7 +917,7 @@ function _clearRuntimeCaches() {
             for (const k of Object.keys(viewCache)) delete viewCache[k];
         }
         // 仅清理与服务端 schema 强耦合的会话状态，保留 trade_cid（公司选择）
-        const preserveKeys = new Set(['trade_cid']);
+        const preserveKeys = new Set(['trade_cid', '_trade_reload_state']);
         const ssKeys = [];
         for (let i = 0; i < sessionStorage.length; i++) ssKeys.push(sessionStorage.key(i));
         ssKeys.forEach(k => { if (!preserveKeys.has(k)) sessionStorage.removeItem(k); });
@@ -470,7 +988,7 @@ async function _waitForRestartAndReload(onTimeout) {
         } catch(_) { /* 旧进程已下线但新进程未就绪，继续等 */ }
         if (attempts >= maxAttempts) {
             console.error('[重启] 超时 (' + maxAttempts + ' 次轮询)，请手动刷新');
-            toast('⚠️ 服务重启超时，请手动刷新页面');
+            toast(t('sys.restart_timeout'));
             if (typeof onTimeout === 'function') onTimeout();
             return;
         }
@@ -485,45 +1003,43 @@ async function doTradeUpdate(e) {
     const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#system-update-btn');
     if (!btn) return;
     btn.disabled = true;
-    btn.textContent = '⏳ 更新中...';
-    toast('⬆️ 正在更新系统...');
+    btn.textContent = t('sys.updating');
+    toast(t('sys.restart_toast').replace('Restarting','Updating'));
     var updateFailed = false;
     var restartScheduled = false;
     try {
         const resp = await api('POST', '/api/trade/system/update');
         if (!resp) {
-            // api() 已 toast 具体错误（超时/HTTP 错误），仅标记失败不重复提示
             updateFailed = true;
         } else if (resp.ok) {
             restartScheduled = !!resp.restart_scheduled;
             if (restartScheduled) {
-                toast('✅ 系统更新完成！正在重启...');
+                toast(t('sys.update_done_restart'));
             } else {
-                toast('✅ 更新完成。请点击"🔄 重启"以应用新版本。');
+                toast(t('sys.update_done'));
             }
         } else if (resp.error || (resp.errors && resp.errors.length)) {
             const errMsg = resp.error || resp.errors.join('; ');
-            toast('❌ 更新失败: ' + errMsg);
+            toast(t('sys.update_fail') + errMsg);
             updateFailed = true;
         } else {
-            toast('⚠️ 更新结果未知，请检查网络后重试');
+            toast(t('sys.update_unknown'));
             updateFailed = true;
         }
     } catch(e) {
-        toast('⚠️ 更新请求失败，请检查网络连接后重试');
+        toast(t('sys.update_network'));
         updateFailed = true;
     }
     if (updateFailed || !restartScheduled) {
         btn.disabled = false;
-        btn.textContent = '⬆️ 系统更新';
+        btn.textContent = t('footer.update');
         return;
     }
     // 存入标记，页面 reload 后检测并显示 toast
     try { sessionStorage.setItem('_trade_upgrade_done', '1'); } catch(_) {}
-    // 后端已通过 BackgroundTasks 调度重启——等待服务先 DOWN 再 UP，然后 hard-reload
     _waitForRestartAndReload(() => {
         btn.disabled = false;
-        btn.textContent = '⬆️ 系统更新';
+        btn.textContent = t('footer.update');
     });
 }
 
@@ -532,23 +1048,21 @@ async function doRestartTrade(e) {
     const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#system-restart-btn');
     if (!btn) return;
     btn.disabled = true;
-    btn.textContent = '⏳ 重启中...';
-    toast('🔄 正在重启 Trade 服务...');
+    btn.textContent = t('sys.restarting');
+    toast(t('sys.restart_toast'));
     try {
         const resp = await api('POST', '/api/trade/system/restart');
         if (resp && resp.ok) {
-            toast('✅ 重启命令已发送，页面将在几秒后刷新');
+            toast(t('sys.restart_ok'));
         } else {
-            toast('❌ 重启失败: ' + (resp?.error || '未知错误'));
+            toast(t('sys.restart_fail') + (resp?.error || ''));
         }
     } catch(e) {
-        // 重启后服务器可能立即断开，请求抛异常属正常
-        toast('🔄 服务正在重启，页面即将刷新...');
+        toast(t('sys.restart_wait'));
     }
-    // 统一通过 wait_down → wait_up → hard reload 流程，自动清理前端 cache
     _waitForRestartAndReload(() => {
         btn.disabled = false;
-        btn.textContent = '🔄 重启';
+        btn.textContent = t('footer.restart');
     });
 }
 
@@ -615,7 +1129,8 @@ function showSkillsHelp() {
         html += '<div style="margin-bottom:16px;"><h4 style="font-size:14px;font-weight:600;margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid var(--primary);color:var(--primary);">' + esc(group.g) + '</h4>';
         for (var si = 0; si < group.items.length; si++) {
             var sk = group.items[si];
-            html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="navigator.clipboard.writeText(\'' + sk.t.split('、')[0] + '\');toast(\'提示词已复制: ' + sk.t.split('、')[0] + '\')" title="点击复制提示词">';
+        var firstTrigger = sk.t.split('、')[0];
+        html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="var t=this.querySelector(\'code\').textContent;navigator.clipboard.writeText(\'' + esc(firstTrigger) + '\');toast(t(\'skills.copied\')+\'' + esc(firstTrigger) + '\')" title="' + (currentLang==='en'?'Click to copy prompt':'点击复制提示词') + '">';
             html += '<code style="font-size:12px;white-space:nowrap;background:var(--bg-muted);padding:1px 6px;border-radius:3px;min-width:130px;">' + esc(sk.n) + '</code>';
             html += '<span style="flex:1;font-size:12px;color:var(--text-secondary);">' + esc(sk.d) + '</span>';
             html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">💬 ' + esc(sk.t.split('、').slice(0,2).join(' | ')) + '</span>';
@@ -632,20 +1147,19 @@ async function updateSkills(e) {
     const btn = (e && (e.currentTarget || e.target)) || document.querySelector('#skills-update-btn');
     if (!btn) return;
     btn.disabled = true;
-    btn.textContent = '⏳ 更新中...';
+    btn.textContent = t('sys.skills_updating');
     try {
         const resp = await api('POST', '/api/trade/skills/update');
         if (resp?.ok) {
-            toast('✅ Skills 更新完成！已同步最新版本');
+            toast(t('sys.skills_ok'));
         } else if (resp) {
-            toast('❌ 更新失败: ' + (resp.error || '未知错误'));
+            toast(t('sys.skills_fail') + (resp.error || ''));
         }
-        // resp 为 null 时 api() 已 toast，不重复提示
     } catch(e) {
-        toast('❌ 更新出错: ' + e.message);
+        toast(t('sys.skills_error') + e.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '🔄 Skills';
+        btn.textContent = t('footer.skills_update');
     }
 }
 
@@ -660,6 +1174,14 @@ function toast(msg) {
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
 
+// 安全移除动态弹窗（跳过静态模版弹窗避免误删 HTML 中的 modal-backdrop 骨架）
+const _STATIC_MODAL_IDS = new Set(['company-modal','customer-modal','library-modal','upgrade-help-modal','skills-help-modal']);
+function _removeDynamicModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(function(e) {
+        if (!_STATIC_MODAL_IDS.has(e.id)) e.remove();
+    });
+}
+
 // ═════════════════════ NAVIGATION ═════════════════════
 // 视图缓存：{ viewKey: { element, rendered, context } }
 const viewCache = {};
@@ -669,7 +1191,7 @@ let currentChatContainer = null;
 function navToView(view, chatCtx, chatName) {
     // 新手引导进行中时阻止导航
     if (!isOnboardingCompleted() && document.getElementById('onboarding-panel')) {
-        toast('请先完成新手引导');
+        toast(t('toast.complete_onboarding'));
         return;
     }
     // 未选择公司时，所有菜单点击都显示固定提示页
@@ -751,19 +1273,6 @@ function navToView(view, chatCtx, chatName) {
 
 // ═════════════════════ CHAT VIEW ═════════════════════
 function renderChatViewInto(container, ctx, name) {
-    const placeholders = {
-        daily: '输入任何问题，或说「早安简报」开始今天的工作...',
-        lead: '说三个信息：卖什么？卖到哪？找什么客户？',
-        platform: '粘贴任何网站链接（B2B平台/公司官网/独立站），我来全面诊断优化...',
-        social: '描述社媒需求，如「帮我规划本周 Facebook 内容日历」...',
-        linkedin: '描述 LinkedIn 营销需求，如「优化我的 LinkedIn Profile」...',
-        customs: '上传海关数据文件后，描述分析需求...',
-        tender: '输入公司/品类名称，如「查 STEEL DYNAMICS 的招标信息」或「找东南亚钢铁设备招标」...',
-        docs: '在下方选择文档库后提问，或直接粘贴文件内容...',
-        docgen: '描述要生成的文档：如「做一份欧洲客户的报价单PPT」...',
-        bilingual: '上传合同/规格书 PDF 生成发货单据（发票/箱单/报关单），或上传拍品清单+图纸生成询价表...',
-        osint: '输入邮箱/域名/公司名，我来做全面的背景调查...',
-    };
 
     const coName = currentCompanyId ? (companies.find(c => c.id === currentCompanyId)?.name || '') : '';
 
@@ -777,29 +1286,29 @@ function renderChatViewInto(container, ctx, name) {
             <div class="chat-topbar-actions">
                 ${ctx === 'docs' ? `
                 <select id="chat-library-select" aria-label="选择文档库" onchange="onChatLibraryChange(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
-                    <option value="">— 选择文档库 —</option>
+                    <option value="">${t('chat.library')}</option>
                 </select>
-                <button onclick="showAddLibraryModal()" title="添加文档库" style="height:30px;width:30px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);cursor:pointer;font-size:16px;">+</button>` : ''}
-                <button onclick="clearChat()">🗑️ 清屏</button>
+                <button onclick="showAddLibraryModal()" title="${t('chat.lib.add')}" style="height:30px;width:30px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);cursor:pointer;font-size:16px;">+</button>` : ''}
+                <button onclick="clearChat()">${t('chat.clr')}</button>
             </div>
         </div>
         <div class="chat-messages" id="chat-messages">
             <div class="empty-state" id="chat-empty">
                 <div class="empty-icon">💬</div>
                 <h2>${esc(name)}</h2>
-                <p>${placeholders[ctx] || '输入您的问题...'}</p>
+                <p>${t('chat.ph.' + ctx)}</p>
             </div>
         </div>
         <div class="chat-input-area">
             <div class="chat-input-inner">
-                <textarea id="msg-input" aria-label="输入消息" placeholder="${placeholders[ctx] || ''}" rows="1"
+                <textarea id="msg-input" aria-label="输入消息" placeholder="${t('chat.ph.' + ctx)}" rows="1"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
                     oninput="this.style.height='24px';this.style.height=(this.scrollHeight>120?120:this.scrollHeight)+'px';"></textarea>
                 <button onclick="sendMsg()" id="send-btn" title="发送">↑</button>
                 <button id="stop-btn" class="hidden" title="停止">■</button>
             </div>
         </div>
-        <div class="drop-overlay" id="drop-overlay"><div class="drop-overlay-inner">&#128193; 释放以添加文件</div></div>`;
+        <div class="drop-overlay" id="drop-overlay"><div class="drop-overlay-inner">&#128193; ${currentLang==='en'?'Drop files to add':'释放以添加文件'}</div></div>`;
 
     if (ctx === 'docs') loadChatLibrarySelect();
     loadChatHistory();
@@ -858,14 +1367,14 @@ function _renderGuidanceBar(currentTimeStr, completed, pending) {
     } else {
         barHtml += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">`;
         barHtml += `<span style="font-size:15px;">☕</span>`;
-        barHtml += `<span style="font-size:13px;color:var(--text-secondary);">当前时段暂无安排 · ${currentTimeStr}</span>`;
+        barHtml += '<span style="font-size:13px;color:var(--text-secondary);">'+t('guide.rest')+' · '+esc(currentTimeStr)+'</span>';
         barHtml += `</div>`;
     }
 
     // 进度条
     const total = doneCount + totalPending;
     const pct = total > 0 ? Math.round(doneCount/total*100) : 0;
-    barHtml += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:1px;"><span>今日进度</span><span>${doneCount}/${total}</span></div>`;
+    barHtml += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:1px;"><span>'+t('guide.progress')+'</span><span>'+doneCount+'/'+total+'</span></div>';
     barHtml += `<div style="height:3px;background:var(--bg-main);border-radius:2px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:${pct}%;background:var(--accent-green);border-radius:2px;transition:width 0.3s;"></div></div>`;
 
     // 今日所有定时任务列表（从 completed + pending 合并，按时间排序）
@@ -1118,7 +1627,7 @@ async function loadChatLibrarySelect() {
         seen.add(l.name);
         return true;
     });
-    sel.innerHTML = '<option value="">— 选择文档库 —</option>' +
+    sel.innerHTML = '<option value="">' + t('chat.library') + '</option>' +
         unique.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
 }
 
@@ -1200,7 +1709,7 @@ async function _uploadToWorkDir(files, subdir) {
 }
 
 function _showDropModal(files) {
-    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+    _removeDynamicModals();
     _pendingDropFiles = files;
 
     const totalSize = files.reduce((s, f) => s + f.size, 0);
@@ -1232,10 +1741,10 @@ function _showDropModal(files) {
     backdrop.querySelector('#drop-confirm-btn').onclick = async function() {
         const subdir = backdrop.querySelector('#drop-subdir-select').value;
         const btn = backdrop.querySelector('#drop-confirm-btn');
-        btn.disabled = true; btn.textContent = '导入中...';
+        btn.disabled = true; btn.textContent = t('import.importing');
         try {
             const result = await _uploadToWorkDir(_pendingDropFiles, subdir);
-            toast(`已导入 ${result.uploaded} 个文件到「${subdir}」`);
+            toast(t('toast.imported', {n: result.uploaded, dir: subdir}));
             const input = document.getElementById('msg-input');
             if (input) {
                 // 检查是否有图片文件，提示 Agent 使用 vision 或 OCR
@@ -1250,8 +1759,8 @@ function _showDropModal(files) {
             }
             backdrop.remove();
         } catch (e) {
-            toast('导入失败: ' + e.message);
-            btn.disabled = false; btn.textContent = '确认导入';
+            toast(t('toast.import_fail') + ': ' + e.message);
+            btn.disabled = false; btn.textContent = t('import.confirm');
         }
     };
 }
@@ -1319,15 +1828,15 @@ function showAddLibraryModal() {
 async function createLibrary() {
     const name = $('lib-name').value.trim();
     const path = $('lib-path').value.trim();
-    if (!name || !path) { toast('请填写库名称和文件夹路径'); return; }
+    if (!name || !path) { toast(t('toast.input_required')); return; }
     const desc = $('lib-desc').value.trim();
     const r = await api('POST', '/api/trade/libraries', {name, root_path: path, description: desc});
     if (r?.id) {
-        toast(`文档库「${name}」已添加`);
+        toast(t('toast.lib_added', {name: name}));
         hideModal('library-modal');
         loadChatLibrarySelect();
     } else {
-        toast(r?.detail || '添加失败');
+        toast(r?.detail || t('toast.lib_add_fail'));
     }
 }
 
@@ -1361,7 +1870,7 @@ function addMsg(role, content, files, save, convId) {
     });
     if (files && files.length) {
         const s = document.createElement('div'); s.className = 'sources';
-        s.innerHTML = '<div class="sources-title">📄 参考文件</div>' + files.map(f => `<div>📎 ${esc(f.file||f)}</div>`).join('');
+        s.innerHTML = '<div class="sources-title">📄 '+(currentLang==='en'?'References':'参考文件')+'</div>' + files.map(f => '<div>📎 '+esc(f.file||f)+'</div>').join('');
         body.appendChild(s);
     }
     div.appendChild(avatar); div.appendChild(body);
@@ -1370,7 +1879,7 @@ function addMsg(role, content, files, save, convId) {
     if (role === 'assistant' && content) {
         const copyBtn = document.createElement('button');
         copyBtn.textContent = '📋';
-        copyBtn.title = '复制到剪贴板';
+        copyBtn.title = currentLang==='en'?'Copy to clipboard':'复制到剪贴板';
         copyBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:1px solid #D1D5DB;border-radius:4px;padding:2px 6px;font-size:12px;cursor:pointer;color:#9CA3AF;opacity:0.5;transition:opacity 0.15s;';
         copyBtn.onmouseenter = function() { this.style.opacity = '1'; };
         copyBtn.onmouseleave = function() { this.style.opacity = '0.5'; };
@@ -1391,7 +1900,7 @@ function addMsg(role, content, files, save, convId) {
             const ratingDiv = document.createElement('div');
             ratingDiv.className = 'msg-rating';
             ratingDiv.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light);';
-            ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">评价此回复：</span>'
+            ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">'+(currentLang==='en'?'Rate this reply: ':'评价此回复：')+'</span>'
                 + '<button class="rating-btn" data-r="👍" style="border:1px solid #D1D5DB;border-radius:4px;padding:2px 8px;font-size:13px;cursor:pointer;background:#fff;">👍</button>'
                 + '<button class="rating-btn" data-r="👎" style="border:1px solid #D1D5DB;border-radius:4px;padding:2px 8px;font-size:13px;cursor:pointer;background:#fff;">👎</button>';
             body.appendChild(ratingDiv);
@@ -1401,7 +1910,7 @@ function addMsg(role, content, files, save, convId) {
                     e.stopPropagation();
                     var rVal = this.dataset.r === '👍' ? 4 : 2;
                     await api('POST', '/api/trade/conversations/' + convIdForRating + '/rate', { rating: rVal, feedback: '' });
-                    ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--accent-green);">✅ 感谢反馈</span>';
+                    ratingDiv.innerHTML = '<span style="font-size:11px;color:var(--accent-green);">✅ '+(currentLang==='en'?'Thanks for feedback':'感谢反馈')+'</span>';
                 });
             });
         }
@@ -1510,7 +2019,7 @@ async function sendMsg() {
     progDiv.className = 'message assistant';
     const pid = 'prog-' + Date.now();
     progDiv.id = pid;
-    progDiv.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-body"><div class="thinking-msg">💭 正在分析问题...</div><div class="elapsed" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div></div>';
+    progDiv.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-body"><div class="thinking-msg">💭 '+t('misc.thinking')+'</div><div class="elapsed" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div></div>';
     container.appendChild(progDiv);
     container.scrollTop = container.scrollHeight;
 
@@ -1528,9 +2037,22 @@ async function sendMsg() {
         const div = ensureProgress();
         const el = document.createElement('div');
         el.className = `tool-item ${status}`; el.id = `tool-${tcId}`;
-        el.innerHTML = `<span class="tool-icon">${status==='running'?'◌':status==='done'?'✓':'✗'}</span>
-            <div class="tool-body"><div class="tool-name">${fmtTool(name)}</div>
-            <div class="tool-detail">${detail||''}</div></div>`;
+        // 安全构建 DOM：textContent 防止工具参数中的 HTML 注入
+        const icon = document.createElement('span');
+        icon.className = 'tool-icon';
+        icon.textContent = status === 'running' ? '◌' : status === 'done' ? '✓' : '✗';
+        const body = document.createElement('div');
+        body.className = 'tool-body';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'tool-name';
+        nameEl.textContent = fmtTool(name);
+        const detailEl = document.createElement('div');
+        detailEl.className = 'tool-detail';
+        detailEl.textContent = detail || '';
+        body.appendChild(nameEl);
+        body.appendChild(detailEl);
+        el.appendChild(icon);
+        el.appendChild(body);
         div.appendChild(el); container.scrollTop = container.scrollHeight;
         toolEls[tcId] = el;
     }
@@ -1546,7 +2068,7 @@ async function sendMsg() {
         const r = await fetch('/api/trade/chat/stream', {
             method:'POST',
             headers:{'Content-Type':'application/json','X-Hermes-Session-Token':TOKEN,'X-Company-ID':String(currentCompanyId)},
-            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query,context:currentChatContext}),
+            body:JSON.stringify({library_id:currentLibraryId,customer_id:currentCustomerId,query,context:currentChatContext,language:currentLang}),
             signal:streamCtl.signal,
         });
         if (!r.ok) { progDiv.remove(); addMsg('assistant', `⚠️ 请求失败 (${r.status})`, null); sendBtn.disabled = false; return; }
@@ -1600,12 +2122,12 @@ async function renderCustomersViewInto(container) {
     const coName = currentCompanyId ? (companies.find(c => c.id === currentCompanyId)?.name || '') : '';
     container.innerHTML = `
         <div class="panel-topbar">
-            <h2>👥 客户管理${coName ? `<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 ${esc(coName)}</span>` : ''}</h2>
+            <h2>👥 ${t('customer.title')}${coName ? '<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 '+esc(coName)+'</span>' : ''}</h2>
             <div class="panel-topbar-actions">
-                <button class="btn btn-danger" id="batch-delete-btn" style="display:none;" onclick="batchDeleteCustomers()">🗑 批量删除</button>
-                <input class="panel-search" id="cust-search" aria-label="搜索客户" placeholder="搜索客户..." oninput="filterCustomers()">
+                <button class="btn btn-danger" id="batch-delete-btn" style="display:none;" onclick="batchDeleteCustomers()">🗑 ${currentLang==='en'?'Batch Delete':'批量删除'}</button>
+                <input class="panel-search" id="cust-search" aria-label="搜索客户" placeholder="${t('customer.search')}" oninput="filterCustomers()">
                 <select id="cust-tier-filter" aria-label="筛选客户等级" onchange="filterCustomers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
-                    <option value="">全部等级</option><option value="A">A 级</option><option value="B">B 级</option><option value="C">C 级</option><option value="none">未分级</option>
+                    <option value="">${currentLang==='en'?'All Tiers':'全部等级'}</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="none">${t('cust.field.tier_none')}</option>
                 </select>
                 <select id="cust-sort" aria-label="客户排序方式" onchange="renderCustomersTable(allCustomers)" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-card);">
                     <option value="name">按名称排序</option><option value="updated_at">按最近跟进</option>
@@ -1796,6 +2318,10 @@ async function showCustomerDetail(cid) {
     backdrop.className = 'slide-panel-backdrop';
     backdrop.id = 'customer-detail-panel';
     backdrop.onclick = function(e) { if (e.target === backdrop) closeCustomerDetail(); };
+    var scoreLabels = {1:currentLang==='en'?'Low':'低',3:currentLang==='en'?'Med':'中',5:currentLang==='en'?'High':'高'};
+    var buyerTypes = currentLang==='en'
+        ? ['Brand','Distributor','Agent','Installer','Maintenance','Competitor','Other']
+        : ['品牌商','分销商','代理商','安装商','维保商','同行','其他'];
     backdrop.innerHTML = `
     <div class="slide-panel">
         <div class="slide-panel-header">
@@ -1803,89 +2329,98 @@ async function showCustomerDetail(cid) {
             <button class="slide-panel-close" onclick="closeCustomerDetail()">×</button>
         </div>
         <div class="panel-section">
-            <div class="panel-section-title">基本信息</div>
+            <div class="panel-section-title">${t('customer.detail.basic')}</div>
             <div class="panel-field-row">
-                <div class="panel-field"><label for="detail-name">客户名称</label><input type="text" value="${esc(c.name)}" id="detail-name"></div>
-                <div class="panel-field"><label for="detail-title">联系人职位</label><input type="text" value="${esc(title)}" id="detail-title"></div>
+                <div class="panel-field"><label for="detail-name">${t('cust.field.name')}</label><input type="text" value="${esc(c.name)}" id="detail-name"></div>
+                <div class="panel-field"><label for="detail-title">${t('cust.field.title')}</label><input type="text" value="${esc(title)}" id="detail-title"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label for="detail-tier">等级</label><select id="detail-tier">
-                    <option value="" ${!tier?'selected':''}>未分级</option>
-                    <option value="A" ${tier==='A'?'selected':''}>A 级</option>
-                    <option value="B" ${tier==='B'?'selected':''}>B 级</option>
-                    <option value="C" ${tier==='C'?'selected':''}>C 级</option>
+                <div class="panel-field"><label for="detail-tier">${t('cust.field.tier')}</label><select id="detail-tier">
+                    <option value="" ${!tier?'selected':''}>${t('cust.field.tier_none')}</option>
+                    <option value="A" ${tier==='A'?'selected':''}>A</option>
+                    <option value="B" ${tier==='B'?'selected':''}>B</option>
+                    <option value="C" ${tier==='C'?'selected':''}>C</option>
                 </select></div>
-                <div class="panel-field"><label for="detail-buyer-type">买家类型</label><select id="detail-buyer-type">
-                    <option value="" ${!buyerType?'selected':''}>未设置</option>
-                    ${['品牌商','分销商','代理商','安装商','维保商','同行','其他'].map(t => `<option value="${t}" ${buyerType===t?'selected':''}>${t}</option>`).join('')}
+                <div class="panel-field"><label for="detail-buyer-type">${t('cust.field.buyer')}</label><select id="detail-buyer-type">
+                    <option value="" ${!buyerType?'selected':''}>${t('cust.field.buyer_none')}</option>
+                    ${buyerTypes.map(t => '<option value="'+t+'" '+(buyerType===t?'selected':'')+'>'+t+'</option>').join('')}
                 </select></div>
-                <div class="panel-field"><label for="detail-country">国家</label><input type="text" value="${esc(country)}" id="detail-country"></div>
+                <div class="panel-field"><label for="detail-country">${t('cust.field.country')}</label><input type="text" value="${esc(country)}" id="detail-country"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label for="detail-main-category">主营品类</label><input type="text" value="${esc(mainCategory)}" id="detail-main-category"></div>
-                <div class="panel-field"><label for="detail-match-score">匹配度</label><select id="detail-match-score">
-                    <option value="0" ${matchScore==0?'selected':''}>未评分</option>
-                    ${[1,2,3,4,5].map(s => `<option value="${s}" ${matchScore==s?'selected':''}>${s} - ${s===1?'低':s===3?'中':s===5?'高':''}</option>`).join('')}
+                <div class="panel-field"><label for="detail-main-category">${t('cust.field.category')}</label><input type="text" value="${esc(mainCategory)}" id="detail-main-category"></div>
+                <div class="panel-field"><label for="detail-match-score">${t('cust.field.score')}</label><select id="detail-match-score">
+                    <option value="0" ${matchScore==0?'selected':''}>${t('cust.field.score_none')}</option>
+                    ${[1,2,3,4,5].map(function(s){return '<option value="'+s+'" '+(matchScore==s?'selected':'')+'>'+s+(scoreLabels[s]?' - '+scoreLabels[s]:'')+'</option>';}).join('')}
                 </select></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label for="detail-email">邮箱</label><input type="text" value="${esc(email)}" id="detail-email"></div>
-                <div class="panel-field"><label for="detail-phone">电话</label><input type="text" value="${esc(phone)}" id="detail-phone"></div>
+                <div class="panel-field"><label for="detail-email">${t('cust.field.email')}</label><input type="text" value="${esc(email)}" id="detail-email"></div>
+                <div class="panel-field"><label for="detail-phone">${t('cust.field.phone')}</label><input type="text" value="${esc(phone)}" id="detail-phone"></div>
             </div>
             <div class="panel-field-row">
                 <div class="panel-field"><label for="detail-whatsapp">WhatsApp</label><input type="text" value="${esc(whatsapp)}" id="detail-whatsapp"></div>
             </div>
             <div class="panel-field-row">
                 <div class="panel-field"><label for="detail-linkedin">LinkedIn</label><input type="text" value="${esc(linkedin)}" id="detail-linkedin"></div>
-                <div class="panel-field"><label for="detail-website">公司网站</label><input type="text" value="${esc(website)}" id="detail-website"></div>
+                <div class="panel-field"><label for="detail-website">${t('cust.field.website')}</label><input type="text" value="${esc(website)}" id="detail-website"></div>
             </div>
             <div class="panel-field-row">
-                <div class="panel-field"><label for="detail-backup-email">备用邮箱</label><input type="text" value="${esc(backupEmail)}" id="detail-backup-email"></div>
-                <div class="panel-field"><label for="detail-contact">联系方式</label><input type="text" value="${esc(c.contact||'')}" id="detail-contact"></div>
+                <div class="panel-field"><label for="detail-backup-email">${t('cust.field.backup_email')}</label><input type="text" value="${esc(backupEmail)}" id="detail-backup-email"></div>
+                <div class="panel-field"><label for="detail-contact">${t('cust.field.contact')}</label><input type="text" value="${esc(c.contact||'')}" id="detail-contact"></div>
             </div>
-            <div class="panel-field"><label for="detail-note">备注</label><textarea id="detail-note">${esc(c.note||'')}</textarea></div>
-            <div class="panel-field"><label for="detail-follow-up-note">AI 跟进建议</label><textarea id="detail-follow-up-note">${esc(followUpNote)}</textarea></div>
-            <button class="btn btn-primary" onclick="saveCustomerDetail(${c.id})" style="width:100%;">💾 保存修改</button>
+            <div class="panel-field"><label for="detail-note">${t('cust.field.note')}</label><textarea id="detail-note">${esc(c.note||'')}</textarea></div>
+            <div class="panel-field"><label for="detail-follow-up-note">${t('cust.field.follow')}</label><textarea id="detail-follow-up-note">${esc(followUpNote)}</textarea></div>
+            <button class="btn btn-primary" onclick="saveCustomerDetail(${c.id})" style="width:100%;">${t('customer.detail.save')}</button>
         </div>
         <div class="panel-section">
-            <div class="panel-section-title">📁 关联文档库 (${libs.length})</div>
+            <div class="panel-section-title">${t('customer.detail.libs')} (${libs.length})</div>
             <div class="panel-linked-libs" id="detail-libs">
                 ${libs.map(l => `
                 <div class="panel-linked-lib">
                     📄 ${esc(l.name)}
-                    <span class="unlink-btn" onclick="unlinkCustomerLib(${c.id},${l.id})" title="取消关联">×</span>
+                    <span class="unlink-btn" onclick="unlinkCustomerLib(${c.id},${l.id})" title="${currentLang==='en'?'Unlink':'取消关联'}">×</span>
                 </div>`).join('')}
             </div>
             <div style="margin-top:8px;display:flex;gap:6px;">
                 <select id="detail-link-lib" aria-label="关联文档库" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;">
-                    <option value="">— 选择文档库 —</option>
+                    <option value="">${t('customer.detail.link_lib')}</option>
                 </select>
-                <button class="btn-xs primary" onclick="linkCustomerLib(${c.id})">关联</button>
+                <button class="btn-xs primary" onclick="linkCustomerLib(${c.id})">${t('customer.detail.link_btn')}</button>
             </div>
         </div>
         <div class="panel-section">
-            <div class="panel-section-title">📦 订单 (<span id="detail-order-count">-</span>) <button class="btn-xs" style="margin-left:8px;" onclick="showOrderModal(${c.id})">+ 新增订单</button></div>
-            <div id="detail-orders"><div class="loading-row"><div class="spinner"></div>加载订单...</div></div>
+            <div class="panel-section-title">${t('customer.detail.orders')} (<span id="detail-order-count">-</span>) <button class="btn-xs" style="margin-left:8px;" onclick="showOrderModal(${c.id})">${t('customer.detail.add_order')}</button></div>
+            <div id="detail-orders"><div class="loading-row"><div class="spinner"></div>${t('misc.loading_orders')}</div></div>
         </div>
         <div class="panel-section">
-            <div class="panel-section-title">💬 最近对话 (${recentConvs.length})</div>
+            <div class="panel-section-title">${t('customer.detail.convs')} (${recentConvs.length})</div>
             <div id="detail-convs">
                 ${recentConvs.length ? recentConvs.map(conv => `
                 <div class="panel-conv-item" onclick="closeCustomerDetail();showConversationDetail(${conv.id})">
                     <div class="conv-time">${esc((conv.created_at||'').slice(0,16))}</div>
                     <div class="conv-query">${esc((conv.query||'').slice(0,80))}</div>
-                </div>`).join('') : '<p style="color:var(--text-muted);font-size:12px;">暂无关联对话。点击下方按钮开始和此客户对话。</p>'}
+                </div>`).join('') : '<p style="color:var(--text-muted);font-size:12px;">'+t('customer.detail.no_convs')+'</p>'}
             </div>
         </div>
-        <button class="btn btn-primary" style="width:100%;" onclick="closeCustomerDetail();startChatWithCustomer(${c.id}, '${esc(c.name)}')">💬 和此客户开始对话</button>
+        <button class="btn btn-primary" style="width:100%;" data-chat-cust-id="${c.id}" data-chat-cust-name="${esc(c.name)}">${t('customer.detail.chat_btn')}</button>
     </div>`;
     document.body.appendChild(backdrop);
+
+    // 绑定安全的事件监听（避免 onclick 中的 XSS 注入）
+    backdrop.querySelector('[data-chat-cust-id]').addEventListener('click', function() {
+        closeCustomerDetail();
+        startChatWithCustomer(
+            parseInt(this.getAttribute('data-chat-cust-id')),
+            this.getAttribute('data-chat-cust-name')
+        );
+    });
 
     // Load library options for linking
     const allLibs = await api('GET', '/api/trade/libraries') || [];
     const linkedIds = libs.map(l=>l.id);
     const sel = $('detail-link-lib');
-    if (sel) sel.innerHTML = '<option value="">— 选择文档库 —</option>' +
+    if (sel) sel.innerHTML = '<option value="">' + t('customer.detail.link_lib') + '</option>' +
         allLibs.filter(l=>!linkedIds.includes(l.id)).map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
     // 异步加载订单
     loadOrdersForCustomer(cid);
@@ -1916,14 +2451,14 @@ async function saveCustomerDetail(cid) {
 
     await api('PUT', `/api/trade/customers/${cid}`, {name, contact, note, country, tier, linkedin_url: linkedin,
         title, email, phone, whatsapp, company_website: website, backup_email: backupEmail, buyer_type: buyerType, follow_up_note: followUpNote, main_category: mainCategory, match_score: matchScore});
-    toast('已保存');
+    toast(t('toast.saved'));
     closeCustomerDetail();
     await loadCustomersData();
 }
 
 async function linkCustomerLib(cid) {
     const lid = $('detail-link-lib')?.value;
-    if (!lid) { toast('请选择文档库'); return; }
+    if (!lid) { toast(t('toast.select_library')); return; }
     const r = await api('POST', `/api/trade/customers/${cid}/libraries/${lid}`);
     if (r && r.ok) { toast('已关联'); closeCustomerDetail(); await loadCustomersData(); showCustomerDetail(cid); }
     else toast(r?.detail||'关联失败');
@@ -1951,7 +2486,7 @@ async function loadOrdersForCustomer(cid) {
         const orders = await api('GET', `/api/trade/customers/${cid}/orders`) || [];
         $('detail-order-count').textContent = orders.length;
         if (!orders.length) {
-            container.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">暂无订单，点击「新增订单」添加。</p>';
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">'+t('cust.field.no_orders')+'</p>';
             return;
         }
         container.innerHTML = orders.map(o => {
@@ -1964,7 +2499,7 @@ async function loadOrdersForCustomer(cid) {
                 ${o.order_no ? '<span style="color:var(--text-muted);margin-left:8px;">#'+esc(o.order_no)+'</span>' : ''}
             </div>`;
         }).join('');
-    } catch(e) { container.innerHTML = '<p style="color:var(--accent-red);font-size:12px;">订单加载失败</p>'; }
+    } catch(e) { container.innerHTML = '<p style="color:var(--accent-red);font-size:12px;">'+t('cust.field.order_fail')+'</p>'; }
 }
 
 function showOrderModal(cid) { showOrderEditModal(null, cid); }
@@ -1978,40 +2513,41 @@ function showOrderEditModal(oid, presetCid) {
     backdrop.className = 'modal-backdrop';
     backdrop.id = 'order-modal-backdrop';
     backdrop.onclick = e => { if (e.target===backdrop) backdrop.remove(); };
-    backdrop.innerHTML = `<div class="modal" style="max-width:520px;width:95%;" onclick="event.stopPropagation()">
-        <h3>${isEdit ? '编辑订单' : '新增订单'}</h3>
-        <input type="hidden" id="order-edit-id" value="${oid||''}">
-        <input type="hidden" id="order-cust-id" value="${presetCid||''}">
-        <div id="order-cust-row" style="display:${presetCid?'none':'block'};">
-            <div class="form-group"><label for="order-cust-sel">客户 *</label><select id="order-cust-sel"></select></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label for="order-product">品名 *</label><input type="text" id="order-product" placeholder="如：预绞丝"></div>
-            <div class="form-group"><label for="order-no">订单号</label><input type="text" id="order-no" placeholder="如：PO-2026-001"></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label for="order-qty">数量</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>
-            <div class="form-group"><label for="order-unit">单位</label><input type="text" id="order-unit" value="套"></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label for="order-price">单价</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>
-            <div class="form-group"><label for="order-currency">币种</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label for="order-total">总金额</label><input type="number" id="order-total" placeholder="3500" step="any"></div>
-            <div class="form-group"><label for="order-status">状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option></select></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label for="order-delivery">交期</label><input type="date" id="order-delivery"></div>
-            <div class="form-group"><label for="order-payment">付款方式</label><input type="text" id="order-payment" placeholder="T/T 30/70"></div>
-        </div>
-        <div class="form-group"><label for="order-notes">备注</label><textarea id="order-notes" style="min-height:50px;" placeholder="备注信息"></textarea></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-            ${isEdit?'<button class="btn btn-danger" onclick="deleteOrder('+oid+')">🗑 删除</button>':''}
-            <button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()">取消</button>
-            <button class="btn btn-primary" onclick="saveOrder()">💾 保存</button>
-        </div>
-    </div>`;
+    var stLabels = [t('order.status_quoting'),t('order.status_ordered'),t('order.status_shipped'),t('order.status_done')];
+    backdrop.innerHTML = '<div class="modal" style="max-width:520px;width:95%;" onclick="event.stopPropagation()">' +
+        '<h3>' + (isEdit ? t('order.edit_title') : t('order.title')) + '</h3>' +
+        '<input type="hidden" id="order-edit-id" value="'+(oid||'')+'">' +
+        '<input type="hidden" id="order-cust-id" value="'+(presetCid||'')+'">' +
+        '<div id="order-cust-row" style="display:'+(presetCid?'none':'block')+';">' +
+            '<div class="form-group"><label for="order-cust-sel">'+t('order.cust_label')+'</label><select id="order-cust-sel"></select></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label for="order-product">'+t('order.product')+'</label><input type="text" id="order-product" placeholder="e.g. ADSS Cable"></div>' +
+            '<div class="form-group"><label for="order-no">'+t('order.no')+'</label><input type="text" id="order-no" placeholder="PO-2026-001"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label for="order-qty">'+t('order.qty')+'</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>' +
+            '<div class="form-group"><label for="order-unit">'+t('order.unit')+'</label><input type="text" id="order-unit" value="'+(currentLang==='en'?'set':'套')+'"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label for="order-price">'+t('order.price')+'</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>' +
+            '<div class="form-group"><label for="order-currency">'+t('order.currency')+'</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label for="order-total">'+t('order.amount')+'</label><input type="number" id="order-total" placeholder="3500" step="any"></div>' +
+            '<div class="form-group"><label for="order-status">'+t('order.status')+'</label><select id="order-status">'+stLabels.map(function(s){return '<option>'+s+'</option>';}).join('')+'</select></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+            '<div class="form-group"><label for="order-delivery">'+t('order.delivery')+'</label><input type="date" id="order-delivery"></div>' +
+            '<div class="form-group"><label for="order-payment">'+t('order.payment')+'</label><input type="text" id="order-payment" placeholder="T/T 30/70"></div>' +
+        '</div>' +
+        '<div class="form-group"><label for="order-notes">'+t('order.notes')+'</label><textarea id="order-notes" style="min-height:50px;" placeholder="Notes"></textarea></div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">' +
+            (isEdit?'<button class="btn btn-danger" onclick="deleteOrder('+oid+')">'+t('order.btn_delete')+'</button>':'') +
+            '<button class="btn" onclick="this.closest(\'.modal-backdrop\').remove()">'+t('btn.cancel')+'</button>' +
+            '<button class="btn btn-primary" onclick="saveOrder()">'+t('btn.save')+'</button>' +
+        '</div>' +
+    '</div>';
     document.body.appendChild(backdrop);
 
     if (isEdit) {
@@ -2034,7 +2570,7 @@ function showOrderEditModal(oid, presetCid) {
     if (!presetCid) {
         api('GET', '/api/trade/customers').then(list => {
             const sel = $('order-cust-sel');
-            sel.innerHTML = '<option value="">-- 选择客户 --</option>' + (list||[]).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+            sel.innerHTML = '<option value="">'+t('order.cust_select')+'</option>' + (list||[]).map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
         });
     }
 }
@@ -2043,7 +2579,7 @@ async function saveOrder() {
     const editId = $('order-edit-id').value;
     const custId = $('order-cust-id').value || $('order-cust-sel').value;
     const product = $('order-product').value.trim();
-    if (!custId || !product) { toast('请选择客户并填写品名'); return; }
+    if (!custId || !product) { toast(t('toast.cust_product_required')); return; }
     const body = {
         customer_id: parseInt(custId), product_name: product,
         order_no: $('order-no').value.trim(),
@@ -2064,17 +2600,17 @@ async function saveOrder() {
     }
     document.querySelector('.modal-backdrop')?.remove();
     loadOrdersForCustomer(custId);
-    toast(editId ? '订单已更新' : '订单已创建');
+    toast(editId ? t('order.updated') : t('order.created'));
 }
 
 async function deleteOrder(oid) {
-    if (!confirm('确定删除此订单？')) return;
+    if (!confirm(t('order.confirm_delete'))) return;
     await api('DELETE', `/api/trade/orders/${oid}`);
     document.querySelector('.modal-backdrop')?.remove();
     // 刷新当前打开的客户详情
     const custId = $('order-cust-id').value;
     if (custId) loadOrdersForCustomer(custId);
-    toast('订单已删除');
+    toast(t('order.deleted'));
 }
 
 // ── Customer CRUD Modal ──────────────────────────────────────
@@ -2732,6 +3268,14 @@ async function loadDirectoryTree() {
     $('dir-tree').innerHTML = `<div style="font-weight:600;margin-bottom:8px;color:var(--text-secondary);">~/.trade/${esc(slug)}/</div>` +
         renderTreeItems(tree, 0);
 
+    // 委托事件：文件树点击（避免 onclick 中直接拼接文件名导致 XSS）
+    $('dir-tree').onclick = function(e) {
+        var el = e.target.closest && e.target.closest('[data-file-click]');
+        if (el && el.getAttribute('data-file-click') === 'preview') {
+            previewFile(el.getAttribute('data-file-name'));
+        }
+    };
+
     // Also load agent identity preview if available
     const identity = await api('GET', `/api/trade/companies/${currentCompanyId}/agent-identity`);
     if (identity?.agent_identity_md) {
@@ -2743,7 +3287,10 @@ async function loadDirectoryTree() {
 function renderTreeItems(items, depth) {
     return items.map(item => {
         const indent = depth * 20;
-        return `<div class="dir-tree-item ${item.type}" style="padding-left:${indent}px;" onclick="${item.type==='file'?`previewFile('${esc(item.name)}')`:'void(0)'}">
+        const attrs = item.type === 'file'
+            ? `data-file-name="${esc(item.name)}" data-file-click="preview"`
+            : '';
+        return `<div class="dir-tree-item ${item.type}" style="padding-left:${indent}px;" ${attrs}>
             <span class="tree-icon">${item.icon}</span> ${esc(item.name)}
         </div>` + (item.children ? renderTreeItems(item.children, depth+1) : '');
     }).join('');
@@ -2759,9 +3306,9 @@ async function renderHistoryViewInto(container) {
     const coName = currentCompanyId ? (companies.find(c => c.id === currentCompanyId)?.name || '') : '';
     container.innerHTML = `
         <div class="panel-topbar">
-            <h2>💬 对话记录${coName ? `<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 ${esc(coName)}</span>` : ''}</h2>
+            <h2>💬 ${t('history.title')}${coName ? '<span style="margin-left:10px;padding:3px 10px;background:rgba(59,130,246,0.08);color:var(--primary);border-radius:999px;font-size:12px;font-weight:500;">🏢 '+esc(coName)+'</span>' : ''}</h2>
             <div class="panel-topbar-actions">
-                <input class="panel-search" id="conv-search" aria-label="搜索对话" placeholder="搜索对话..." oninput="filterConversations()">
+                <input class="panel-search" id="conv-search" aria-label="搜索对话" placeholder="${currentLang==='en'?'Search conversations...':'搜索对话...'}" oninput="filterConversations()">
             </div>
         </div>
         <div class="panel-body">
@@ -2782,7 +3329,7 @@ async function loadConversations() {
 function renderConversationsList(data) {
     const container = $('conv-list');
     if (!data.length) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><h2>暂无对话记录</h2></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><h2>'+t('history.no_records')+'</h2></div>';
         return;
     }
     container.innerHTML = data.map(c => `
@@ -2790,26 +3337,26 @@ function renderConversationsList(data) {
             <div style="flex:1;min-width:0;" onclick="showConversationDetail(${c.id})">
                 <div class="conv-meta">
                     <span>${esc((c.created_at||'').slice(0,16))}</span>
-                    ${c.library_id ? '<span style="background:#EFF6FF;color:var(--primary);padding:2px 6px;border-radius:4px;">📁 文档库</span>' : ''}
+                    ${c.library_id ? '<span style="background:#EFF6FF;color:var(--primary);padding:2px 6px;border-radius:4px;">📁 '+t('nav.docs')+'</span>' : ''}
                 </div>
                 <div class="conv-q">${esc(c.query||'').slice(0,100)}</div>
                 <div class="conv-a">${esc(c.response||'').slice(0,150)}</div>
             </div>
             <button class="btn-xs" style="color:var(--accent-red);border-color:var(--accent-red);flex-shrink:0;margin-top:2px;"
-                onclick="event.stopPropagation();deleteConversation(${c.id})" title="删除此对话">🗑</button>
+                onclick="event.stopPropagation();deleteConversation(${c.id})" title="${t('hist.delete_title')}">🗑</button>
         </div>
     `).join('');
 }
 
 async function deleteConversation(cid) {
-    if (!confirm('确定删除这条对话记录？此操作不可恢复。')) return;
+    if (!confirm(t('hist.confirm_delete'))) return;
     const r = await api('DELETE', `/api/trade/conversations/${cid}`);
     if (r && r.ok) {
-        toast('对话已删除');
+        toast(t('hist.deleted'));
         allConversations = allConversations.filter(c => c.id !== cid);
         renderConversationsList(allConversations);
     } else {
-        toast(r?.detail || '删除失败');
+        toast(r?.detail || t('hist.delete_fail'));
     }
 }
 
@@ -2892,7 +3439,7 @@ function onboardingGoToStep2() {
 async function onboardingStartOSINT() {
     var input = $('onboarding-osint-input');
     var query = input.value.trim();
-    if (!query) { toast('请输入公司名或网址'); return; }
+    if (!query) { toast(t('toast.enter_company')); return; }
     _onboardingInputText = query;
     input.disabled = true;
     $('onboarding-send-btn').disabled = true;
@@ -2903,7 +3450,7 @@ async function onboardingStartOSINT() {
     _onboardingStreamCtl = new AbortController();
     var progDiv = document.createElement('div');
     progDiv.className = 'onboarding-progress';
-    progDiv.innerHTML = '<div class="thinking-msg">💭 正在分析...</div>';
+    progDiv.innerHTML = '<div class="thinking-msg">💭 '+t('misc.thinking')+'</div>';
     resultsArea.appendChild(progDiv);
     var toolEls = {};
     var progressDiv = null;
@@ -2917,7 +3464,22 @@ async function onboardingStartOSINT() {
         var el = document.createElement('div');
         el.className = 'tool-item ' + status;
         el.id = 'onb-tool-' + tcId;
-        el.innerHTML = '<span class="tool-icon">' + (status==='running'?'◌':status==='done'?'✓':'✗') + '</span><div class="tool-body"><div class="tool-name">' + fmtTool(name) + '</div><div class="tool-detail">' + (detail||'') + '</div></div>';
+        // 安全构建 DOM：textContent 防止注入
+        var icon = document.createElement('span');
+        icon.className = 'tool-icon';
+        icon.textContent = status === 'running' ? '◌' : status === 'done' ? '✓' : '✗';
+        var body = document.createElement('div');
+        body.className = 'tool-body';
+        var nameEl = document.createElement('div');
+        nameEl.className = 'tool-name';
+        nameEl.textContent = fmtTool(name);
+        var detailEl = document.createElement('div');
+        detailEl.className = 'tool-detail';
+        detailEl.textContent = detail || '';
+        body.appendChild(nameEl);
+        body.appendChild(detailEl);
+        el.appendChild(icon);
+        el.appendChild(body);
         div.appendChild(el);
         resultsArea.scrollTop = resultsArea.scrollHeight;
         toolEls[tcId] = el;
@@ -3174,6 +3736,9 @@ async function saveCompanyIdentity() {
 
 // ═════════════════════ INIT ═════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+    // 初始化语言
+    initLang();
+
     // 检测是否刚完成系统升级（页面 reload 后显示 toast）
     try {
         if (sessionStorage.getItem('_trade_upgrade_done')) {

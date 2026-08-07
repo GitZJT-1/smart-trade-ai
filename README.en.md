@@ -15,7 +15,7 @@
   <p>Runs on your machine. Your data stays with you.</p>
 </div>
 
-**Cold emails, client research, B2B platform management — this tool handles the repetitive stuff so you don't have to.**
+**Cold emails, client research, B2B platform management — this tool handles the repetitive stuff so you don't have to. Bilingual interface (Chinese/English) included — switch anytime.**
 
 ---
 
@@ -203,7 +203,7 @@ powershell -File scripts/build.ps1  # Windows → dist/Smart Trade AI.exe
 | Cold Outreach | Product promotion emails / cold emails / follow-ups based on company product data |
 | Email Intelligence | 120+ platform email registration check (holehe), social profile discovery |
 | Client Management | A/B/C grading, detail panel, document library linking |
-| Document Analysis | Read local PDF / Word / Excel / PPT files, AI auto-parses |
+| Document Analysis | Complete file-by-file parsing of PDF/Word/Excel/PPT, never skips or truncates |
 | Business Doc Generation | One-click quotes, proforma invoices, contracts (DOCX / XLSX / PPTX) |
 | Quote & Negotiation | Negotiation strategy based on product knowledge base + client profile |
 | Due Diligence | 6-layer verification: email → WHOIS → sanctions → MX → tech stack → LinkedIn |

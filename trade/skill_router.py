@@ -231,6 +231,9 @@ def _score_skills(query: str) -> list[dict]:
                 None,
             )
             if skill_name_candidate:
+                from trade.skill_registry import _BLOCKED_SKILLS
+                if skill_name_candidate in _BLOCKED_SKILLS:
+                    return []  # 显式调用被封禁的 skill，返回空（不触发）
                 return [{
                     "skill_name": skill_name_candidate,
                     "score": _EXPLICIT_SCORE,

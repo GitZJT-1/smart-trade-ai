@@ -57,12 +57,12 @@ def _cleanup_rate_limit_dicts():
             for cid in stale:
                 _last_skill_per_company.pop(cid, None)
 
-_cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
-_cleanup_thread.start()
-
 # 进程内 skill 缓存：记录每个 company 上次使用的 skill 名称，用于跳过重复注入
 _last_skill_per_company: dict[int, str] = {}
 _skill_cache_lock = threading.Lock()
+
+_cleanup_thread = threading.Thread(target=_cleanup_rate_limit_dicts, daemon=True)
+_cleanup_thread.start()
 
 
 def _check_chat_rate_limit(company_id: int) -> bool:
@@ -124,7 +124,7 @@ async def trade_chat(
 
     full_query, skill_hint = build_query(
         cid, payload.library_id, query, customer_id=payload.customer_id,
-        last_skill_name=last_skill,
+        last_skill_name=last_skill, language=payload.language or "zh",
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存
@@ -215,7 +215,7 @@ async def trade_chat_stream(
 
     full_query, skill_hint = build_query(
         cid, payload.library_id, query, customer_id=payload.customer_id,
-        last_skill_name=last_skill,
+        last_skill_name=last_skill, language=payload.language or "zh",
     )
 
     # 从 full_query 或 skill_hint 中提取当前匹配的 skill 名称并缓存

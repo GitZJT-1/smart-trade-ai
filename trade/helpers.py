@@ -7,6 +7,8 @@ Trade AI Assistant — 共享辅助函数。
 
 import json
 import os
+import re
+from pathlib import Path
 
 from trade import chat_memory as _cm
 from trade import company as _company
@@ -335,6 +337,51 @@ def _get_history_block(company_id: int | None, total_prompt_chars: int) -> tuple
 _OSINT_SKILL_NAMES = frozenset({"b2b-osint", "b2b-email-intel"})
 
 
+# ── 用户问题中显式文件/目录路径提取 ──────────────────────────────────────
+
+# 匹配常见文件路径模式：绝对路径、带扩展名的文件名、中文文件名
+_EXPLICIT_PATH_RE = re.compile(
+    r'(?:(?:文件|目录|路径|path|file|dir)\s*[：:]\s*)?'  # 可选前缀 "文件："
+    r'(/(?:[^\s,，。；;、]+/)*[^\s,，。；;、]+'            # Unix 绝对路径
+    r'|\b[A-Za-z]:\\(?:[^\s,，。；;、]+\\)*[^\s,，。；;、]+'  # Windows 绝对路径
+    r'|[^\s,，。；;、]+\.(?:xlsx?|csv|pdf|docx?|pptx?|txt|md|json|xml|html?|png|jpg|jpeg)'
+    r')',
+    re.IGNORECASE,
+)
+
+
+def _extract_explicit_paths(query: str) -> list[str]:
+    """从用户问题中提取明确提到的文件路径或目录路径。
+
+    提取后验证路径是否真实存在，只返回磁盘上确实存在的路径。
+    去重并排序：目录优先、绝对路径优先。
+    """
+    candidates = _EXPLICIT_PATH_RE.findall(query)
+    if not candidates:
+        return []
+
+    verified: list[str] = []
+    seen = set()
+    for raw in candidates:
+        raw = raw.strip().rstrip(',，。；;、')
+        if not raw or raw in seen:
+            continue
+        # 去除前缀标记
+        cleaned = re.sub(r'^(?:文件|目录|路径|path|file|dir)\s*[：:]\s*', '', raw, flags=re.IGNORECASE)
+        try:
+            p = Path(cleaned).expanduser().resolve()
+            if p.exists() and str(p) not in seen:
+                verified.append(str(p))
+                seen.add(str(p))
+        except (OSError, ValueError):
+            # 路径无效（含非法字符等），跳过
+            pass
+
+    # 排序：目录在前，文件在后；各自按字母序
+    verified.sort(key=lambda x: (not Path(x).is_dir(), x.lower()))
+    return verified
+
+
 def build_query(
     company_id: int,
     library_id: int | None,
@@ -342,6 +389,7 @@ def build_query(
     customer_id: int | None = None,
     *,
     last_skill_name: str | None = None,
+    language: str = "zh",
 ) -> tuple[str, str | None]:
     """组装完整的用户 prompt：公司身份 + 文档库上下文 + Skill 注入。
 
@@ -400,6 +448,11 @@ def build_query(
         code_fallback=code_fallback,
     )
 
+    # 1.4 语言策略：用户选择英文时替换语言策略块
+    if language == "en":
+        from trade.prompt import LANGUAGE_POLICY_BLOCK, LANGUAGE_POLICY_BLOCK_EN
+        system_prompt = system_prompt.replace(LANGUAGE_POLICY_BLOCK, LANGUAGE_POLICY_BLOCK_EN)
+
     # 1.5 注入当前公司信息 — Agent 需要明确知道自己为哪家公司工作
     if company_id:
         co = _company.get(company_id)
@@ -448,28 +501,72 @@ def build_query(
         if order_text:
             order_context = order_text
 
-    # 4. Library document context
+    # 4. Library document context — 所有栏目均告知可用文档库，Agent 自行判断是否读取
+    #    读取时必须遵守完整扫描规则：逐个文件、不跳过、不截断
     doc_context = ""
+
+    # 4.0 用户问题中明确提到了文件路径或目录 → 强制读取
+    explicit_paths = _extract_explicit_paths(query)
+    if explicit_paths:
+        path_lines = "\n".join(
+            f"  - {p}" + (" (目录)" if Path(p).is_dir() else " (文件)")
+            for p in explicit_paths
+        )
+        doc_context += (
+            f"\n## 用户指定文件（强制读取 — 最高优先级）\n"
+            f"用户在问题中明确提到了以下文件/目录，**你必须先全部读取完毕才能回答**：\n"
+            f"{path_lines}\n\n"
+            f"**强制规则：**\n"
+            f"1. 对每个目录使用 list_files 列出所有文件，对每个文件使用 read_file 完整读取\n"
+            f"2. 每个文件必须读到末尾，截断则用 offset 继续，多 sheet Excel 读全部 sheet\n"
+            f"3. **禁止跳过任何一个**——用户明确指定了就说明需要\n"
+            f"4. 全部读取完成后，综合所有文件内容回答用户问题\n\n"
+        )
+
     if library_id:
-        # 用户明确选择了文档库
+        # 用户明确选择了文档库 → 强制完整读取
         lib = _lib.get(library_id, company_id=company_id)
         if lib:
             doc_context = (
-                f"\n[上下文] 用户正在文档库「{lib['name']}」({lib['root_path']}) "
-                "中提问。必要时使用 read_file 读取目录中的文件。"
+                f"\n## 文档库上下文（强制扫描）\n"
+                f"用户正在文档库「{lib['name']}」({lib['root_path']}) 中提问。\n"
+                f"**你必须先扫描此目录中的所有文件：**\n"
+                f"1. 使用 list_files 列出 {lib['root_path']} 下的所有文件\n"
+                f"2. 逐个使用 read_file 完整读取每个文件，不允许跳过任何文件\n"
+                f"3. 每个文件必须读到末尾，如果被截断则用 offset 继续读取\n"
+                f"4. 全部读完后才能开始回答用户问题\n"
             )
     elif company_id:
-        # 用户没有指定文档库 → 自动列出公司所有文档库，让 Agent 自己找
+        # 收集工作目录 + 所有文档库，告知 Agent 可用目录，Agent 自行判断是否需要读取
+        dirs_to_scan: list[str] = []
+        tc = _company.get_trade_company(company_id)
+        if tc:
+            data_dir = tc.get("data_dir", "")
+            if data_dir and Path(data_dir).is_dir():
+                dirs_to_scan.append(data_dir)
+            if tc.get("extra1"):
+                extra = _json_loads(tc["extra1"])
+                wd = extra.get("work_dir", "")
+                if wd and Path(wd).is_dir() and wd not in dirs_to_scan:
+                    dirs_to_scan.append(wd)
         company_libs = _lib.list_by_company(company_id)
-        if company_libs:
-            lib_list = "\n".join(
-                f"  - {l['name']}：{l['root_path']}" for l in company_libs
-            )
+        for l in company_libs:
+            rp = l.get("root_path", "")
+            if rp and Path(rp).is_dir() and rp not in dirs_to_scan:
+                dirs_to_scan.append(rp)
+
+        if dirs_to_scan:
+            dir_lines = "\n".join(f"  - {d}" for d in dirs_to_scan)
             doc_context = (
-                "\n[上下文] 当前公司的文档库目录如下。用户可能想从这些文档中获取信息，"
-                "请根据用户的问题自行判断需要读取哪些目录和文件。"
-                "使用 list_files 浏览目录，使用 read_file 读取具体文件。\n"
-                f"{lib_list}"
+                f"\n## 可用文档目录\n"
+                f"当前公司有以下数据目录，你**可以根据用户问题自行判断**是否需要读取：\n"
+                f"{dir_lines}\n\n"
+                f"**如果决定读取文件，必须遵守以下规则：**\n"
+                f"1. 使用 list_files 列出目录中的所有文件，**不跳过任何文件**\n"
+                f"2. 逐个使用 read_file **完整读取每个文件**，文件名不等于内容\n"
+                f"3. 每个文件必须读到末尾，如果被截断则用 offset 继续读取\n"
+                f"4. 多 sheet 的 Excel 必须读每个 sheet，多页 PDF 必须读每一页\n"
+                f"5. **禁止跳过文件或中途截断**——一个被跳过的文件可能就是答案所在\n"
             )
 
     # 6. Skill system hint — OSINT 类 skill 的注入指令作为 system 层独立传入

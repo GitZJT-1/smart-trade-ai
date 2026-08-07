@@ -359,14 +359,20 @@ def purge(company_id: int) -> bool:
         ).rowcount
         conn.commit()
         if n > 0:
-            # 清理文件系统：trade_companies.data_dir
+            # 清理文件系统：trade_companies.data_dir（仅当目录在 TRADE_HOME 下）
             if data_dir_str:
                 data_path = Path(data_dir_str)
                 if data_path.exists():
                     try:
-                        shutil.rmtree(data_path)
-                    except OSError:
-                        pass  # 目录清理失败不抛异常
+                        # 安全校验：确保 data_dir 在 TRADE_HOME 下，防止误删系统目录
+                        data_path.resolve().relative_to(TRADE_HOME.resolve())
+                    except ValueError:
+                        pass  # 不在 TRADE_HOME 下，跳过清理（不删除外部目录）
+                    else:
+                        try:
+                            shutil.rmtree(data_path)
+                        except OSError:
+                            pass  # 目录清理失败不抛异常
             # 清理文件系统：~/.trade/{slug}/
             if slug:
                 slug_dir = TRADE_HOME / slug

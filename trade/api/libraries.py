@@ -112,9 +112,22 @@ async def upload_to_work_dir(
         # NUL 字节拒绝
         if "\0" in rel:
             raise HTTPException(status_code=400, detail="文件名含非法字符")
-        content = await f.read()
-        if len(content) > _MAX_FILE_BYTES:
-            raise HTTPException(status_code=413, detail=f"文件过大: {rel} ({len(content)} bytes)")
+        # 逐个文件大小预检（利用 Starlette 在 multipart part header 中的 size 信息）
+        f_size = getattr(f, "size", None)
+        if f_size is not None and f_size > _MAX_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"文件过大: {rel} ({f_size} bytes)")
+        # 分块读取防止内存耗尽：达到上限即中止
+        chunks = []
+        total = 0
+        while True:
+            chunk = await f.read(1024 * 1024)  # 1MB 分块
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _MAX_FILE_BYTES:
+                raise HTTPException(status_code=413, detail=f"文件过大: {rel}")
+            chunks.append(chunk)
+        content = b"".join(chunks)
         if not content:
             raise HTTPException(status_code=400, detail=f"空文件: {rel}")
         dest.write_bytes(content)

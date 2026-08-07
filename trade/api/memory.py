@@ -40,8 +40,12 @@ def memory_recall(
     query: str,
     cid: int | None = Depends(opt_company),
 ):
-    """搜索 Hindsight 长期记忆中的相关历史对话。"""
-    result = chat_memory.recall_context(query)
+    """搜索当前公司的长期记忆。使用公司专属 bank，确保数据隔离。"""
+    if cid is None:
+        return {"results": [], "query": query, "company_id": None,
+                "hint": "请提供 X-Company-ID header 以按公司搜索记忆"}
+    from trade.memory import _bank_id
+    result = chat_memory.recall_context(query, bank_id=_bank_id(cid))
     if not result:
         return {"results": [], "query": query, "company_id": cid}
     return {"results": [result], "query": query, "company_id": cid}

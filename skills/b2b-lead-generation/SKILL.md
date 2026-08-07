@@ -194,6 +194,35 @@ author: Foreign Trade Assistant
 
   ## 发送前强制自检
   每次生成任何邮件、报价、回复后，在输出给用户之前，**必须对照文末「Quality Gate Checklist」逐项检查**。这是强制步骤，不得跳过。漏掉一项意味着可能丢失客户。
+
+  **Google 高级搜索指令库**（直接复制使用）：
+  - 精准找客户官网：`"{行业关键词}" + site:.{国家后缀}`（如 `"LED lighting" site:.de`）
+  - 搜公司邮箱：`"{公司名}" mail` 或 `"@{公司域名}" email`
+  - 找 CEO/采购人：`site:linkedin.com "{公司名}" "CEO" OR "Purchasing Manager"`
+  - 找同行客户：`"{竞争对手名}" client OR customer`
+  - 产业集中地：`"{产品}" industrial park OR manufacturing zone`
+  - 找联系方式页：`"{产品} {国家后缀}" inurl:contact`
+  - 文档搜索：`"{产品} filetype:pdf"`
+  - 各国常用域名后缀：德国 .de、法国 .fr、英国 .co.uk、意大利 .it、日本 .co.jp、俄国 .ru、巴西 .com.br、澳洲 .com.au、印度 .co.in
+
+  **各国常用邮箱后缀**：
+  - 德国 @t-online.de、@web.de | 法国 @wanadoo.fr、@orange.fr | 日本 @docomo.ne.jp | 韩国 @naver.com | 俄国 @yandex.ru、@mail.ru | 意大利 @libero.it | 英国 @btinternet.com | 印度 @rediffmail.com
+
+  **领英十种免费获客方法**：
+  1. 同步邮箱导入（上传客户邮箱列表，领英自动匹配好友）
+  2. 系统推荐好友（完善档案后，People You May Know 更精准）
+  3. Who Viewed Your Profile（回访看过你资料的人）
+  4. People Also Viewed（竞争对手公司页面右侧推荐）
+  5. 搜索框关键词（Title + Company + Location 组合搜索）
+  6. 突破三度人脉——用公司名找员工，通过员工主页加同事
+  7. 搜索框 + Companies（看员工列表和 People Also Viewed）
+  8. Groups 群组（加同行群组，成员列表中全是潜在客户）
+  9. 动态和文章（SEO 权重高，长尾关键词可排谷歌首页）
+  10. 自建公司主页和 Group（followers 里全是精准客户）
+
+  **领英安全规则**：一天加好友不超过 100 个；新号先内部互加 50 人再开发；绝对不加国内同行（防举报封号）；界面语言切换为英文（功能更全）。
+
+  **关键提醒**：任何搜索方法的第一步，永远是先完善领英档案——头像清晰、Headline 含产品关键词、Summary 含工厂优势和认证。
 ---
 
 Subject: [Personalization — company name or recent news] + [Value prop]

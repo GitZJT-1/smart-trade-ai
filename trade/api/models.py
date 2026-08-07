@@ -176,3 +176,4 @@ class ChatRequest(BaseModel):
     library_id: int | None = Field(None, description="关联的文档库 ID")
     customer_id: int | None = Field(None, description="关联的客户 ID")
     context: str = Field("", description="聊天上下文 (daily/lead/platform/...)")
+    language: str = Field("zh", description="界面语言 zh/en")

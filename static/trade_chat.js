@@ -38,7 +38,7 @@ const I18N = {
         // footer buttons
         'footer.update':'⬆️ 系统更新','footer.restart':'🔄 重启',
         'footer.skills':'📖 技能帮助','footer.skills_update':'🔄 Skills',
-        'footer.upgrade':'⬆️ 升级说明',
+        'footer.upgrade':'⬆️ 升级说明','footer.onboarding':'🎓 新手引导',
         // modals - company
         'modal.co.title':'🏢 公司设置','modal.co.tab_list':'公司列表','modal.co.tab_identity':'Agent 身份',
         'modal.co.add_title':'添加新公司','modal.co.name':'公司名称 *','modal.co.name_ph':'例如：我的外贸公司',
@@ -227,7 +227,7 @@ const I18N = {
         'chat.clr':'🗑️ Clear','chat.library':'— Select Library —','chat.lib.add':'Add Library',
         'footer.update':'⬆️ Update','footer.restart':'🔄 Restart',
         'footer.skills':'📖 Skills Help','footer.skills_update':'🔄 Skills',
-        'footer.upgrade':'⬆️ Upgrade Guide',
+        'footer.upgrade':'⬆️ Upgrade Guide','footer.onboarding':'🎓 Tutorial',
         'modal.co.title':'🏢 Company Settings','modal.co.tab_list':'Companies','modal.co.tab_identity':'Agent Identity',
         'modal.co.add_title':'Add Company','modal.co.name':'Company Name *','modal.co.name_ph':'e.g. My Trading Co.',
         'modal.co.slug_ph':'Auto-generated','modal.co.slug_tt':'Auto-generated from company name',
@@ -408,6 +408,7 @@ function _applyLanguage() {
         'system-update-btn': 'footer.update', 'system-restart-btn': 'footer.restart',
         'skills-help-btn': 'footer.skills', 'skills-update-btn': 'footer.skills_update',
         'upgrade-help-btn': 'footer.upgrade',
+        'onboarding-btn': 'footer.onboarding',
     };
     for (var id in map) { var b = document.getElementById(id); if (b) b.textContent = t(map[id]); }
     // 4. 静态 modal 文本更新
@@ -3563,6 +3564,12 @@ async function onboardingSaveAndContinue() {
 function onboardingFinish() {
     try { localStorage.setItem('_onboarding_completed', '1'); } catch(_) {}
     navToView('chat', 'daily', '今日简报');
+}
+
+function restartOnboarding() {
+    // 清除引导完成标记，重新启动新手引导
+    try { localStorage.removeItem('_onboarding_completed'); } catch(_) {}
+    showOnboardingGuide();
 }
 
 function onboardingSkip(e) {

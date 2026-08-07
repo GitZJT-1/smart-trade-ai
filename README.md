@@ -495,9 +495,18 @@ python server.py
 
 ## 联系作者
 
-<img src="docs/wechat-contact.jpeg" alt="WeChat Contact" width="200">
+<div style="display:flex;gap:40px;align-items:flex-start;">
+  <div>
+    <img src="docs/wechat-contact.jpeg" alt="WeChat" width="200"><br>
+    <small>微信扫码 · 备注「Trade」</small>
+  </div>
+  <div>
+    <img src="docs/whatsapp-contact.jpg" alt="WhatsApp" width="200"><br>
+    <small>WhatsApp</small>
+  </div>
+</div>
 
-扫码添加微信，备注「Trade」。商务合作或技术支持请发邮件至 lauroge@gmail.com。
+商务合作或技术支持请发邮件至 lauroge@gmail.com。
 
 ---
 

@@ -301,7 +301,7 @@ ruff check trade/ server.py  # Lint
     <small>WeChat · Note "Trade"</small>
   </div>
   <div>
-    <img src="docs/whatsapp-contact.jpg" alt="WhatsApp" width="200"><br>
+    <img src="docs/whatsapp-contact.png" alt="WhatsApp" width="200"><br>
     <small>WhatsApp</small>
   </div>
 </div>

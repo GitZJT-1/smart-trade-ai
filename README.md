@@ -501,7 +501,7 @@ python server.py
     <small>微信扫码 · 备注「Trade」</small>
   </div>
   <div>
-    <img src="docs/whatsapp-contact.jpg" alt="WhatsApp" width="200"><br>
+    <img src="docs/whatsapp-contact.png" alt="WhatsApp" width="200"><br>
     <small>WhatsApp</small>
   </div>
 </div>

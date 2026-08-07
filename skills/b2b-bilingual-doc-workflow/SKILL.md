@@ -37,7 +37,7 @@ triggers:
   - 生成报关单
   - 备件询价
 category: 文档管理
-version: 2.1.0
+version: 2.3.0
 author: Foreign Trade Assistant
 tags: [B2B, Trade, Russian, Ukrainian, Contract, Shipping, RFQ, OCR, XLS, Drawings, GOST, Annotation]
 related_skills: [b2b-document, b2b-doc-generation]
@@ -68,6 +68,9 @@ SKILL_DIR="<本 skill 目录绝对路径>"
 [ -f "$SKILL_DIR/.venv-skill/Scripts/python.exe" ] || (cd "$SKILL_DIR" && uv venv --python 3.11 .venv-skill)
 uv pip install --python "$SKILL_DIR/.venv-skill/Scripts/python.exe" xlrd pandas python-docx pymupdf xlwt xlutils
 
+# 可选：Google Cloud Vision 高精度 OCR（俄语西里尔文字首选）
+uv pip install --python "$SKILL_DIR/.venv-skill/Scripts/python.exe" google-cloud-vision
+
 # ② Tesseract 语言包自检（rus 缺失 = 俄语转拉丁转写，必须人工校；ukr 缺失 = 乌克兰语降级）
 ls "/c/Program Files/Tesseract-OCR/tessdata/" | grep -E "rus|ukr" || echo "语言包缺失"
 
@@ -88,7 +91,8 @@ ls "/c/Program Files/Tesseract-OCR/tessdata/" | grep -E "rus|ukr" || echo "语�
 
 | 脚本 | 用途 | 对应节点 |
 |---|---|---|
-| `scripts/ocr_pdf.py` | 合同 PDF 多页 OCR（文字/扫描混合）+ 字段提取 + 待核清单 | A1-A2 |
+| `scripts/ocr_pdf.py` | 合同 PDF 多页 OCR（文字/扫描混合）+ 字段提取 + 待核清单，默认 Tesseract 引擎 | A1-A2 |
+| `scripts/ocr_google_vision.py` | **高精度 OCR**（Google Cloud Vision API），俄语西里尔文字/工程图纸首选，一次请求取代多引擎交叉验证 | A1, B2.5, B4 |
 | `scripts/extract_fields.py` | 对已有 OCR 文本重复提字段/调参 | A2 |
 | `scripts/xls_tpl.py` | .xls 模板读写（xlutils.copy 保格式），CLI: dump / fill | A6, B5 |
 | `scripts/validate_3docs.py` | 三单一致性校验 + 结构化报告（交付物） | A7 |
@@ -116,7 +120,7 @@ PY="$SKILL_DIR/.venv-skill/Scripts/python.exe"
 
 脚本自动完成：
 - **遍历所有页**：每页 `get_text()` 判文字/扫描，混合文档分别处理
-- 扫描页 300dpi 渲染 PNG → tesseract OCR（rus+eng，`--tessdata-dir` 防中文路径乱码）
+- 扫描页 300dpi 渲染 PNG → Google Vision（首选）或 Tesseract OCR（rus+eng，`--tessdata-dir` 防中文路径乱码）
 - 字段提取：宽松锚点 + 特征数字兜底（合同号 16-20 位、规格书号 10 位、金额俄式小数点归一化）
 - 输出 4 个文件：`ocr_full.txt` 逐页全文 / `pages/page_NN.png` 渲染图 / `fields.json` 字段+来源页 / `verify_list.txt` 待核清单
 
@@ -284,20 +288,42 @@ img.save("drawing.png", "PNG")
 
 **超大片幅（decompression bomb）**：传真/扫描管线可能产出 1.8 亿像素级文件。Pillow 默认限制 ~178MP 会抛 `DecompressionBombError`，打开前先 `Image.MAX_IMAGE_PIXELS = None`；GIF 多帧取面积最大帧，存 PNG。
 
-**Step 2 — OCR 引擎**（优先本地 Tesseract，无则 OCR.space 兜底）：
+**Step 2 — OCR 引擎**（优先级：Google Cloud Vision > Tesseract > OCR.space > RapidOCR）：
 
-- **Tesseract（Windows winget 免管理员）**：`winget install --id Tesseract-OCR.Tesseract --silent --accept-source-agreements`；俄语包 `curl -L https://github.com/tesseract-ocr/tessdata_fast/raw/main/rus.traineddata -o rus.traineddata` 放入 tessdata 或用户可写目录
-- **中文用户名铁律**：中文路径会让 `TESSDATA_PREFIX` 传给 tesseract.exe 时乱码（"does not exist, ignore it"）→ **永远用 `--tessdata-dir <临时目录>`**，不设环境变量
+**① Google Cloud Vision（首选，俄语工程图纸准确度远超开源引擎）**：
+
+```bash
+# 一条命令处理图纸/合同 PDF（自动识别文字页 vs 扫描页）
+PY="$SKILL_DIR/.venv-skill/Scripts/python.exe"
+"$PY" "$SKILL_DIR/scripts/ocr_google_vision.py" "<图纸.png|合同.pdf>" --lang-hint ru --out <输出目录>
+```
+
+- **认证**：`export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json`（推荐服务账号，完整功能）+ `uv pip install google-cloud-vision`
+- 备选 API Key（功能受限，仅纯文本）：在 `~/AppData/Local/hermes/.env` 设 `GOOGLE_API_KEY=...`
+- **认证检测**：`"$PY" "$SKILL_DIR/scripts/ocr_google_vision.py" --check-auth`
+- **费用**：前 1000 单位/月免费，之后 $1.50/千页
+- **为什么用它**：西里尔文字识别准确度碾压 Tesseract（俄语是 Google 的传统强项），对 ГОСТ/ДСТУ 工程图纸的混合排版、小字标题栏、数字/字母混排几乎不需要人工校对
+
+**② Tesseract（本地备选，Google Vision 不可用时）**：
+
+- `winget install --id Tesseract-OCR.Tesseract --silent --accept-source-agreements`；俄语包 `curl -L https://github.com/tesseract-ocr/tessdata_fast/raw/main/rus.traineddata -o rus.traineddata` 放入 tessdata 或用户可写目录
+- **中文用户名铁律**：中文路径会让 `TESSDATA_PREFIX` 传给 tesseract.exe 时乱码（\"does not exist, ignore it\"）→ **永远用 `--tessdata-dir <临时目录>`**
 - 运行：`tesseract drawing.png stdout -l rus+eng --tessdata-dir <临时目录>`
-- **OCR.space 兜底**（无 Tesseract 时）：图缩到 max 1600px、JPEG q85 压到 <1.5MB（免费限额），`urllib.parse.urlencode` 构造 POST（勿手拼 `+` 拼接，400 错误元凶）；超时 120s；`detectOrientation: True` 防扫描图旋转；混排默认 `language="eng"`，纯西里尔换 `"rus"`
 
-**OCR 参数**（工程图纸）：
+**③ OCR.space（Google Vision 和 Tesseract 都不可用时兜底）**：
+- 图缩到 max 1600px、JPEG q85 压到 <1.5MB（免费限额），`urllib.parse.urlencode` 构造 POST；超时 120s；混排默认 `language=\"eng\"`，纯西里尔换 `\"rus\"`
+
+**④ RapidOCR（离线最后备选）**：全离线 ONNX 推理，俄语数字可用但汉字易误读（`7`→`了`），仅在前三种都不可用时启用。
+
+**OCR 参数**（工程图纸，Tesseract）：
 
 | 参数 | 设置 | 理由 |
 |---|---|---|
 | 语言 | `-l rus+eng` | GOST/ДСТУ 图纸常俄英双语标注 |
 | PSM | 默认 3；乱码时 `--psm 6` | 混合文本+尺寸标注布局 |
 | 标题栏 | 裁剪右下区域放大 12-16x，psm 6/10 | 小字缩写密集 |
+
+> ⚠️ **Google Vision 优势**：使用 Google Vision 时上述 Tesseract 参数/数字误读/标题栏放大技巧全部不需要——直接传原图即可获得高准确度结构化结果。只有在 Google Vision 不可用时才走 Tesseract 老路径。
 
 **Tesseract 常见数字误读（工程图纸）**：`70.`→`10.`、`5.*`→`3.*`、`То.`→`10.`（西里尔 Т 像 1）、`S16.`→`6.`。编号列表必须对照预期模式人工核验。
 
@@ -308,6 +334,8 @@ img.save("drawing.png", "PNG")
 - 翻译结合图纸内容确认（如 Вал полый выходной 看图纸确认空心轴）
 
 ### B4 提取单重/关键参数（图纸标题栏固定打法）
+
+> 💡 **Google Vision 简化**：使用 `ocr_google_vision.py` 时，标题栏 OCR 不再需要裁剪放大 12-16x + PSM 调参——直接传整张图纸，Google Vision 自动识别小字密集区域。仅在降级到 Tesseract 时走下方传统流程。
 
 - 从图纸标题栏提取重量（俄语 `Масса` / `Вес`，英语 `Weight`）
 - **固定打法**：扫描 TIF → 渲染 300dpi PNG → 裁右下角标题栏区域 → OCR 定位 `Масса/Вес` 行 → 提取数值

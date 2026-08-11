@@ -1,9 +1,11 @@
 """
-工程图纸 PDF 自动处理模块。
+工程图纸 PDF 自动处理模块（实验性）。
 
-从客户发来的 PDF 图纸中提取结构化生产信息（零件名、材料、尺寸、公差等），
-用于报价和生产。自动判断 PDF 类型（文字层 vs 扫描件），分别采用文本提取
-或 LLM Vision 处理。
+⚠️ 重要：AI 分析结果仅供初步参考，不可直接用于报价或生产。
+所有尺寸、材料、标准均需人工逐项核实确认。
+
+从客户发来的 PDF 图纸中辅助提取结构化生产信息（零件名、材料、尺寸、公差等）。
+自动判断 PDF 类型（文字层 vs 扫描件），分别采用文本提取或 LLM Vision 处理。
 """
 
 from __future__ import annotations
@@ -222,12 +224,14 @@ def analyze_drawing(pdf_path: str | Path) -> dict:
                 "pages": pages,
                 "raw_text": fallback_text[:5000],
                 "hint": "LLM 分析不可用，已提取原始文字内容，请人工审阅",
+                "disclaimer": "AI 分析结果仅供初步参考，不可直接用于报价或生产。所有数据需人工逐项核实。",
             }
 
         return {
             "ok": result.get("ok", True),
             "source": pdf_type if result else "text_fallback",
             "pages": pages,
+            "disclaimer": "AI 分析结果仅供初步参考，不可直接用于报价或生产。所有尺寸、材料、标准需人工逐项核实确认。",
             "result": {
                 "part_name": result.get("part_name", "") or "",
                 "drawing_number": result.get("drawing_number", "") or "",

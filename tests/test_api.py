@@ -256,7 +256,7 @@ class TestSkillRouter:
 
     def test_match_document_generation(self):
         from trade.skill_router import match_skill
-        result = match_skill("帮我做一份提案演示PPT")
+        result = match_skill("帮我生成一份形式发票给客户")
         assert result is not None
         assert result["name"] == "b2b-doc-generation"
 

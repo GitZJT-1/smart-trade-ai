@@ -336,24 +336,18 @@ STOP RULE（防止无效搜索）:
     {
         "name": "b2b-document",
         "triggers": [
-            # Chinese
-            "分析文档", "分析文件", "读取报价", "看合同", "产品规格",
-            "产品报价单", "合同分析", "技术规格", "参数对比", "翻译合同",
-            # English
-            "analyze document", "analyze file", "read quote", "read contract",
-            "product spec", "specification", "price list", "compare",
-            "datasheet", "technical document",
-            # Fragments
-            "帮我看看这个", "这是什么产品", "产品参数", "单价多少",
-            "价格是多少", "交期多久", "moq", "最小订货量",
+            "读报价单", "对比报价", "提取合同条款", "分析PI", "看装箱单",
+            "产品规格书", "贸易单据", "报价分析", "合同条款提取", "PI分析",
+            "invoice analysis", "quotation comparison", "trade document",
+            "packing list analysis", "contract terms",
         ],
         "aliases": [],
-        "input_fmt": "文档文件路径（PDF/Word/Excel/CSV/图片）或文档内容",
+        "input_fmt": "外贸单据文件路径（报价单/合同/PI/装箱单/产品规格书）",
         "output_fmt": (
-            "文档摘要 + 关键数据提取（产品/价格/数量/交期）"
-            "+ 交叉引用（如有多个文档）+ 业务建议"
+            "关键数据提取（价格/数量/交期/贸易术语）"
+            "+ 交叉引用（如有多个文档）+ 报价对比"
         ),
-        "augment_prompt": """你是 b2b-document 技能。当用户要求分析文档、报价单、合同、规格表时，执行 4 阶段分析流程：
+        "augment_prompt": """你是 b2b-document 技能。当用户要求分析外贸报价单、合同、PI、规格表时，执行 4 阶段分析流程：
 
 **铁律（违反即幻觉）**：
 0. 完整读取每个文件到末尾，禁止截断。多 sheet 的 Excel 必须读每个 sheet，长文件用 offset 循环读完
@@ -376,22 +370,14 @@ STOP RULE（防止无效搜索）:
     {
         "name": "b2b-doc-generation",
         "triggers": [
-            # Chinese
-            "生成文档", "创建文档", "制作文档", "生成PPT", "生成PPTX",
-            "做一份报价", "做一份合同", "做一份提案", "做一份演示",
-            "生成报价单", "生成合同", "生成提案", "导出文档",
-            # English
-            "generate doc", "gen doc", "create doc",
-            "generate document", "create document", "generate pptx",
-            "generate proposal", "generate contract", "generate quote",
-            "make a presentation", "export to docx", "export to xlsx",
-            "proposal template", "quotation template",
-            # Fragments
-            "帮我生成", "输出一份", "出一份", "做成文件", "导出",
+            "做报价单", "生成PI", "形式发票", "出合同", "外贸合同",
+            "装箱单模板", "商业提案", "报价单模板", "外贸单证", "生成商业计划书",
+            "proforma invoice", "quotation template", "commercial proposal",
+            "packing list template", "sales contract",
         ],
         "aliases": [],
-        "input_fmt": "文档类型（PPT/Word/Excel）+ 受众（客户/内部）+ 语言",
-        "output_fmt": "可下载的 PPTX/DOCX/XLSX 文件",
+        "input_fmt": "外贸单证类型（报价单/PI/合同/装箱单/商业提案）+ 受众+ 语言",
+        "output_fmt": "可下载的外贸单证 PPTX/DOCX/XLSX 文件",
         "augment_prompt": """你是 b2b-doc-generation 技能。当用户要求生成 PPT、Word 文档、Excel 报价单、合同或商业提案时，请执行以下步骤：
 
 1. 加载 skill: b2b-doc-generation

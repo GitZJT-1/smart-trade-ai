@@ -83,7 +83,7 @@ const I18N = {
         'modal.upgrade.p2':'等待执行完毕，看到「重启完成」提示后，刷新浏览器页面（<kbd>Ctrl+Shift+R</kbd>）即可。',
         'modal.upgrade.p3':'如果 <code>hermes</code> 命令找不到，说明 Hermes Agent 未安装。请先参考安装说明安装 Hermes。',
         // modals - skills help
-        'modal.skills.title':'📖 全部 37 个技能速查',
+        'modal.skills.title':'📖 全部 38 个技能速查',
         'modal.skills.desc':'在聊天框输入关键词，Trade 自动匹配合适的技能。点击复制图标可复制快速启动提示词。',
         // common
         'btn.close':'关闭','btn.cancel':'取消','btn.save':'保存','btn.ok':'确定',
@@ -267,7 +267,7 @@ const I18N = {
         'modal.upgrade.cmd':'Help me update Trade and restart it. Repo: https://github.com/chefroger/smart-trade-ai',
         'modal.upgrade.p2':'Wait for completion, then refresh the page (<kbd>Ctrl+Shift+R</kbd>).',
         'modal.upgrade.p3':'If <code>hermes</code> is not found, Hermes Agent is not installed. See install guide first.',
-        'modal.skills.title':'📖 All 37 Skills Reference',
+        'modal.skills.title':'📖 All 38 Skills Reference',
         'modal.skills.desc':'Type keywords in chat — Trade auto-matches the right skill. Click copy icon for quick prompts.',
         'btn.close':'Close','btn.cancel':'Cancel','btn.save':'Save','btn.ok':'OK',
         'license.expired':'Expired','license.expiring':'Expiring Soon','license.trial':'Trial',

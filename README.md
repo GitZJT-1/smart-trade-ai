@@ -153,7 +153,7 @@ trade
 curl -fsSL https://raw.githubusercontent.com/chefroger/smart-trade-ai/main/scripts/install.sh | bash
 ```
 
-脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 37 个 skills → 数据库初始化。
+脚本自动完成：Python 环境检查 → Hermes Agent → Trade 安装 → 38 个 skills → 数据库初始化。
 
 > **如果你希望安装前先审查脚本**：
 > ```bash
@@ -308,7 +308,7 @@ trade/                     B2B 业务层
 ├── app.py                  FastAPI app factory
 └── ... + 37 个业务模块
 
-skills/                    37 个 B2B skills（Markdown 驱动）
+skills/                    38 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）
 server.py                  FastAPI 入口
 ```

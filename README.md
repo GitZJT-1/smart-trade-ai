@@ -229,7 +229,7 @@ python server.py
 
 ---
 
-## 37 项专业能力
+## 38 项专业能力
 
 | 场景 | 能力 |
 |------|------|
@@ -303,10 +303,10 @@ trade/                     B2B 业务层
 ├── api/                   FastAPI 路由（10 个业务域）
 ├── osint/                 客户背调模块（6 层检测）
 ├── skill_router.py        Skill 自动匹配引擎
-├── skill_registry.py      37 个 skill 注册表（纯数据）
+├── skill_registry.py      38 个 skill 注册表（纯数据）
 ├── bootstrap.py            启动引导（Hermes 版本检查、env 加载、Skills 同步）
 ├── app.py                  FastAPI app factory
-└── ... + 37 个业务模块
+└── ... + 38 个业务模块
 
 skills/                    38 个 B2B skills（Markdown 驱动）
 tests/                     测试覆盖（database/business/api/osint/smoke）

@@ -1259,6 +1259,21 @@ STOP RULE（防止无效搜索）:
         "output_fmt": "三档方案对比表 + 推荐方案说明书 + ROI 分析 + 实施路线图",
         "augment_prompt": "",
     },
+    # ── b2b-tech-drawing: 工程图纸分析（P1）──────────────────────
+    {
+        "name": "b2b-tech-drawing",
+        "triggers": [
+            "图纸", "工程图", "技术图纸", "铸件图", "机械图", "零件图",
+            "GOST", "ASTM", "ISO 图纸", "DIN 标准",
+            "图纸报价", "分析图纸", "看看这张图", "帮我读图纸",
+            "technical drawing", "engineering drawing", "casting drawing",
+            "blueprint", "mechanical drawing",
+        ],
+        "aliases": ["b2b-document"],
+        "input_fmt": "客户发来的工程图纸 PDF 文件",
+        "output_fmt": "结构化零件信息（名称/图号/材料/尺寸/公差/技术要求）+ 报价建议",
+        "augment_prompt": "",
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

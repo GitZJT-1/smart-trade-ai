@@ -393,31 +393,32 @@ def _parse_qa_pairs(content: str) -> list[dict]:
 def _load_qa_pairs(skill_name: str) -> list[dict]:
     """加载 skill 的 QA 对（mtime 缓存）。
 
-    查找顺序：源码 skills/ 目录 → 已安装 ~/.hermes/skills/
-    （已安装版本可能不含 references 子目录，优先查找源码）
+    查找顺序：Hermes 已安装 skills 路径 → 源码 skills/ 目录（开发环境回退）。
+    生产环境通过 install-trade-skills 将 references/ 同步到 ~/.hermes/skills/。
     """
     with _QA_CACHE_LOCK:
         if skill_name in _QA_CACHE:
             return _QA_CACHE[skill_name]
 
-    # 优先查找源码目录（references 文件在这里）
     qa_path = None
-    try:
-        import trade
-        pkg_root = Path(trade.__file__).parent.parent
-        src_qa = pkg_root / "skills" / skill_name / "references" / "qa_pairs.md"
-        if src_qa.is_file():
-            qa_path = src_qa
-    except Exception:
-        pass
 
-    # Fallback：已安装目录
+    # 1. 优先 Hermes 已安装路径（生产环境）
+    skill_dir = _get_skill_dir(skill_name)
+    if skill_dir:
+        candidate = skill_dir / "references" / "qa_pairs.md"
+        if candidate.is_file():
+            qa_path = candidate
+
+    # 2. 回退到源码目录（开发环境）
     if qa_path is None:
-        skill_dir = _get_skill_dir(skill_name)
-        if skill_dir:
-            qa_path = skill_dir / "references" / "qa_pairs.md"
-            if not qa_path.is_file():
-                qa_path = None
+        try:
+            import trade
+            pkg_root = Path(trade.__file__).parent.parent
+            src_qa = pkg_root / "skills" / skill_name / "references" / "qa_pairs.md"
+            if src_qa.is_file():
+                qa_path = src_qa
+        except Exception:
+            pass
 
     if qa_path is None:
         return []

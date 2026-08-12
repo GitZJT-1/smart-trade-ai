@@ -112,9 +112,19 @@ def _copy_skills(src: Path, dst_base: Path, progress_callback=None) -> list[str]
         if not skill_file.is_file():
             continue
 
+        # 复制 SKILL.md
         dest = dst_base / skill_dir.name / "SKILL.md"
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(skill_file, dest)
+
+        # 同步复制 references/ 子目录（如 qa_pairs.md）
+        refs_src = skill_dir / "references"
+        if refs_src.is_dir():
+            refs_dst = dst_base / skill_dir.name / "references"
+            if refs_dst.exists():
+                shutil.rmtree(refs_dst)
+            shutil.copytree(refs_src, refs_dst)
+
         installed.append(skill_dir.name)
         if progress_callback:
             progress_callback(f"  ✓ {skill_dir.name}")
@@ -356,6 +366,25 @@ def update_skills() -> None:
                 dest_file.write_text(remote_content, encoding="utf-8")
                 print(f"  ↻ {skill_name} (updated)")
                 updated += 1
+
+                # 同步下载 references/qa_pairs.md（如果 GitHub 上存在）
+                try:
+                    qa_url = f"{RAW_BASE}/{skill_name}/references/qa_pairs.md"
+                    qa_req = urllib.request.Request(
+                        qa_url,
+                        headers={"User-Agent": "Trade-Skills-Updater/1.0"},
+                    )
+                    with urllib.request.urlopen(qa_req, timeout=10) as qa_resp:
+                        qa_raw = qa_resp.read(_MAX_SKILL_BYTES + 1)
+                        if len(qa_raw) <= _MAX_SKILL_BYTES:
+                            qa_dest = dest_dir / "references" / "qa_pairs.md"
+                            qa_dest.parent.mkdir(parents=True, exist_ok=True)
+                            qa_dest.write_bytes(qa_raw)
+                except urllib.error.HTTPError:
+                    pass  # 该 skill 没有 QA 对文件，正常跳过
+                except Exception:
+                    pass  # 网络或其他问题，不阻塞主流程
+
                 break
 
             except urllib.error.HTTPError as e:

@@ -323,6 +323,176 @@ def match_skill(query: str) -> dict | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# QA 对检索（从 references/qa_pairs.md 加载结构化知识）
+# ─────────────────────────────────────────────────────────────────────────────
+
+_QA_CACHE: dict[str, list[dict]] = {}  # skill_name → [{"q":..., "a":..., "keywords":[...], "tags":[...]}]
+_QA_CACHE_LOCK = threading.Lock()
+
+
+def _parse_qa_pairs(content: str) -> list[dict]:
+    """解析 qa_pairs.md 文件，返回 QA 对列表。"""
+    pairs = []
+    current_q = ""
+    current_a = ""
+    current_keywords: list[str] = []
+    current_tags: list[str] = []
+
+    in_answer = False
+    for line in content.split('\n'):
+        stripped = line.strip()
+
+        if stripped.startswith('## Q') and ':' in stripped[:10]:
+            # 保存上一对
+            if current_q and current_a:
+                pairs.append({
+                    "q": current_q.strip(),
+                    "a": current_a.strip(),
+                    "keywords": list(current_keywords),
+                    "tags": list(current_tags),
+                })
+            # 新问题
+            current_q = stripped.split(':', 1)[1].strip() if ':' in stripped else stripped
+            current_a = ""
+            current_keywords = []
+            current_tags = []
+            in_answer = True
+
+        elif stripped.startswith('**答案**:'):
+            current_a = stripped.replace('**答案**:', '').strip()
+            in_answer = True
+
+        elif in_answer and stripped and not stripped.startswith('**') and not stripped.startswith('##'):
+            # 继续追加答案内容
+            if current_a:
+                current_a += ' ' + stripped
+            else:
+                current_a = stripped
+
+        elif stripped.startswith('**标签**:'):
+            current_tags = [t.strip() for t in stripped.replace('**标签**:', '').split(',')]
+
+        elif stripped.startswith('**关键词**:'):
+            current_keywords = [k.strip() for k in stripped.replace('**关键词**:', '').split(',')]
+
+        elif stripped.startswith('## Q'):
+            pass  # 下一个问题，循环会处理
+
+    # 保存最后一对
+    if current_q and current_a:
+        pairs.append({
+            "q": current_q.strip(),
+            "a": current_a.strip(),
+            "keywords": list(current_keywords),
+            "tags": list(current_tags),
+        })
+
+    return pairs
+
+
+def _load_qa_pairs(skill_name: str) -> list[dict]:
+    """加载 skill 的 QA 对（mtime 缓存）。
+
+    查找顺序：源码 skills/ 目录 → 已安装 ~/.hermes/skills/
+    （已安装版本可能不含 references 子目录，优先查找源码）
+    """
+    with _QA_CACHE_LOCK:
+        if skill_name in _QA_CACHE:
+            return _QA_CACHE[skill_name]
+
+    # 优先查找源码目录（references 文件在这里）
+    qa_path = None
+    try:
+        import trade
+        pkg_root = Path(trade.__file__).parent.parent
+        src_qa = pkg_root / "skills" / skill_name / "references" / "qa_pairs.md"
+        if src_qa.is_file():
+            qa_path = src_qa
+    except Exception:
+        pass
+
+    # Fallback：已安装目录
+    if qa_path is None:
+        skill_dir = _get_skill_dir(skill_name)
+        if skill_dir:
+            qa_path = skill_dir / "references" / "qa_pairs.md"
+            if not qa_path.is_file():
+                qa_path = None
+
+    if qa_path is None:
+        return []
+
+    try:
+        content = qa_path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    pairs = _parse_qa_pairs(content)
+    with _QA_CACHE_LOCK:
+        _QA_CACHE[skill_name] = pairs
+    return pairs
+
+
+def _score_qa_relevance(query: str, pairs: list[dict]) -> list[dict]:
+    """按与 query 的相关性对 QA 对评分排序，返回 top 5。
+
+    评分策略：关键词单字匹配 > 标签匹配 > 问题标题词重叠。
+    """
+    import re as _re
+
+    normed = _norm(query)
+    scored = []
+
+    for pair in pairs:
+        score = 0
+
+        # 关键词匹配：拆成单字/词逐项检查
+        for kw in pair.get("keywords", []):
+            kw_norm = _norm(kw)
+            # 全词匹配
+            if kw_norm in normed:
+                score += 5
+            else:
+                # 拆词匹配（中文字符逐个检查，英文按空格拆）
+                kw_chars = set(kw_norm.replace(' ', ''))
+                query_chars = set(normed.replace(' ', ''))
+                char_overlap = len(kw_chars & query_chars)
+                if char_overlap >= 2:  # 至少 2 个字重叠
+                    score += char_overlap
+
+        # 标签匹配
+        for tag in pair.get("tags", []):
+            tag_norm = _norm(tag)
+            if tag_norm in normed:
+                score += 3
+            else:
+                tag_chars = set(tag_norm.replace(' ', ''))
+                query_chars = set(normed.replace(' ', ''))
+                if len(tag_chars & query_chars) >= 2:
+                    score += 1
+
+        # 问题标题词重叠
+        q_normed = _norm(pair["q"])
+        q_words = set(_re.findall(r'[\u4e00-\u9fff]+|[a-zA-Z]+', q_normed))
+        query_words = set(_re.findall(r'[\u4e00-\u9fff]+|[a-zA-Z]+', normed))
+        common = q_words & query_words
+        score += len(common) * 2
+
+        # 场景匹配
+        for scene_tag in pair.get("tags", []):
+            scene_norm = _norm(scene_tag)
+            if any(w in normed for w in _re.findall(r'[\u4e00-\u9fff]+|[a-zA-Z]+', scene_norm)):
+                score += 1
+
+        scored.append({**pair, "_score": score})
+
+    # 过滤零分，按分数降序，取 top 5
+    scored = [s for s in scored if s["_score"] > 0]
+    scored.sort(key=lambda x: -x["_score"])
+    return scored[:5]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Query 增强（注入 skill prompt）
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -378,6 +548,18 @@ def augment_query(
     if augment is None:
         augment = skill.get("augment_prompt", "")
 
+    # 检索最相关的 QA 对（references/qa_pairs.md），精准注入相关知识
+    qa_pairs = _load_qa_pairs(name)
+    qa_injection = ""
+    if qa_pairs:
+        relevant = _score_qa_relevance(query, qa_pairs)
+        if relevant:
+            qa_lines = ["\n## 相关知识（精准匹配）\n"]
+            for i, r in enumerate(relevant):
+                qa_lines.append(f"**Q{i+1}**: {r['q']}")
+                qa_lines.append(f"**A{i+1}**: {r['a']}\n")
+            qa_injection = "\n".join(qa_lines)
+
     # 路径相关 skill：注入公司数据目录路径
     data_dir_hint = ""
     if name == "b2b-data-directory" and company_id:
@@ -391,14 +573,15 @@ def augment_query(
                 f"完整路径示例：~/.trade/companies/{slug}/"
             )
 
-    # 组装注入块
+    # 组装注入块（含 QA 对精准匹配）
     injection = (
         f"\n"
         f"{SKILL_INJECTION_MARKER}\n"
         f"## 技能触发：{name}\n"
         f"{SKILL_EXPLICIT_MARKER if skill_name else ''}\n"
         f"{augment}"
-        f"{data_dir_hint}\n"
+        f"{data_dir_hint}"
+        f"{qa_injection}"
         f"## 用户原始问题\n{query}\n"
         f"{SKILL_INJECTION_MARKER}\n"
     )

@@ -76,3 +76,103 @@ class TestSkillCount:
             "b2b-six-thinking-hats", "b2b-inquiry-training",
         ):
             assert expected in names, f"缺少技能: {expected}"
+
+
+class TestQAPairs:
+    """测试 QA 对加载、解析、评分和注入。"""
+
+    def test_parse_qa_pairs(self):
+        """解析标准格式的 QA 对。"""
+        from trade.skill_router import _parse_qa_pairs
+
+        content = """## Q1: 如何做客户背调？
+**答案**: 核心目标是转化为发球权。
+**标签**: 背调原则, 客户筛选
+**场景**: 任何客户背调
+**关键词**: 背调, 发球权, 信息不对称
+
+## Q2: 如何写开发信？
+**答案**: 高回复率公式 = 初步调查 + 避开SPAM。
+**标签**: 开发信公式
+**场景**: 写开发信前
+**关键词**: 高回复率, SPAM, 标题
+"""
+        pairs = _parse_qa_pairs(content)
+        assert len(pairs) == 2
+        assert pairs[0]["q"] == "如何做客户背调？"
+        assert pairs[0]["tags"] == ["背调原则", "客户筛选"]
+        assert pairs[0]["keywords"] == ["背调", "发球权", "信息不对称"]
+        assert pairs[1]["q"] == "如何写开发信？"
+        assert "高回复率" in pairs[1]["a"]
+
+    def test_parse_qa_pairs_empty(self):
+        """空内容返回空列表。"""
+        from trade.skill_router import _parse_qa_pairs
+
+        assert _parse_qa_pairs("") == []
+        assert _parse_qa_pairs("只是一些文字没有QA格式") == []
+
+    def test_load_qa_pairs_real_skill(self):
+        """加载真实 skill 的 QA 对（b2b-osint 应有 15 条）。"""
+        from trade.skill_router import _load_qa_pairs
+
+        pairs = _load_qa_pairs("b2b-osint")
+        assert len(pairs) == 15
+        # 验证结构完整性
+        for p in pairs:
+            assert p["q"], f"QA pair missing question"
+            assert p["a"], f"QA pair missing answer"
+            assert isinstance(p["tags"], list)
+            assert isinstance(p["keywords"], list)
+
+    def test_load_qa_pairs_nonexistent(self):
+        """不存在的 skill 或没有 QA 文件的 skill 返回空。"""
+        from trade.skill_router import _load_qa_pairs
+
+        assert _load_qa_pairs("nonexistent-skill") == []
+        # b2b-document 没有 qa_pairs.md
+        assert _load_qa_pairs("b2b-document") == []
+
+    def test_score_qa_relevance_chinese(self):
+        """中文查询匹配中文 QA 对。"""
+        from trade.skill_router import _load_qa_pairs, _score_qa_relevance
+
+        pairs = _load_qa_pairs("b2b-osint")
+        relevant = _score_qa_relevance("帮我背调一下这个客户", pairs)
+        assert len(relevant) > 0, "Should find relevant QA pairs for 背调 query"
+        assert len(relevant) <= 5, "Should return at most 5 pairs"
+        # 最高分的应该是背调相关的
+        assert any("背调" in r["q"] or "背调" in r["a"] for r in relevant)
+
+    def test_score_qa_relevance_english(self):
+        """英文查询匹配英文 QA 对。"""
+        from trade.skill_router import _load_qa_pairs, _score_qa_relevance
+
+        pairs = _load_qa_pairs("b2b-cold-outreach")
+        relevant = _score_qa_relevance("write a cold email to US client", pairs)
+        assert len(relevant) > 0
+
+    def test_score_qa_relevance_no_match(self):
+        """完全不相关的查询返回空。"""
+        from trade.skill_router import _load_qa_pairs, _score_qa_relevance
+
+        pairs = _load_qa_pairs("b2b-osint")
+        relevant = _score_qa_relevance("今天天气真好", pairs)
+        assert len(relevant) == 0
+
+    def test_augment_query_includes_qa(self):
+        """augment_query 匹配到有 QA 对的 skill 时应注入相关知识块。"""
+        from trade.skill_router import augment_query
+
+        result = augment_query("帮我背调一下")
+        assert "相关知识（精准匹配）" in result, "Should inject QA section"
+        assert "发球权" in result or "背调" in result
+
+    def test_augment_query_no_qa_for_skill_without_pairs(self):
+        """没有 QA 文件的 skill 不注入 QA 块。"""
+        from trade.skill_router import augment_query
+
+        # b2b-document 没有 qa_pairs.md
+        result = augment_query("读报价单")
+        # 可能匹配到 skill 但不应该有 QA 注入
+        assert "相关知识（精准匹配）" not in result or "b2b-document" not in result

@@ -1,24 +1,23 @@
 ---
 name: b2b-document
-description: 本地文档分析 — 读取 PDF/Word/Excel/PPT，AI 自动解析与提取关键数据
+description: 外贸文档分析 — 读取报价单/合同/PI/装箱单等贸易单据，提取报价、条款、规格等关键数据
 when_to_use:
-  - "用户提供 PDF / Word / Excel / PPT 要求分析"
-  - "读取报价单 / 合同 / 产品规格书 / 装箱单"
-  - "提取文档关键数据生成结构化摘要"
-  - "对比多份文档的差异"
-  - "用户提到「分析文档」「看合同」「读报价」"
-  - "不要用于：生成新文档（用 b2b-doc-generation）"
+  - "用户提供了外贸单据（报价单 / 合同 / PI / 装箱单 / 产品规格书）要求提取关键信息"
+  - "需要对比多份报价单的价格差异"
+  - "从合同或 PI 中提取付款条件、交期、贸易术语"
+  - "让 Hermes 内置 read_file 读文件即可，不需要本技能"
+  - "不要用于：生成新文档（用 b2b-doc-generation）；普通 PDF/Word 阅读（用 Hermes 内置 office skills）"
 triggers:
-  - 分析文档
-  - 分析文件
-  - 读取报价
-  - 看合同
-  - 产品规格
-  - 产品报价单
-  - 合同分析
-  - 帮我看看这个
-  - invoices analysis
-  - calculate price
+  - 读报价单
+  - 对比报价
+  - 提取合同条款
+  - 分析PI
+  - 看装箱单
+  - 产品规格书
+  - 贸易单据
+  - 报价分析
+  - invoice analysis
+  - quotation comparison
   # ... (see skill_registry.py for full list)
 category: 文档管理
 version: 1.0.0

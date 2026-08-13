@@ -229,12 +229,27 @@ def generate_invoice_from_template(order, config, template_path, out_path):
         for c in range(5):
             _set_cell_text(t.cell(r, c), "")
 
+    # 表头币种（模板写死 USD，按订单币种替换）
+    cur_label = {"CNY": "RMB", "USD": "USD", "EUR": "EUR", "RUB": "RUB"}.get(cur.upper(), "USD")
+    _set_cell_text(t.cell(6, 3), f"Unit price\n({cur_label})")
+    _set_cell_text(t.cell(6, 4), f"Amount\n({cur_label})")
+
     # Total 行
     total_qty = sum(it.get("quantity", 0) for it in items)
     total = sum(it.get("amount") or 0 for it in items)
     _set_cell_text(t.cell(16, 1), "Total")
     _set_cell_text(t.cell(16, 2), f"{total_qty:,.0f}")
-    _set_cell_text(t.cell(16, 4), f"＄{total:,.0f}")
+    _set_cell_text(t.cell(16, 4), f"{sym}{total:,.0f}")
+
+    # 落款段落（表格外：公司名 + 日期）
+    for p in doc.paragraphs:
+        txt = p.text.strip()
+        if not txt:
+            continue
+        if any(k in txt for k in ("Machinery", "Co.", "LTD", "Ltd")):
+            _set_para_text(p, seller.get("name_en", ""))
+        elif txt.replace(".", "").replace(" ", "").isdigit() and len(txt) >= 8:
+            _set_para_text(p, order.get("date", ""))
 
     doc.save(out_path)
     return out_path

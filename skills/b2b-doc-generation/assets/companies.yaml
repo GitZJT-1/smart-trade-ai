@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════════
+# companies.yaml — 公司（卖方）+ 客户（买方）台账
+# 由 b2b-doc-generation 的单证流水线读取，作为 buyer_match 的匹配源
+# 和单据表头的实体来源。
+#
+# 用法：手动编辑本文件即可（YAML 纯文本）。或让 AI 帮你填。
+#   sellers: 你们自己的公司（单据表头 = 卖方）
+#   buyers:  客户台账（legal_names / aliases 用于客户名多级匹配）
+# ═══════════════════════════════════════════════════════════════
+
+sellers:
+  luofei:                      # seller_id：公司英文名前两个实词小写+下划线（跳过 Co/Ltd/Inc）
+    name_cn: "沈阳罗菲机械设备贸易有限公司"        # ← 改成你的公司中文名
+    name_en: "Shenyang Luofei Machinery Equipment Trading Co., Ltd."  # ← 改成英文名
+    address: ""                # ← 公司地址（PI/CI 表头）
+    contact: ""                # ← 联系人
+    tel: ""                    # ← 电话
+    email: ""                  # ← 邮箱
+    uscc: ""                   # ← 统一社会信用代码（报关单用）
+    bank:
+      name: ""                 # 银行名（PI 付款信息）
+      swift: ""
+      account_no: ""
+
+buyers:
+  # ── 示例客户（脱敏，替换成你的真实客户）──
+  # 每个客户维护 legal_names（法定全名）+ aliases（简称/别名），
+  # 这是 buyer_match 多级匹配的关键：客户名拼写多变时靠它们兜底。
+  demo_buyer:
+    name_en: "Metiz Trading LLC"
+    name_ru: "ООО «Метиз Трейдинг»"
+    legal_names:
+      - "Metiz Trading LLC"
+      - "ООО Метиз Трейдинг"
+    aliases:
+      - "Metiz"
+      - "Метиз"
+    address: ""
+    contact: ""
+    email: ""
+    inn: ""                    # 俄罗斯 INN 税号（PI/CI 买方税号，俄客户常要求）

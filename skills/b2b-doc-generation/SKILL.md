@@ -64,6 +64,7 @@ author: Foreign Trade Assistant
 | `scripts/buyer_match.py` | 客户多级匹配 + 硬阻断 | pyyaml |
 | `scripts/precheck.py` | 生成前阻断式校验引擎（12 规则） | pyyaml（可选） |
 | `scripts/price_anchor.py` | 报价单 UUID 锚点 stamp / 价格回写 update | openpyxl |
+| `scripts/doc_writers.py` | 从 order.json 生成发票/箱单/报关单（套 NLMK 俄英双语结构） | python-docx/xlwt |
 | `scripts/html_to_pptx.py` | HTML 手册 → 可编辑 PPTX | python-pptx/bs4/lxml |
 
 运行环境：系统 `python`（3.11+）已装 openpyxl + pyyaml，直接 `python scripts/xxx.py` 可跑，无需建 venv。
@@ -142,7 +143,19 @@ python scripts/precheck.py <order.json> --config assets/companies.yaml --stage f
 
 ### Phase 6：生成正式单据（从 order.json 读）
 
-从 order.json 读数据，套模板生成 PI / CI / 装箱单 / 报关单（俄英双语客户走 b2b-bilingual-doc-workflow 的俄英模板细节）。报关三件套完整流程见 references/customs-declaration-templates.md。
+用 writer 脚本生成，俄英双语结构按 NLMK 26BY008 真实模板：
+
+```bash
+# 一次生成发票 + 箱单 + 报关单
+python scripts/doc_writers.py all <order.json> --config assets/companies.yaml --outdir <输出目录>
+# 或单独生成
+python scripts/doc_writers.py invoice <order.json> --config assets/companies.yaml
+```
+
+- 发票（invoice.docx）= 商业发票 CI；形式发票 PI 同版式，标题改 PROFORMA INVOICE + 加有效期。
+- 箱单（packing.docx）、报关单（customs.xls）结构与 references 记录一致。
+- 报关单是近似海关版式（从零画）；真实报关建议套你的 .xls 模板（详见 references/customs-declaration-templates.md 的 xlrd/xlutils 套模板流程）。
+- 俄英双语客户走 b2b-bilingual-doc-workflow 的俄英模板细节。
 
 ### Phase 7：交付
 

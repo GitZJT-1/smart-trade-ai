@@ -87,6 +87,8 @@ class OrderModel:
     seller_id: Optional[str] = None       # 引用 config/companies.yaml 的 sellers key
     buyer_id: Optional[str] = None        # 引用 config/companies.yaml 的 buyers key
     buyer_raw_name: str = ""              # 询价单上提取到的原始客户名（用于匹配）
+    contract_no: str = ""                 # 客户合同号（箱单/报关单引用）
+    spec_no: str = ""                     # 规格书号（箱单/报关单引用）
     terms: OrderTerms = field(default_factory=OrderTerms)
     items: list[OrderItem] = field(default_factory=list)
     meta: dict = field(default_factory=dict)
@@ -127,6 +129,8 @@ def from_dict(d: dict) -> OrderModel:
         seller_id=d.get("seller_id"),
         buyer_id=d.get("buyer_id"),
         buyer_raw_name=d.get("buyer_raw_name", ""),
+        contract_no=d.get("contract_no", ""),
+        spec_no=d.get("spec_no", ""),
         terms=terms,
         items=items,
         meta=d.get("meta", {}),

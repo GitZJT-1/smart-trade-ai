@@ -235,13 +235,13 @@ def generate_invoice_from_template(order, config, template_path, out_path):
     _set_cell_text(t.cell(6, 3), f"Unit price\n({cur_label})")
     _set_cell_text(t.cell(6, 4), f"Amount\n({cur_label})")
 
-    # Total 行（删行后位置 = first + n）
+    # Total 行（删行后位置 = first + n；金额格式与商品行一致：纯数字+2位小数，币种由表头标注）
     total_qty = sum(it.get("quantity", 0) for it in items)
     total = sum(it.get("amount") or 0 for it in items)
     total_row = first + n
     _set_cell_text(t.cell(total_row, 1), "Total")
     _set_cell_text(t.cell(total_row, 2), f"{total_qty:,.0f}")
-    _set_cell_text(t.cell(total_row, 4), f"{sym}{total:,.0f}")
+    _set_cell_text(t.cell(total_row, 4), f"{total:,.2f}")
 
     # 落款段落（表格外：公司名 + 日期）
     for p in doc.paragraphs:
@@ -262,6 +262,7 @@ def generate_packing_from_template(order, config, template_path, out_path):
     buyer = resolve_buyer(order, config)
     terms = order.get("terms", {}) or {}
     items = order.get("items", [])
+    packing = order.get("packing", {}) or {}
 
     doc = Document(template_path)
     buyer_name = buyer.get("name_en", "") or buyer.get("name_ru", "")
@@ -299,6 +300,13 @@ def generate_packing_from_template(order, config, template_path, out_path):
         _set_cell_text(t.cell(r, 0), desc)
         _set_cell_text(t.cell(r, 1), f"{it.get('quantity', 0):,.0f}")
         _set_cell_text(t.cell(r, 2), it.get("unit", "pcs"))
+    # 包装/净重/毛重/体积（C3-C6 垂直合并单元格，填起始行；缺数据留空，不用模板旧值）
+    nw = packing.get("net_weight_kg", "")
+    gw = packing.get("gross_weight_kg", "")
+    _set_cell_text(t.cell(first, 3), str(packing.get("package_type", "")))
+    _set_cell_text(t.cell(first, 4), str(nw) if nw != "" else "")
+    _set_cell_text(t.cell(first, 5), str(gw) if gw != "" else "")
+    _set_cell_text(t.cell(first, 6), "")  # 体积未提供，留空
     # 删除多余商品行（同一索引反复删）
     for _ in range(TEMPLATE_ITEM_ROWS - n):
         t._tbl.remove(t.rows[first + n]._tr)
@@ -307,6 +315,10 @@ def generate_packing_from_template(order, config, template_path, out_path):
     total_row = first + n
     _set_cell_text(t.cell(total_row, 0), "Total")
     _set_cell_text(t.cell(total_row, 1), f"{total_qty:,.0f}")
+    _set_cell_text(t.cell(total_row, 3), str(packing.get("package_type", "")))
+    _set_cell_text(t.cell(total_row, 4), str(nw) if nw != "" else "")
+    _set_cell_text(t.cell(total_row, 5), str(gw) if gw != "" else "")
+    _set_cell_text(t.cell(total_row, 6), "")
 
     doc.save(out_path)
     return out_path

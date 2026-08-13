@@ -124,11 +124,12 @@ def generate_customs_from_template(order, config, template_path, out_path):
         # ── 商品区（模板 9 项，R21 起每项 2 行）──
         TEMPLATE_ITEM_ROWS = 9
         first_row = 21
-        for i, it in enumerate(items):
-            if i >= TEMPLATE_ITEM_ROWS:
-                print(f"  ⚠ 商品 {i + 1} 项超出模板容量（{TEMPLATE_ITEM_ROWS} 项），已跳过。"
-                      "多于此数需扩展报关单模板或分单。", file=sys.stderr)
-                break
+        n = min(len(items), TEMPLATE_ITEM_ROWS)
+        if len(items) > TEMPLATE_ITEM_ROWS:
+            print(f"  ⚠ 商品 {len(items)} 项超出模板容量（{TEMPLATE_ITEM_ROWS} 项），超出部分已跳过。"
+                  "多于此数需扩展报关单模板或分单。", file=sys.stderr)
+        for i in range(n):
+            it = items[i]
             r = first_row + 2 * i
             nw = it.get("total_weight_kg") or it.get("weight_kg_per_unit") or 0
             qty = it.get("quantity", 0)
@@ -143,12 +144,11 @@ def generate_customs_from_template(order, config, template_path, out_path):
             setv(r, 10, currency_zh)                     # 币制
             # 申报要素行(r+1)：保留模板原文，不覆盖
 
-        # 清空多余商品行
-        for i in range(len(items), TEMPLATE_ITEM_ROWS):
-            r = first_row + 2 * i
-            for c in (0, 1, 2, 4, 6, 8, 9, 10):
-                setv(r, c, "")
-            setv(r + 1, 0, "")  # 申报要素行
+        # 删除多余商品行（每项 2 行；Excel 1-based：22=第一项商品行，39=第九项申报要素）
+        if n < TEMPLATE_ITEM_ROWS:
+            del_start = 22 + 2 * n
+            del_end = 22 + 2 * TEMPLATE_ITEM_ROWS - 1
+            ws.Rows(f"{del_start}:{del_end}").Delete()
 
         wb.SaveAs(out_path, FileFormat=56)  # 56 = xlExcel8 (.xls)
         wb.Close(False)
@@ -207,13 +207,16 @@ def generate_invoice_from_template(order, config, template_path, out_path):
     _set_cell_text(t.cell(4, 0), f"Terms of delivery \n{terms.get('incoterm', '')} Port of {port}")
     _set_cell_text(t.cell(5, 2), f"Terms of Payment: {terms.get('payment', 'T/T')}")
 
-    # 商品行（模板 9 项，R7 起）
+    # 商品行（模板 9 项，R7 起；按实际商品数，多余行删除不留空）
     first = 7
     TEMPLATE_ITEM_ROWS = 9
-    for i, it in enumerate(items):
-        if i >= TEMPLATE_ITEM_ROWS:
-            break
+    n = min(len(items), TEMPLATE_ITEM_ROWS)
+    if len(items) > TEMPLATE_ITEM_ROWS:
+        print(f"  ⚠ 商品 {len(items)} 项超出模板容量（{TEMPLATE_ITEM_ROWS} 项），超出部分已跳过。",
+              file=sys.stderr)
+    for i in range(n):
         r = first + i
+        it = items[i]
         desc = it.get("description_ru") or it.get("description_en") or it.get("description_cn")
         qty = it.get("quantity", 0)
         up = it.get("unit_price")
@@ -223,23 +226,22 @@ def generate_invoice_from_template(order, config, template_path, out_path):
         _set_cell_text(t.cell(r, 2), f"{qty:,.0f}")
         _set_cell_text(t.cell(r, 3), f"{up:,.2f}" if up is not None else "")
         _set_cell_text(t.cell(r, 4), f"{am:,.2f}" if am is not None else "")
-    # 清空多余商品行
-    for i in range(len(items), TEMPLATE_ITEM_ROWS):
-        r = first + i
-        for c in range(5):
-            _set_cell_text(t.cell(r, c), "")
+    # 删除多余商品行（同一索引反复删，删一行后下行自动上移）
+    for _ in range(TEMPLATE_ITEM_ROWS - n):
+        t._tbl.remove(t.rows[first + n]._tr)
 
     # 表头币种（模板写死 USD，按订单币种替换）
     cur_label = {"CNY": "RMB", "USD": "USD", "EUR": "EUR", "RUB": "RUB"}.get(cur.upper(), "USD")
     _set_cell_text(t.cell(6, 3), f"Unit price\n({cur_label})")
     _set_cell_text(t.cell(6, 4), f"Amount\n({cur_label})")
 
-    # Total 行
+    # Total 行（删行后位置 = first + n）
     total_qty = sum(it.get("quantity", 0) for it in items)
     total = sum(it.get("amount") or 0 for it in items)
-    _set_cell_text(t.cell(16, 1), "Total")
-    _set_cell_text(t.cell(16, 2), f"{total_qty:,.0f}")
-    _set_cell_text(t.cell(16, 4), f"{sym}{total:,.0f}")
+    total_row = first + n
+    _set_cell_text(t.cell(total_row, 1), "Total")
+    _set_cell_text(t.cell(total_row, 2), f"{total_qty:,.0f}")
+    _set_cell_text(t.cell(total_row, 4), f"{sym}{total:,.0f}")
 
     # 落款段落（表格外：公司名 + 日期）
     for p in doc.paragraphs:
@@ -286,22 +288,25 @@ def generate_packing_from_template(order, config, template_path, out_path):
     t = doc.tables[0]
     first = 1
     TEMPLATE_ITEM_ROWS = 9
-    for i, it in enumerate(items):
-        if i >= TEMPLATE_ITEM_ROWS:
-            break
+    n = min(len(items), TEMPLATE_ITEM_ROWS)
+    if len(items) > TEMPLATE_ITEM_ROWS:
+        print(f"  ⚠ 商品 {len(items)} 项超出模板容量（{TEMPLATE_ITEM_ROWS} 项），超出部分已跳过。",
+              file=sys.stderr)
+    for i in range(n):
         r = first + i
+        it = items[i]
         desc = it.get("description_ru") or it.get("description_en") or it.get("description_cn")
         _set_cell_text(t.cell(r, 0), desc)
         _set_cell_text(t.cell(r, 1), f"{it.get('quantity', 0):,.0f}")
         _set_cell_text(t.cell(r, 2), it.get("unit", "pcs"))
-    for i in range(len(items), TEMPLATE_ITEM_ROWS):
-        r = first + i
-        for c in range(7):
-            _set_cell_text(t.cell(r, c), "")
+    # 删除多余商品行（同一索引反复删）
+    for _ in range(TEMPLATE_ITEM_ROWS - n):
+        t._tbl.remove(t.rows[first + n]._tr)
 
     total_qty = sum(it.get("quantity", 0) for it in items)
-    _set_cell_text(t.cell(10, 0), "Total")
-    _set_cell_text(t.cell(10, 1), f"{total_qty:,.0f}")
+    total_row = first + n
+    _set_cell_text(t.cell(total_row, 0), "Total")
+    _set_cell_text(t.cell(total_row, 1), f"{total_qty:,.0f}")
 
     doc.save(out_path)
     return out_path

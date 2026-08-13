@@ -1887,16 +1887,16 @@ function showOrderEditModal(oid, presetCid) {
             <div class="form-group"><label for="order-no">订单号</label><input type="text" id="order-no" placeholder="如：PO-2026-001"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label for="order-qty">数量</label><input type="number" id="order-qty" placeholder="1000" step="any"></div>
+            <div class="form-group"><label for="order-qty">数量</label><input type="number" id="order-qty" placeholder="1000" step="any" min="0"></div>
             <div class="form-group"><label for="order-unit">单位</label><input type="text" id="order-unit" value="套"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label for="order-price">单价</label><input type="number" id="order-price" placeholder="0.35" step="any"></div>
+            <div class="form-group"><label for="order-price">单价</label><input type="number" id="order-price" placeholder="0.35" step="any" min="0"></div>
             <div class="form-group"><label for="order-currency">币种</label><select id="order-currency"><option>USD</option><option>EUR</option><option>CNY</option></select></div>
         </div>
         <div class="form-row">
             <div class="form-group"><label for="order-total">总金额</label><input type="number" id="order-total" placeholder="3500" step="any"></div>
-            <div class="form-group"><label for="order-status">状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option></select></div>
+            <div class="form-group"><label for="order-status">状态</label><select id="order-status"><option>报价中</option><option>已下单</option><option>已出货</option><option>已完成</option><option>已取消</option></select></div>
         </div>
         <div class="form-row">
             <div class="form-group"><label for="order-delivery">交期</label><input type="date" id="order-delivery"></div>

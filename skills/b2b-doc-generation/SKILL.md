@@ -154,8 +154,8 @@ python scripts/doc_writers.py invoice <order.json> --config assets/companies.yam
 
 - 发票（invoice.docx）= 商业发票 CI；形式发票 PI 同版式，标题改 PROFORMA INVOICE + 加有效期。
 - 箱单（packing.docx）、报关单（customs.xls）结构与 references 记录一致。
-- 报关单是近似海关版式（从零画）；真实报关建议套你的 .xls 模板（详见 references/customs-declaration-templates.md 的 xlrd/xlutils 套模板流程）。
-- 俄英双语客户走 b2b-bilingual-doc-workflow 的俄英模板细节。
+- 报关单套模板用 **Excel COM**（win32com 调 Excel 打开→改值→另存），合并单元格/边框 100% 保留；前置：Windows + 装 Excel/WPS。不用 xlutils.copy（它会丢边框，纯 copy 实测 354 格边框不一致）。
+- 模板文件（报关单.xls / *发票*.docx / *箱单*.docx）含客户隐私数据，**不提交仓库**，运行时用 `--template-dir` 指向本地目录（如 Desktop\发运文件\）。
 
 ### Phase 7：交付
 

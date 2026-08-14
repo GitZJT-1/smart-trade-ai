@@ -32,7 +32,7 @@ IN0701/
    - Mandatory: standard contract, quality certificate, full marking + manufacturer
 3. **Convert all drawings** (PDF→PNG via pymupdf dpi=300 per page; GIF/TIF→PNG via PIL with
    `Image.MAX_IMAGE_PIXELS = None` for the 180 MP GIFs; `convert("RGB")` for L/P/CMYK modes).
-4. **Batch OCR**: one python loop over 46 PNGs → `tesseract <stem> -l rus+eng --psm 3`,
+4. **Batch OCR**: one python loop over 46 PNGs → `ocr_ppocrv5.py`（PP-OCRv5, ru）,
    skip already-done `.txt` outputs so re-runs are cheap.
 5. **Extract** from each OCR txt: drawing #, material (ГОСТ grade), numbered technical
    requirements (1-6 typical). Known materials this run:

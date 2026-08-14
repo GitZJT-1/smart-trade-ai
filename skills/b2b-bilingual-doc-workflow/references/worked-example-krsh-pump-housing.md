@@ -61,7 +61,7 @@ The corrected approach used PIL pixel-density analysis to find text line positio
 
 ### Key technique: Text line detection without OCR
 
-Since Tesseract was unavailable and OCR.space produced garbled results on this engineering scan:
+Since OCR.space produced garbled results on this engineering scan:
 
 ```python
 # Scan dark pixel density row-by-row in the right half
@@ -118,35 +118,7 @@ Parameters that worked at 300 DPI (3508×2480):
 - Position-specific labels (spiral tongue, arcs)
 - Usage instructions
 
-**OCR source**: Local Tesseract 5.5.0 via winget, using `-l rus+eng` with `--tessdata-dir`.
-
-### Tesseract on Windows (winget) — Repeatable Setup
-
-```bash
-winget install --id Tesseract-OCR.Tesseract --silent --accept-source-agreements
-# timeout >= 180s (50MB download on slow connections)
-# Installed to: C:\Program Files\Tesseract-OCR\
-
-# Download Russian trained data (fast variant, ~3.7MB)
-curl -L "https://github.com/tesseract-ocr/tessdata_fast/raw/main/rus.traineddata" -o rus.traineddata
-```
-
-**Chinese-character home directory workaround**: `TESSDATA_PREFIX` garbles with `C:\Users\周家同`.
-Always use `--tessdata-dir` CLI flag directly:
-
-```bash
-mkdir -p /tmp/tessdata
-cp rus.traineddata /tmp/tessdata/
-cp "C:/Program Files/Tesseract-OCR/tessdata/eng.traineddata" /tmp/tessdata/
-tesseract drawing.png stdout -l rus+eng --tessdata-dir /tmp/tessdata
-```
-
-### Tesseract PSM Modes Tested
-
-| PSM | Result | Verdict |
-|-----|--------|---------|
-| Default (3) | Clean numbered list, readable Russian | ✅ Best |
-| 6 (block) | Chaotic with noise from drawing body | ❌ |
+**OCR source**: PP-OCRv5 (local GPU, ru).
 
 ### OCR Numbering Errors on This Drawing
 
@@ -161,6 +133,4 @@ Manual verification of numbered lists is **mandatory**.
 ### Key Lessons (Durable)
 
 1. **OCR → annotation file → user annotates**: The user has now rejected automated annotation twice (first: perimeter callout boxes, second: automated marker placement). The durable preference is: agent does the thinking (extract + translate), user does the image editing.
-2. **winget works for Tesseract on locked-down Windows**: No admin required. Download lang data from tessdata_fast separately.
-3. **--tessdata-dir > TESSDATA_PREFIX**: On Chinese-localized Windows, always use the CLI flag.
-4. **Always clean OCR numbering**: Drawing fonts cause systematic misreads of item numbers.
+2. **Always clean OCR numbering**: Drawing fonts cause systematic misreads of item numbers.

@@ -37,7 +37,7 @@ triggers:
   - 生成报关单
   - 备件询价
 category: 文档管理
-version: 2.3.0
+version: 2.7.0
 author: Foreign Trade Assistant
 tags: [B2B, Trade, Russian, Ukrainian, Contract, Shipping, RFQ, OCR, XLS, Drawings, GOST, Annotation]
 related_skills: [b2b-document, b2b-doc-generation]
@@ -59,6 +59,8 @@ related_skills: [b2b-document, b2b-doc-generation]
 2. **格式以模板为准** — 表头、列序、俄英双语结构必须与用户提供的模板完全一致，禁止自创列结构
 3. **俄语/乌克兰语品名保留原文**，附加贴合行业的中文翻译，格式如 `Втулка ч.4-435281 | 衬套 件号 4-435281`
 4. **单价/总价在报价前留空**，不得猜测
+5. **OCR 引擎仅用本地/免费方案** — 禁止外部付费视觉 API（Google Cloud Vision / Gemini Vision 等）。整页文档/合同/扫描 PDF/表格 → **PaddleOCR-VL**（本地 GPU VLM，结构化输出）；工程图纸标题栏/线级小字 → **PP-OCRv5**（本地 GPU 检测+识别，西里尔，带置信度+坐标）；兜底 → OCR.space → RapidOCR。不得引入需要绑卡/服务账号的 OCR 服务。详见 references/ocr-engine-policy.md。
+6. **询价单条目与合同/招标文件一一对应，禁止自行装配体拆件** — 合同文件里是装配体（品名尾缀 СБ）就按装配体整行报价，不得根据图纸 BOM/明细表把装配体拆成若干零件逐行列出。图纸 BOM/明细表只用于核对单重/材质等参数（写进核对报告），绝不用于改写询价单的行结构。拆件会破坏询价单与合同的一致性（实战 20155505 螺旋输送机拆 4 行、260813 批次全部拆件，均被用户否定）。
 
 ## 环境准备（幂等，可重复执行）
 
@@ -68,10 +70,7 @@ SKILL_DIR="<本 skill 目录绝对路径>"
 [ -f "$SKILL_DIR/.venv-skill/Scripts/python.exe" ] || (cd "$SKILL_DIR" && uv venv --python 3.11 .venv-skill)
 uv pip install --python "$SKILL_DIR/.venv-skill/Scripts/python.exe" xlrd pandas python-docx pymupdf xlwt xlutils
 
-# ② Tesseract 语言包自检（rus 缺失 = 俄语转拉丁转写，必须人工校；ukr 缺失 = 乌克兰语降级）
-ls "/c/Program Files/Tesseract-OCR/tessdata/" | grep -E "rus|ukr" || echo "语言包缺失"
-
-# ③ 一键自检脚本（推荐）：venv + tesseract + 语言包 + OCR.space 全部探测
+# ② 一键自检脚本（推荐）：venv 依赖 + PaddleOCR GPU 引擎 + OCR.space 全部探测
 "$SKILL_DIR/.venv-skill/Scripts/python.exe" "$SKILL_DIR/scripts/env_check.py"
 ```
 
@@ -84,11 +83,29 @@ ls "/c/Program Files/Tesseract-OCR/tessdata/" | grep -E "rus|ukr" || echo "语�
 
 ⚠️ **execute_code 环境陷阱**：execute_code 脚本运行在临时沙箱 Python，与 terminal 的 venv 不同。装库后一律 `SKILL_DIR/.venv-skill/Scripts/python.exe SKILL_DIR/scripts/<脚本>.py`（terminal 里）执行。脚本内部已带 `sys.stdout.reconfigure(encoding="utf-8")` 防俄语打印乱码。
 
+## PaddleOCR 本地 GPU 引擎（两种，按场景分流）
+
+**整页文档/合同/扫描 PDF/表格 → PaddleOCR-VL**（结构化 markdown/json，保留表格/标题/阅读顺序）：
+
+```bash
+"$SKILL_DIR/.venv-paddleocr/Scripts/python.exe" "$SKILL_DIR/scripts/ocr_paddle_vl.py" "<文件.pdf或图片>" --out "<输出目录>"
+```
+
+**工程图纸标题栏/BOM/尺寸标注 → PP-OCRv5**（线级检测+识别，西里尔，每行带置信度+坐标）：
+
+```bash
+"$SKILL_DIR/.venv-paddleocr/Scripts/python.exe" "$SKILL_DIR/scripts/ocr_ppocrv5.py" "<图纸图片或目录>" --lang ru --out "<输出目录>"
+```
+
+均需 GPU（驱动 ≥ 520），同一 `.venv-paddleocr`；部署与坑见 references/ocr-engine-policy.md。
+
 ## scripts/ 工具箱（本 skill 的全部自动化核心）
 
 | 脚本 | 用途 | 对应节点 |
 |---|---|---|
-| `scripts/ocr_pdf.py` | 合同 PDF 多页 OCR（文字/扫描混合）+ 字段提取 + 待核清单，默认 Tesseract 引擎 | A1-A2 |
+| `scripts/ocr_pdf.py` | 合同 PDF 多页 OCR（文字页直取 + 扫描页 PP-OCRv5）+ 字段提取 + 待核清单 | A1-A2 |
+| `scripts/ocr_paddle_vl.py` | PaddleOCR-VL 本地 GPU 文档结构化解析（109 语含西里尔，Markdown/JSON/DOCX），整页合同/扫描件首选 | A1, B2.5 |
+| `scripts/ocr_ppocrv5.py` | PP-OCRv5 本地 GPU 线级 OCR（检测+识别，ru/uk 西里尔，带置信度+坐标），工程图纸首选 | B2.5, B4, C1 |
 | `scripts/extract_fields.py` | 对已有 OCR 文本重复提字段/调参 | A2 |
 | `scripts/xls_tpl.py` | .xls 模板读写（xlutils.copy 保格式），CLI: dump / fill | A6, B5 |
 | `scripts/validate_3docs.py` | 三单一致性校验 + 结构化报告（交付物） | A7 |
@@ -116,7 +133,7 @@ PY="$SKILL_DIR/.venv-skill/Scripts/python.exe"
 
 脚本自动完成：
 - **遍历所有页**：每页 `get_text()` 判文字/扫描，混合文档分别处理
-- 扫描页 300dpi 渲染 PNG → Tesseract OCR（rus+eng，`--tessdata-dir` 防中文路径乱码）
+- 扫描页 300dpi 渲染 PNG → PP-OCRv5（GPU 线级 OCR，西里尔）
 - 字段提取：宽松锚点 + 特征数字兜底（合同号 16-20 位、规格书号 10 位、金额俄式小数点归一化）
 - 输出 4 个文件：`ocr_full.txt` 逐页全文 / `pages/page_NN.png` 渲染图 / `fields.json` 字段+来源页 / `verify_list.txt` 待核清单
 
@@ -266,7 +283,9 @@ xlrd 读取。典型列（乌克兰语，注意与俄语区分）：
 - 每项内含 JPG/PDF/TIF 图纸（TIF 多为 300dpi 扫描件），处理方式见 B2.5
 - 映射失败时列出无法映射的目录名与清单人工比对（可能子目录名缺 ч.件号）
 
-### B2.5 图纸 OCR 处理（TIF→PNG→Tesseract，OCR.space 兜底）
+### B2.5 图纸 OCR 处理（TIF→PNG→PP-OCRv5，OCR.space 兜底）
+
+**⚠️ 多页 PDF 铁律**：`pymupdf` 打开后先用 `len(doc)` 取页数。**每一页都渲染 300dpi PNG 并 OCR**，不能只看第 1 页。装配图的 BOM/明细表（Спецификация）往往在第 2 页或更后页，且表格结构 OCR 识别效果远好于第 1 页装配图本身。跳页 = 丢数据（实战：20155581 紧固件单重全部来自第 2 页 BOM，第 1 页 OCR 是乱码）。
 
 **输入识别**：图纸文件常为 TIFF 扫描件（微信/邮件传输）、JPG/PNG 照片、PDF 扫描件。
 
@@ -284,37 +303,39 @@ img.save("drawing.png", "PNG")
 
 **超大片幅（decompression bomb）**：传真/扫描管线可能产出 1.8 亿像素级文件。Pillow 默认限制 ~178MP 会抛 `DecompressionBombError`，打开前先 `Image.MAX_IMAGE_PIXELS = None`；GIF 多帧取面积最大帧，存 PNG。
 
-**Step 2 — OCR 引擎**（优先级：Tesseract > OCR.space > RapidOCR）：
+**Step 2 — OCR 引擎**（优先级：PP-OCRv5 > OCR.space > RapidOCR）：
 
-**① Tesseract（首选，本地 OCR 引擎）**：
+**① PP-OCRv5（首选，本地 GPU 线级检测+识别）**：
 
-- `winget install --id Tesseract-OCR.Tesseract --silent --accept-source-agreements`；俄语包 `curl -L https://github.com/tesseract-ocr/tessdata_fast/raw/main/rus.traineddata -o rus.traineddata` 放入 tessdata 或用户可写目录
-- **中文用户名铁律**：中文路径会让 `TESSDATA_PREFIX` 传给 tesseract.exe 时乱码（\"does not exist, ignore it\"）→ **永远用 `--tessdata-dir <临时目录>`**
-- 运行：`tesseract drawing.png stdout -l rus+eng --tessdata-dir <临时目录>`
+- 命令：`.venv-paddleocr/Scripts/python.exe scripts/ocr_ppocrv5.py <图纸.png或目录> --lang ru --out <输出目录>`
+- 支持 ru/uk/be 西里尔；每行输出 [文本, 置信度, 坐标]，低分(≤0.5)多为乱码可程序化过滤
+- 西里尔拼写准确（实测长词 `Неуказанные предельные отклонения` 等全对）
 
-**② OCR.space（Tesseract 不可用时兜底）**：
+**② OCR.space（PP-OCRv5 不可用时兜底）**：
 - 图缩到 max 1600px、JPEG q85 压到 <1.5MB（免费限额），`urllib.parse.urlencode` 构造 POST；超时 120s；混排默认 `language=\"eng\"`，纯西里尔换 `\"rus\"`
 
 **③ RapidOCR（离线最后备选）**：全离线 ONNX 推理，俄语数字可用但汉字易误读（`7`→`了`），仅在前两种都不可用时启用。
 
-**OCR 参数**（工程图纸，Tesseract）：
+**OCR 参数**（工程图纸，PP-OCRv5）：
 
 | 参数 | 设置 | 理由 |
 |---|---|---|
-| 语言 | `-l rus+eng` | GOST/ДСТУ 图纸常俄英双语标注 |
-| PSM | 默认 3；乱码时 `--psm 6` | 混合文本+尺寸标注布局 |
-| 标题栏 | 裁剪右下区域放大 12-16x，psm 6/10 | 小字缩写密集 |
+| `--lang` | `ru`（俄）/ `uk`（乌） | GOST/ДСТУ 图纸俄英标注，ru 含拉丁+数字 |
+| `--device` | `gpu:0` | GPU 推理，每页 1-2 秒 |
 
-**Tesseract 常见数字误读（工程图纸）**：`70.`→`10.`、`5.*`→`3.*`、`То.`→`10.`（西里尔 Т 像 1）、`S16.`→`6.`。编号列表必须对照预期模式人工核验。
+**PP-OCRv5 噪声提示**：旋转/镜像标注不自动转正会出乱码，靠置信度分数过滤（≤0.5 弃用）；编号列表仍须对照预期模式人工核验。
 ### B3 逐项翻译
 
 - 保留俄语原名 + 中文翻译：`Втулка ч.4-435281 | 衬套 件号 4-435281`
 - 查 scripts/glossary.json（141 词条），未收录的词按行业常识翻译并**回写 JSON**（唯一真源，改后重新生成 references/glossary.md）
 - 翻译结合图纸内容确认（如 Вал полый выходной 看图纸确认空心轴）
 
-### B4 提取单重/关键参数（图纸标题栏固定打法）
+### B4 提取单重/关键参数（图纸 BOM 表优先，标题栏兜底）
 
-- 从图纸标题栏提取重量（俄语 `Масса` / `Вес`，英语 `Weight`）
+**数据来源优先级**：BOM/明细表（Спецификация，通常是 PDF 第 2+ 页）> 图纸标题栏 > 客户清单沿用。
+
+- 从 BOM 表或图纸标题栏提取重量（俄语 `Масса` / `Вес`，英语 `Weight`）
+- **⚠️ BOM 表 Вес 列语义（关键坑）**：BOM 中 `Норма` 列 = 每套装配体用量。当 `Норма > 1`（如螺栓 11 шт.、垫圈 22 шт.），`Вес` 列的值 = **该用量下的总重**（11 件螺栓共重 1.3 kg），**不是单件重**。询价单"图纸单重"直接取 BOM 的 Вес 原值，不要自作聪明除以 Норма 换算成单件重。总重另算（总套数 × BOM Вес）。实战 20155581：螺栓 Вес 1.3（=11 件 × 0.118 kg）、垫圈 Вес 4.4（=22 件 × 0.2 kg）、螺母 Вес 0.3（=11 件 × 0.027 kg）——若误当单件重则全错。
 - **固定打法**：扫描 TIF → 渲染 300dpi PNG → 裁右下角标题栏区域 → OCR 定位 `Масса/Вес` 行 → 提取数值
 - **标题栏 Масса 格定位**：ГОСТ 2.104 小标题栏中 `Лит|Масса|Масштаб` 三小格在标题栏第一行最右侧；值行在其正下方；不同图纸标题栏 y 起点差异大，先扫描右下区域暗像素行分布定位，再裁剪放大 12-16x OCR（psm 6/10）
 - **表格式系列图纸标题栏 Масса 空白（关键坑）**：一个图号覆盖多规格的系列图纸，标题栏 Масса 格**通常留空**——单重必须查图纸内**尺寸表**（表含 `Масса` 列，按规格行取值），表里没有的定制规格只能沿用客户清单值并标 `[待核]`
@@ -346,6 +367,7 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 - Receiver 列每行保留原文，不得删除
 - 单重必须是独立数值列，嵌进规格文本会破坏工厂按列汇总
 - 单价/总价留空待报价；用 xlwt 新建（或 xls_tpl.py 套模板样式），sheet 名保持原样
+- **禁止自行装配体拆件（铁律 #6）**：询价单行 = 合同/招标文件条目，一一对应。合同里是装配体（СБ）就整行报价，不得按图纸 BOM 拆成零件逐行。图纸 BOM/明细表只用于提取单重/材质写核对报告，不改写行结构。行数必须与合同条目数完全一致
 
 ### B6 校验
 
@@ -365,7 +387,7 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 当用户说注释"不准确"/"位置不对"，或明确"你负责提取，我来添加"时用此方式 —— **安全默认**（扫描图上自动像素级定位难做准）。
 
 1. 对图纸 OCR（见 B2.5）提取全部俄文 + 英文标注
-2. 人工清理 OCR 输出（修正乱码、重建编号列表 — Tesseract 常把 `10.` 读成 `70.`/`То.`）
+2. 人工清理 OCR 输出（修正乱码、重建编号列表 — 图纸小字常把 `10.` 读成 `70.`/`То.`）
 3. 建注释对照表：标题栏信息（图号/品名/材质/标准）、技术要求 1-10 俄中对照、位置标注、表面粗糙度符号、剖面视图引用
 4. 保存 `[文件名]_注释对照表.md` 到图纸所在目录，交付用户粘贴到图上
 
@@ -396,7 +418,7 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 
 仅当用户要求自动标注且 C1 未被拒。Pillow + Windows 中文字体（绝对路径 `C:/Windows/Fonts/msyh.ttc`，先 `os.path.exists()` 验证）。
 
-- **文本行检测**：Tesseract 不可用/乱码时按暗像素密度逐行扫描定位（暗像素阈值 R<120；行间距 >3px 分行；步长 2px；大图纯 Python 约 30-60s）
+- **文本行检测**：OCR 不可用/乱码时按暗像素密度逐行扫描定位（暗像素阈值 R<120；行间距 >3px 分行；步长 2px；大图纯 Python 约 30-60s）
 - **布局规律**（300dpi 右半幅）：顶部图号；中部技术要求编号列表（可能 2-3 列）；下方规格表；底部标题栏
 - **内联放置**：俄文行尾 +8px 写中文（蓝 `(0,70,200)`）；超出右缘 → 数字红圈标记 + 底部对照表（红表头白字，隔行浅蓝底）
 - **辅助标注**：材质等号（右上角蓝，`Сталь 12X18H12M3T ≈ AISI 316Ti / EN 1.4571`）、关键尺寸（左侧绿）、品名（深蓝）
@@ -410,7 +432,12 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 
 1. **件号格式统一**：`件号` + 空格 + 原编号原样保留（含引号/斜杠/点），如 `密封皮碗 件号 НТ.ГП.SMS/13" 3/8.15225342 装配件`
 2. **英寸标记**：`13" 3/8` = 13又3/8英寸，中文统一写 `13又3/8英寸`；纯数字后缀 `244,5` 直接译 `244.5`
-3. **俄语逗号=小数点**：339,72 → 339.72；Ф1/4 = 1/4 英寸
+3. **俄语数字格式（重要）**：逗号=小数点、点=千分位——与英语完全相反  
+   - `4.800,000` = 4,800.000（四千八百，不是 4,800,000）  
+   - `8,000` = 8.000（八，不是 8,000）  
+   - `53 000,00` = 53,000.00  
+   - 详见 `references/sap-srm-tender-number-format.md`  
+   - Ф1/4 = 1/4 英寸
 4. **СБ / ч. / шт 缩写**：СБ=装配件（品名尾部）、ч.=件号、шт=件
 5. **乌克兰语按俄语词根翻译**：Найменування→наименование→名称，Кіл-ть→количество→数量
 
@@ -436,8 +463,6 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 
 | 异常 | 处理 |
 |---|---|
-| rus.traineddata 缺失 | 仅用 eng（俄语变拉丁转写），verify_list 提示"需人工校"；补装：下载到 tessdata 目录 |
-| ukr.traineddata 缺失 | 自动降级 rus+eng（乌克兰语清单多为文字型 XLS 不受影响，仅扫描图纸标题栏受影响） |
 | vision 工具不可用 | 走 verify_list 人工核对路径（A1.5 路径 2），只核对清单条目 |
 | 多页混合 PDF（首页扫描+次页文字） | ocr_pdf.py 逐页判断分别处理，页码标记进全文 |
 | ZIP 子目录与 Lot 映射失败 | 列出无法映射的目录名，与清单人工比对（可能子目录名缺 ч.件号） |
@@ -463,5 +488,8 @@ col0 Lot | col1 Receiver | col2 Name(俄语原文) | col3 中文翻译 | col4 Qu
 - **乌克兰语 ≠ 俄语**：用 i/ї/є 字符与 Найменування/Кіл-ть 判断；品名翻译按俄语词根处理
 - **.xls 旧格式**：xlrd 只能读；写/改必须 xlwt / xlutils.copy（openpyxl 不支持 .xls）；一律用 scripts/xls_tpl.py
 - **模板里的公司名**：模板可能是其他公司的，生成时必须替换为合同中实际供应商/买家，仅保留格式
-- **中文路径 + tesseract**：必须 `--tessdata-dir`；TESSDATA_PREFIX 在中文用户名下乱码（脚本已内置）
 - **pymupdf 不认 MSYS 路径**：Windows 原生库只接受 `C:/...` 或 `C:\...`，脚本传参用 Windows 路径（实测踩坑）
+- **SAP SRM 招标数量格式（千分位点 + 小数点逗号）**：SAP SRM 俄语区导出的 `Количество` 字段使用俄语数字格式——`.` 是千分位、`,` 是小数点（与英语相反）。`4.800,000` = 4,800 件（不是 4,800,000）。提取招标数量后**必须按俄语规则转换**再写入询价表，否则数量会暴涨 1000 倍。转换公式：去点、逗号换小数点。详见 `references/sap-srm-tender-number-format.md`
+- **多页扫描 PDF 只读第 1 页（高频致命坑）**：装配图 PDF 多为 2+ 页——第 1 页是装配图本身（OCR 乱码），第 2+ 页是 BOM/明细表（表格清晰易读）。**只 OCR 第 1 页会丢失全部单重/材质/图号数据**。铁律：`len(doc)` 取页数 → 逐页渲染 300dpi → 逐页 OCR → 遇到表格结构文字优先采信。已踩坑两次：20155505（明细表 PNG 没读）和 20155581（第 2 页 BOM 没读导致紧固件单重全错）。
+- **自行装配体拆件破坏一致性（铁律 #6 踩坑）**：看到装配图有 BOM 明细表时，曾把整个装配体（СБ）拆成 4-6 行零件写进询价单——用户明确否定：询价单条目必须与合同/招标文件完全对应，拆件破坏一致性。**BOM 只是图纸内明细，不是询价单的行依据**。正确做法：询价单行 = 合同条目（装配体整行），BOM 提取的单重/材质写进核对报告（md）供参考，不进询价单内容。
+- **Windows 重命名含中文/俄文路径的交付文件夹（实战踩坑）**：① git-bash 的 `ls`/`find` 对西里尔路径不稳定（同一路径部分命令报 No such file），改用 Python `os.listdir`/`os.rename` 处理 Unicode 路径最可靠；② 若用户在资源管理器打开该文件夹、或文件夹内有 `~$xxx.xlsx` 锁文件（Excel/WPS 正打开该文件），`os.rename` 抛 `PermissionError [WinError 5] 拒绝访问`——带延迟重试即可（锁释放后一次成功），不要硬改；③ 用户可能正一边在资源管理器里手动重命名一边等结果，改名后隔几秒二次核验是否稳定再收工。

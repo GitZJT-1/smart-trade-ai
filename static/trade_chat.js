@@ -2,14 +2,15 @@
 let companies = [];
 let currentCompanyId = null;
 let currentView = 'chat';       // chat | customers | tasks | directory | history
-let currentChatContext = 'lead'; // lead | platform | social | linkedin | customs | tender | docs | docgen | bilingual | osint
-let currentChatName = '客户开发';
+let currentChatContext = 'daily'; // daily | lead | platform | social | linkedin | customs | tender | docs | docgen | bilingual | osint
+let currentChatName = '今日简报';
 let currentLibraryId = null;
 let currentCustomerId = null;
 let _currentConvId = null;       // 当前 AI 回复的 conversation_id，用于评分
 let editingCustomerData = null; // for customer detail panel
 let _onboardingStep = 1;          // 1 = welcome card, 2 = OSINT input + results
 let _onboardingInputText = '';    // user-entered company name/website
+let _autoScrollToBottomOnLoad = false; // 页面打开时默认滚到聊天最底部（最新消息）
 let _onboardingOsinResponse = ''; // accumulated AI response text
 let _onboardingStreamCtl = null;  // AbortController for SSE stream
 
@@ -752,6 +753,7 @@ function navToView(view, chatCtx, chatName) {
 // ═════════════════════ CHAT VIEW ═════════════════════
 function renderChatViewInto(container, ctx, name) {
     const placeholders = {
+        daily: '今日简报：告诉我关注的市场/产品，我来生成今日简报（汇率、大宗商品、目标市场动态、客户跟进待办）。也可以说「生成早安简报」直接推送最新一项。',
         lead: '说三个信息：卖什么？卖到哪？找什么客户？',
         platform: '粘贴任何网站链接（B2B平台/公司官网/独立站），我来全面诊断优化...',
         social: '描述社媒需求，如「帮我规划本周 Facebook 内容日历」...',
@@ -1385,8 +1387,14 @@ async function loadChatHistory(conversationId) {
         if (c.response) addMsg('assistant', c.response, null, false);
     });
     // 恢复上次浏览位置，首次加载滚到底部（最新消息）
-    var savedPos = sessionStorage.getItem('scroll_' + currentChatContext);
-    container.scrollTop = savedPos ? parseInt(savedPos) : container.scrollHeight;
+    // 页面打开时强制滚到最底部，避免旧阅读位置覆盖「默认看最新」需求
+    if (_autoScrollToBottomOnLoad) {
+        container.scrollTop = container.scrollHeight;
+        _autoScrollToBottomOnLoad = false;
+    } else {
+        var savedPos = sessionStorage.getItem('scroll_' + currentChatContext);
+        container.scrollTop = savedPos ? parseInt(savedPos) : container.scrollHeight;
+    }
 }
 
 // ═════════════════════ SSE STREAMING ═════════════════════
@@ -1451,6 +1459,8 @@ async function sendMsg() {
     let responseText = '';
     let responseConvId = null;
     _currentConvId = null;
+    let stalled = false;          // SSE 停滞看门狗是否已触发（catch/finally 需读取，须挂函数作用域）
+    let stallTimer = null;        // 看门狗定时器引用（finally 需清理，须挂函数作用域）
 
     function ensureProgress() {
         if (!progressDiv) { progressDiv = document.createElement('div'); progressDiv.className = 'tool-progress'; progDiv.appendChild(progressDiv); }
@@ -1484,10 +1494,26 @@ async function sendMsg() {
         if (!r.ok) { progDiv.remove(); addMsg('assistant', `⚠️ 请求失败 (${r.status})`, null); sendBtn.disabled = false; return; }
 
         const reader = r.body.getReader(); const decoder = new TextDecoder();
+        // ═══ 加固：SSE 停滞看门狗 ═══
+        // 长任务期间若服务端心跳/字节流中断（TCP 半开、代理断链、agent 线程挂死），
+        // 下方 buffer 循环会一直空转等待，界面停留在「正在分析问题…」，看起来像丢了回馈。
+        // 后端每 15s 发一次 `: ping` 心跳；若 90s 无任何字节，判定连接停滞，主动 abort。
+        // 90s 远大于 15s 心跳间隔，正常工作时绝不会误触发。由用户手动停止则走 AbortError 分支。
+        let lastByteAt = Date.now();
+        let gotTerminal = false;          // 已收到 response / error / done 终态
+        let errorText = '';               // 后端下发的 error 消息
+        const STALL_MS = 90000;
+        stallTimer = setInterval(() => {
+            if (!gotTerminal && (Date.now() - lastByteAt) > STALL_MS) {
+                stalled = true;
+                streamCtl.abort();        // 触发下方 catch 的 AbortError，统一清理并提示
+            }
+        }, 5000);
         let buffer = '';
         while (true) {
             const {done,value} = await reader.read();
             if (done) break;
+            lastByteAt = Date.now();      // 收到字节（含 `: ping`）即重置停滞计时
             buffer += decoder.decode(value, {stream:true});
             const lines = buffer.split('\n'); buffer = lines.pop()||'';
             let eventType='',dataStr='';
@@ -1504,12 +1530,21 @@ async function sendMsg() {
                     case 'thinking':
                         if (!progDiv.querySelector('.thinking-msg')) { const t=document.createElement('div'); t.className='thinking-msg'; t.style.cssText='font-size:12px;color:var(--text-muted);padding:4px 0;'; t.textContent='💭 '+(data.message||'思考中...'); progDiv.appendChild(t); }
                         break;
-                    case 'response': responseText = data.text||''; responseConvId = data.conversation_id || null; _currentConvId = data.conversation_id || null; break;
-                    case 'error': progDiv.innerHTML=`<div class="msg-avatar" style="background:var(--accent-red);color:#fff;">⚠</div><div class="msg-body" style="color:var(--accent-red);">${esc(data.message)}</div>`; sendBtn.disabled = false; return;
+                    case 'response': responseText = data.text||''; responseConvId = data.conversation_id || null; _currentConvId = data.conversation_id || null; gotTerminal = true; break;
+                    case 'done': gotTerminal = true; break;
+                    case 'error': errorText = data.message || '请求出错'; gotTerminal = true; break;
                     }
                     eventType='';dataStr='';
+                    if (gotTerminal) break;   // 终态后立即停止读循环，第一时间渲染
                 }
             }
+            if (gotTerminal) break;
+        }
+        clearInterval(stallTimer);
+        if (errorText) {
+            progDiv.innerHTML=`<div class="msg-avatar" style="background:var(--accent-red);color:#fff;">⚠</div><div class="msg-body" style="color:var(--accent-red);">${esc(errorText)}</div>`;
+            sendBtn.disabled = false;
+            return;
         }
         progDiv.remove();
         if (responseText) addMsg('assistant', responseText, null, true, responseConvId);
@@ -1517,9 +1552,13 @@ async function sendMsg() {
     } catch(e) {
         progDiv.remove();
         _currentConvId = null;
-        if (e.name==='AbortError') addMsg('assistant','🛑 已停止生成。',null);
+        if (e.name==='AbortError') {
+            if (stalled) addMsg('assistant','⚠️ 连接停滞（超过 90 秒无响应），已中断。请重试或检查网络。',null);
+            else addMsg('assistant','🛑 已停止生成。',null);
+        }
         else addMsg('assistant',`网络错误：${e.message}`,null);
     } finally {
+        clearInterval(stallTimer);   // 确保看门狗定时器一定被清理
         clearInterval(elapsedTimer);
         _currentConvId = null;
         if (stopBtn) { stopBtn.classList.add('hidden'); stopBtn.onclick = null; }
@@ -3140,10 +3179,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             startVersionCheck();
             return;
         }
-        // 恢复之前的视图或默认打开客户开发
+        // 恢复之前的视图或默认打开今日简报
         const restoreView = reloadState?.view || 'chat';
-        const restoreCtx = reloadState?.chatCtx || 'lead';
-        const restoreName = reloadState?.chatName || '客户开发';
+        const restoreCtx = reloadState?.chatCtx || 'daily';
+        const restoreName = reloadState?.chatName || '今日简报';
+        // 页面打开默认进入今日简报视图并滚到最底部（最新消息）
+        _autoScrollToBottomOnLoad = true;
         navToView(restoreView, restoreCtx, restoreName);
         // 恢复滚动位置（等 DOM 渲染完成后）
         if (reloadState?.scrollY > 0) {

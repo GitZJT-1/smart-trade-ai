@@ -394,7 +394,7 @@ def create_app() -> FastAPI:
             # 1. 优先读 version.txt（升级成功后写入，最可靠）
             version_file = _get_trade_data_dir() / "version.txt"
             if version_file.is_file():
-                version = version_file.read_text().strip()
+                version = version_file.read_text(encoding="utf-8").strip()
 
             # 1b. 对比 pyproject.toml，如有更新则自动同步 version.txt
             _pyproject = None
@@ -410,7 +410,7 @@ def create_app() -> FastAPI:
                     import tomli as _toml
                 _pv = ""
                 try:
-                    _data = _toml.loads(_pyproject.read_text())
+                    _data = _toml.loads(_pyproject.read_text(encoding="utf-8"))
                     _pv = _data.get("project", {}).get("version", "")
                 except Exception:
                     pass
@@ -418,7 +418,7 @@ def create_app() -> FastAPI:
                     version = _pv
                     try:
                         version_file.parent.mkdir(parents=True, exist_ok=True)
-                        version_file.write_text(version)
+                        version_file.write_text(version, encoding="utf-8")
                     except Exception:
                         pass
         except Exception:

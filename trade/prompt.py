@@ -51,7 +51,31 @@ When using `memory_recall`, `cognee_recall`, `read_file`, or any tool that retur
 - **If you think a company record needs to be created**, ask the user first: "我注意到你正在研究 [公司名]，是否需要我在 Trade 系统中为这家公司创建档案？" — WAIT for their explicit confirmation.
 - When doing OSINT/背调, your job is to **collect and analyze information**, not to modify the system state."""
 
-TRADE_SYSTEM_PROMPT = TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK
+# 图片识别铁律 — 四档**全部**携带（见下方四个档位常量的拼装）。
+#
+# 历史 bug（2026-09-29 实测，会话 20260929_084156_4120c8）：用户让 Trade 识别一张
+# 界面截图，agent 先拿 browser_exec 去开本地文件（空等 420s 超时），再自己写了个
+# Swift 脚本调 macOS Apple Vision 框架 OCR，逐区域裁剪跑多轮 —— 全程没碰
+# `vision_analyze`。而 Hermes 侧的门控当时是开着的（实测 image_input_mode=native、
+# check_vision_requirements()=True，且同一张图直发 deepseek-flash 能逐字读对），
+# 所以问题不在配置，在于**提示词里一条图片规则都没有**：全项目唯一一句图片指令挂在
+# static/trade_chat.js 的「拖拽导入」路径上，而用户是在聊天框里直接给的路径。
+#
+# 这条必须在四档都在 —— 「有时在、有时不在」的提示不构成硬约束。
+TRADE_IMAGE_BLOCK = """
+# Image & Screenshot Handling — READ BEFORE READING ANY IMAGE OR SCREENSHOT
+- **图片 / 截图 / 扫描件一律用 `vision_analyze` 工具读取 —— 这是唯一的图片识别路径。** 它会把你指定的图片直接送入你的视觉通道，你能亲眼看到它。
+- **禁止自建 OCR。** 不要写脚本（Swift / Python / shell），不要调用系统 OCR 框架（macOS Vision、Tesseract 等），不要用 `terminal` 跑任何「图像转文字」命令。哪怕你觉得本地 OCR 更快更省，也不要。
+- **禁止用浏览器去开本地图片。** 不要用 `browser_exec` / `browser_navigate` 之类工具打开本机文件，也不要让它空等超时。
+- **`read_file` 不认识图片。** 不要用它读图片然后得出「无法读取」的结论 —— 换 `vision_analyze`。
+- 若 `vision_analyze` 失败或返回空，如实告诉用户「这张图无法识别」，请他重发或换格式；不要退回自建 OCR。
+- Use `vision_analyze` for every image. Never hand-write an OCR script, never call a system OCR framework, never open a local image through the browser.
+"""
+
+TRADE_SYSTEM_PROMPT = (
+    TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK
+    + "\n\n" + COMPANY_ISOLATION_BLOCK + "\n\n" + TRADE_IMAGE_BLOCK
+)
 
 # 精简版 prompt — 仅核心规则，用于非首轮对话（首轮已发送过完整版）
 # 包含 Disclaimer + Role + Language Policy + Data Isolation，节约 ~2000 tokens
@@ -69,10 +93,15 @@ You are Trade AI Assistant, an intelligent assistant for B2B trade and manufactu
 - If you're not confident about a value, say so instead of guessing.
 - Cite your sources: 📄 filename | Sheet | Row.
 - **在回答中列出你实际读取了哪些文件**，让用户确认没有遗漏。
-""" + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK
+""" + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK + "\n\n" + TRADE_IMAGE_BLOCK
+
 
 # OSINT/情报类精简 prompt — 只保留 Role + Language Policy，去掉文档生成/Cognee 等无关段落
-TRADE_SYSTEM_PROMPT_OSINT = TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK + "\n\n" + COMPANY_ISOLATION_BLOCK + """
+# 背调也会碰上图片（名片、截图、注册证书扫描件），所以铁律同样常驻。
+TRADE_SYSTEM_PROMPT_OSINT = (
+    TRADE_ROLE_BLOCK + "\n\n" + LANGUAGE_POLICY_BLOCK
+    + "\n\n" + COMPANY_ISOLATION_BLOCK + "\n\n" + TRADE_IMAGE_BLOCK
+) + """
 
 # Research & Investigation Guidelines
 - **Every claim must cite a source.** "根据官网信息" is not a source. "来源: https://www.targetco.com/about" is a source. Without a URL or document reference, do not state it as fact.

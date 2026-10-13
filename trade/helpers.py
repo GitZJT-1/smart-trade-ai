@@ -84,11 +84,11 @@ def check_provider() -> str | None:
     if isinstance(model_cfg, dict):
         # v0.13 字典格式：检查 default model 和 provider 是否都已配置
         if not model_cfg.get("default") and not model_cfg.get("provider"):
-            return "未配置 AI 模型。请先运行 trade setup 选择模型。"
+            return "未配置 AI 模型。请先运行 hermes setup 选择模型。"
     elif isinstance(model_cfg, str):
         # v0.14+ 字符串格式：检查是否为空字符串
         if not model_cfg.strip():
-            return "未配置 AI 模型。请先运行 trade setup 选择模型。"
+            return "未配置 AI 模型。请先运行 hermes setup 选择模型。"
 
     has_key = any(
         os.getenv(k)
@@ -101,7 +101,7 @@ def check_provider() -> str | None:
     )
     if not has_key:
         # 所有已知的 API Key 环境变量均未设置，无法调用 LLM
-        return "未检测到 API Key。请在 ~/.hermes/.env 中设置，或运行 trade setup 重新配置。"
+        return "未检测到 API Key。请在 ~/.hermes/.env 中设置，或运行 hermes setup 重新配置。"
 
     # 检查 openai SDK 是否可导入 — Hermes 用此 SDK 作为所有 provider 的通用 HTTP 客户端
     try:

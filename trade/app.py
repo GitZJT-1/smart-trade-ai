@@ -27,12 +27,6 @@ def _init_db():
     return _do_init()
 
 
-def _check_license():
-    """检查许可证，返回 (ok, message)。"""
-    from trade.license import check_license
-    return check_license()
-
-
 # ── Session token ────────────────────────────────────────────────────────────
 
 _SESSION_TOKEN = secrets.token_urlsafe(32)
@@ -378,20 +372,9 @@ def create_app() -> FastAPI:
     _db_path = _init_db()
     print(f"  Database: {_db_path}")
 
-    # 许可证检查：到期不影响服务启动（chat 端点在每次请求时校验），
-    # 但打印醒目提示引导用户激活
-    lic_ok, lic_msg = _check_license()
-    if not lic_ok:
-        print(f"\n  ⚠️  {lic_msg}")
-        print("  Chat 接口已限制，请通过前端获取激活码。\n")
-
     # 注入 session token
     from trade.api.deps import set_session_token
     set_session_token(_SESSION_TOKEN)
-
-    # 挂载 license 路由（无需 session token）
-    from trade.api.license import router as license_router
-    app.include_router(license_router, prefix="/api/trade")
 
     # 挂载 system 路由（需要 session token）
     app.include_router(_create_system_router(), prefix="/api/trade")

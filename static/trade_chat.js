@@ -245,7 +245,6 @@ async function api(method, path, body) {
             const err = await r.json().catch(() => ({}));
             const msg = err.detail || `请求失败 (${r.status})`;
             if (r.status === 401) toast('请先选择公司');
-            else if (r.status === 402) showLicenseExpired(msg);
             else if (r.status === 404) toast(msg);
             else if (r.status === 409) toast(msg);
             else toast(msg);
@@ -259,137 +258,6 @@ async function api(method, path, body) {
     }
 }
 
-// ── 许可证 ──
-
-async function loadLicenseStatus() {
-    try {
-        const r = await fetch('/api/trade/license/status');
-        const data = await r.json();
-        const bar = document.getElementById('license-bar');
-        if (!bar) return;
-
-        if (data.status === 'expired') {
-            bar.style.display = 'block';
-            bar.style.background = '#FEF2F2';
-            bar.style.color = '#991B1B';
-            var expiredHtml = '⚠️ 试用期已到期 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;">输入激活码</a>';
-            if (data.request_code) {
-                expiredHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = expiredHtml;
-        } else if (data.status === 'active' && data.days_remaining <= 7) {
-            // 已激活但快到期（7天内）：显示黄色/红色警告 + 申请码 + 续期按钮
-            bar.style.display = 'block';
-            bar.style.background = data.days_remaining === 0 ? '#FEF2F2' : '#FFFBEB';
-            bar.style.color = data.days_remaining === 0 ? '#991B1B' : '#92400E';
-            var activeWarn = '✅ 已激活 · 有效期至 ' + (data.expires_at||'').slice(0,10) + ' · <a href="#" onclick="showActivateModal()" style="color:' + (data.days_remaining===0?'#DC2626':'#D97706') + ';text-decoration:underline;font-weight:600;">续期激活</a>';
-            if (data.request_code) {
-                activeWarn += ' · 申请码: <code style="background:' + (data.days_remaining===0?'#FEE2E2':'#FEF3C7') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = activeWarn;
-        } else if (data.status === 'active') {
-            bar.style.display = 'block';
-            bar.style.background = '#F0FDF4';
-            bar.style.color = '#166534';
-            bar.innerHTML = `✅ 已激活${data.expires_at ? ' · 有效期至 ' + data.expires_at.substring(0,10) : ''}`;
-        } else if (data.status === 'trial') {
-            bar.style.display = 'block';
-            if (data.days_remaining <= 7) {
-                // 快到期：橙色警告
-                bar.style.background = '#FFFBEB';
-                bar.style.color = '#92400E';
-            } else {
-                // 正常试用：蓝色信息
-                bar.style.background = '#EFF6FF';
-                bar.style.color = '#1E40AF';
-            }
-            var trialHtml = `⏳ 试用剩余 ${data.days_remaining} 天 · <a href="#" onclick="showActivateModal()" style="color:${data.days_remaining <= 7 ? '#D97706' : '#2563EB'};text-decoration:underline;">输入激活码</a>`;
-            if (data.request_code) {
-                trialHtml += ' · 申请码: <code style="background:' + (data.days_remaining <= 7 ? '#FEF3C7' : '#DBEAFE') + ';padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = trialHtml;
-        } else if (data.status === 'tampered') {
-            bar.style.display = 'block';
-            bar.style.background = '#FEF2F2';
-            bar.style.color = '#991B1B';
-            var tamperedHtml = '⚠️ 许可证数据异常 · <a href="#" onclick="showActivateModal()" style="color:#DC2626;text-decoration:underline;font-weight:600;">重新激活</a>';
-            if (data.request_code) {
-                tamperedHtml += ' · 申请码: <code style="background:#FEE2E2;padding:1px 6px;border-radius:3px;font-size:11px;user-select:all;cursor:text;" onclick="navigator.clipboard.writeText(this.textContent);toast(\'申请码已复制\')">' + esc(data.request_code) + '</code>';
-            }
-            bar.innerHTML = tamperedHtml;
-        }
-    } catch(e) { /* license API 不可用时静默 */ }
-}
-
-function showLicenseExpired(msg) {
-    const div = document.createElement('div');
-    div.className = 'modal-backdrop';
-    div.innerHTML = `<div class="modal" style="text-align:center;max-width:420px;">
-        <h3>⏰ ${esc(msg) || '试用期已到期'}</h3>
-        <p style="margin:8px 0;color:var(--text-secondary);">请联系 Roger Lococo 获取激活码继续使用</p>
-        <img src="/static/wechat-contact.jpeg" alt="微信扫码联系" style="width:200px;border-radius:8px;margin:8px 0;">
-        <p style="font-size:11px;color:var(--text-muted);">微信扫码 · 备注「Trade」</p>
-        <p style="font-size:11px;color:var(--text-muted);">📧 lauroge@gmail.com</p>
-        <button class="btn btn-primary" onclick="showActivateModal()">🔑 输入激活码</button>
-        <button class="btn" onclick="this.closest('.modal-backdrop').remove()" style="margin-top:8px;">关闭</button>
-    </div>`;
-    document.body.appendChild(div);
-}
-
-async function showActivateModal() {
-    // 关掉现有弹窗
-    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-
-    // 获取申请码
-    var reqCode = '';
-    try {
-        var s = await fetch('/api/trade/license/status');
-        var sd = await s.json();
-        reqCode = sd.request_code || '';
-    } catch(e) {}
-
-    const div = document.createElement('div');
-    div.className = 'modal-backdrop';
-    div.innerHTML = `<div class="modal" style="text-align:center;">
-        <h3>🔑 激活 Trade Assistant</h3>
-        <p style="margin:8px 0;color:var(--text-secondary);">请将下方申请码发送给作者获取激活码</p>
-        ${reqCode ? `<div style="background:var(--bg-secondary);padding:10px 14px;border-radius:var(--radius-sm);font-family:monospace;font-size:16px;letter-spacing:2px;margin:8px 0;cursor:pointer;user-select:all;" onclick="navigator.clipboard.writeText(this.textContent);toast('申请码已复制')" title="点击复制">${reqCode}</div>` : ''}
-        <input type="text" id="activate-code-input" aria-label="激活码" placeholder="粘贴作者提供的激活码" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:monospace;font-size:14px;text-align:center;text-transform:uppercase;margin:12px 0;">
-        <button class="btn btn-primary" onclick="doActivate()" style="margin-top:8px;">✅ 激活</button>
-        <button class="btn" onclick="this.closest('.modal-backdrop').remove()">取消</button>
-        <p id="activate-msg" style="margin-top:10px;font-size:12px;"></p>
-    </div>`;
-    document.body.appendChild(div);
-    setTimeout(() => document.getElementById('activate-code-input')?.focus(), 100);
-}
-
-async function doActivate() {
-    const input = document.getElementById('activate-code-input');
-    const msg = document.getElementById('activate-msg');
-    const code = input.value.trim();
-    if (!code) { msg.textContent = '请输入激活码'; msg.style.color = 'var(--accent-red)'; return; }
-    try {
-        const r = await fetch('/api/trade/license/activate', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({code})
-        });
-        const data = await r.json();
-        if (data.ok) {
-            msg.textContent = data.message;
-            msg.style.color = 'var(--accent-green)';
-            setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-                loadLicenseStatus();
-            }, 1500);
-        } else {
-            msg.textContent = data.error || '激活失败';
-            msg.style.color = 'var(--accent-red)';
-        }
-    } catch(e) {
-        msg.textContent = '网络错误，请重试';
-        msg.style.color = 'var(--accent-red)';
-    }
-}
 
 // ── 重启协调 ──
 // 清理前端运行时缓存，但保留用户上下文（trade_cid 让重启后不必重新选公司）
@@ -3149,9 +3017,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => toast('✅ 系统更新完成！'), 500);
         }
     } catch(_) {}
-
-    // 许可证状态检查
-    loadLicenseStatus();
 
     try {
         await loadCompanies();

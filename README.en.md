@@ -269,7 +269,7 @@ trade/                     B2B business layer
 ├── skill_registry.py      39 skill registry (pure data)
 └── ... + 20 business modules
 
-skills/                    39 B2B skills (Markdown-driven)
+skills/                    40 B2B skills (Markdown-driven)
 tests/                     Test coverage (database / business / API / OSINT / smoke)
 server.py                  FastAPI entry point
 ```

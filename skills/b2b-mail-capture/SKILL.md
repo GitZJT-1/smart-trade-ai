@@ -5,6 +5,7 @@ when_to_use:
   - 用户说「抓取这几天/今天的询价和招标邮件」「把邮件抓进 XX 文件夹」
   - 需要把一个邮箱近 N 天的询价(RFQ)/招标(конкурс/тендер)邮件连同附件批量下载归档
   - 需要把已归档但缺附件的历史邮件补齐附件（backfill）
+  - 不要用于：把已抓下来的招标附件整理成询价单（用 b2b-tender-processing）；下载 MinIO/Nextcloud 大文件（用 b2b-tender-download）
 triggers:
   - 抓取邮件
   - 询价招标邮件
@@ -13,9 +14,8 @@ triggers:
   - imaplib
   - 抓进文件夹
 category: 自动化
-version: 1.1.0
-author: Hermes
----
+version: 1.1.1
+author: Hermes---
 
 # B2B 询价/招标邮件批量抓取与归档（通用模板）
 
@@ -37,6 +37,8 @@ author: Hermes
 > 下游解析笔记：SRM 主 PDF（`0.PDF`）的字段位置、行项表**文本顺序错乱**的判定规则、采购方备注必摘条款、附件核对法，见 `references/nlmk-srm-main-pdf-notes.md`（以 NLMK SRM 为实例，其他 SRM 平台可参照）。
 
 > 招标文件夹整理（行项取哪个源、进度表结构、压缩包解压命名、截止时间提取、备注里的商务条款）见 `references/nlmk-tender-folder-organization.md`。
+
+> 企业邮箱接入（网易企业邮 IMAP/SMTP 服务器、授权码、文件夹 UTF-7 编码、imaplib 读写模板、登录错误码对照）见 `references/corporate-email-imap.md` —— 全库只此一份，`b2b-supplier-sourcing` 发询价、其他技能读写企业邮时都引用这里。
 
 ## 落盘约定（产物形态）
 

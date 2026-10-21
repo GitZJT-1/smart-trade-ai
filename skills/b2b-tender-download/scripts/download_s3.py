@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-download_resumable.py — MinIO S3 并行分块下载器 (boto3, 8线程 x 8MB, 断点续传)
-本会话实测可用（2026-08-04，tender.pro MinIO）。
+MinIO S3 并行分块下载器（boto3，8 线程 × 8MB，断点续传）— 2026-08-04 招标下载实战验证
 
 用法:
-  python download_resumable.py --targets targets.json --dir "目标目录"
+  python download_s3.py --targets targets.json --dir "目标目录"
 
-targets.json 格式:
-  {"keys": ["文件1.7z", "文件2.7z"], "milestone_index": 0}
-  milestone_index: 该文件完成时打印 ASCII 里程碑标记 (=== MILESTONE_XXX_DONE ===)，供外部 watch_patterns 捕获
+targets.json:
+  {"keys": ["文件1.7z", "文件2.7z"], "milestone_index": 0, "milestone_marker": "MILESTONE_X_DONE"}
+  - milestone_index: 该文件完成时打印 === <milestone_marker> ===（供外部 watch_patterns 捕获）
 
 特性:
-  - 分块下载到 <目标>/<文件名>.blocks/000000 等，断点续传（已有完整块跳过）
-  - 每轮重试未完成块 (MAX_ROUNDS)，掉速/断线自动续
-  - 全部块完成后合并为最终文件并清理分块
+  - 分块落到 <目标>/<文件名>.blocks/000000，已有完整块跳过（断点续传）
+  - 每轮只重试未完成块（MAX_ROUNDS），掉速/断线自动续
+  - 全部块完成后合并、校验总字节 == ContentLength，再删分块
   - 进度写 <目标>/_下载日志.txt + stdout
+
+铁律（见 SKILL.md）:
+  - 启动前确认无其他下载进程（尤其 minio_dl3 / download_s3* / monitor_*）
+  - 多进程同写一个 .blocks 目录 = WinError 32 + 数据损坏，且可能让已完成文件被另一实例删掉
+  - 凭据走环境变量 TENDER_S3_ACCESS / TENDER_S3_SECRET / TENDER_S3_BUCKET，不在代码里写死
 """
 import argparse
 import json
@@ -28,9 +32,9 @@ import boto3
 from botocore.config import Config
 
 ENDPOINT = os.environ.get("TENDER_S3_ENDPOINT", "http://minio.pc1.tender.pro:9000")
-ACCESS = os.environ.get("TENDER_S3_ACCESS", "MINIO_ACCESS_KEY")
-SECRET = os.environ.get("TENDER_S3_SECRET", "MINIO_SECRET_KEY")
-BUCKET = os.environ.get("TENDER_S3_BUCKET", "MINIO_BUCKET")
+ACCESS = os.environ.get("TENDER_S3_ACCESS", "")
+SECRET = os.environ.get("TENDER_S3_SECRET", "")
+BUCKET = os.environ.get("TENDER_S3_BUCKET", "")
 BLOCK = 8 * 1024 * 1024  # 8MB
 WORKERS = 8
 MAX_ROUNDS = 40
@@ -39,6 +43,10 @@ _lock = threading.Lock()
 
 
 def get_client():
+    missing = [k for k, v in (("TENDER_S3_ACCESS", ACCESS), ("TENDER_S3_SECRET", SECRET),
+                              ("TENDER_S3_BUCKET", BUCKET)) if not v]
+    if missing:
+        sys.exit("缺少凭据环境变量: " + ", ".join(missing))
     return boto3.client(
         "s3",
         endpoint_url=ENDPOINT,
@@ -77,7 +85,9 @@ def fetch_block(client, key, i, start, want, block_dir, log_path):
         return True
     tmp = bf + ".tmp"
     try:
-        resp = client.get_object(Bucket=BUCKET, Key=key, Range=f"bytes={start}-{start + want - 1}")
+        resp = client.get_object(
+            Bucket=BUCKET, Key=key, Range=f"bytes={start}-{start + want - 1}"
+        )
         with open(tmp, "wb") as f:
             while True:
                 chunk = resp["Body"].read(1024 * 1024)
@@ -102,7 +112,7 @@ def fetch_block(client, key, i, start, want, block_dir, log_path):
         return False
 
 
-def download_file(client, key, dest_dir, log_path, milestone=False):
+def download_file(client, key, dest_dir, log_path, milestone=False, marker="MILESTONE_DONE"):
     fname = os.path.basename(key) or key.replace("/", "_")
     final_path = os.path.join(dest_dir, fname)
     size = head_size(client, key)
@@ -134,7 +144,10 @@ def download_file(client, key, dest_dir, log_path, milestone=False):
             break
         log(f"  [ROUND {round_no}] 待下 {len(pending)} 块", log_path)
         with ThreadPoolExecutor(max_workers=WORKERS) as ex:
-            futs = {ex.submit(fetch_block, client, key, i, st, w, block_dir, log_path): (i, st, w) for i, st, w in pending}
+            futs = {
+                ex.submit(fetch_block, client, key, i, st, w, block_dir, log_path): (i, st, w)
+                for i, st, w in pending
+            }
             for fut in as_completed(futs):
                 i, st, w = futs[fut]
                 if fut.result():
@@ -163,15 +176,24 @@ def download_file(client, key, dest_dir, log_path, milestone=False):
 
     log(f"[MERGE] {fname} 合并 {nblocks} 块...", log_path)
     tmp_final = final_path + ".merging"
-    with open(tmp_final, "wb") as out:
-        for i in range(nblocks):
-            bf = os.path.join(block_dir, f"{i:06d}")
-            with open(bf, "rb") as f:
-                while True:
-                    chunk = f.read(8 * 1024 * 1024)
-                    if not chunk:
-                        break
-                    out.write(chunk)
+    try:
+        with open(tmp_final, "wb") as out:
+            for i in range(nblocks):
+                bf = os.path.join(block_dir, f"{i:06d}")
+                with open(bf, "rb") as f:
+                    while True:
+                        chunk = f.read(8 * 1024 * 1024)
+                        if not chunk:
+                            break
+                        out.write(chunk)
+    except Exception as e:
+        try:
+            os.remove(tmp_final)
+        except OSError:
+            pass
+        log(f"[ERROR] {fname} 合并异常 {type(e).__name__}: {str(e)[:120]}, 保留分块", log_path)
+        return "error"
+
     if os.path.getsize(tmp_final) != size:
         os.remove(tmp_final)
         log(f"[ERROR] {fname} 合并大小不符, 保留分块", log_path)
@@ -188,7 +210,7 @@ def download_file(client, key, dest_dir, log_path, milestone=False):
         pass
     log(f"[COMPLETE] {fname} ({size} bytes)", log_path)
     if milestone:
-        print("=== MILESTONE_MPAR_DONE ===", flush=True)
+        print(f"=== {marker} ===", flush=True)
     return "done"
 
 
@@ -201,6 +223,7 @@ def main():
     cfg = json.load(open(args.targets, encoding="utf-8"))
     keys = cfg["keys"]
     milestone_idx = int(cfg.get("milestone_index", -1))
+    marker = cfg.get("milestone_marker", "MILESTONE_DONE")
     os.makedirs(args.dir, exist_ok=True)
     log_path = os.path.join(args.dir, "_下载日志.txt")
 
@@ -210,7 +233,8 @@ def main():
     for idx, key in enumerate(keys):
         log(f">>> [{idx+1}/{len(keys)}] {key}", log_path)
         try:
-            res = download_file(client, key, args.dir, log_path, milestone=(idx == milestone_idx))
+            res = download_file(client, key, args.dir, log_path,
+                                milestone=(idx == milestone_idx), marker=marker)
         except Exception as e:
             res = f"error:{type(e).__name__}:{str(e)[:120]}"
             log(f"[EXC] {key}: {res}", log_path)

@@ -9,8 +9,8 @@ import logging
 
 SEVENZIP = r"C:\Program Files\7-Zip\7z.exe"
 ROOTS = [
-    r"C:\Users\周家同\Desktop\沈阳山泰通用机械有限公司\报价单\КФ_解压",
-    r"C:\Users\周家同\Desktop\沈阳山泰通用机械有限公司\报价单\БФ_解压",
+    r"C:/Users/<user>\Desktop\沈阳山泰通用机械有限公司\报价单\КФ_解压",
+    r"C:/Users/<user>\Desktop\沈阳山泰通用机械有限公司\报价单\БФ_解压",
 ]
 LOGDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 logging.basicConfig(

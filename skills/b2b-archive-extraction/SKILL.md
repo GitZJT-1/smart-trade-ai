@@ -1,16 +1,24 @@
 ---
 name: b2b-archive-extraction
-description: 批量解压 7z 压缩包到各自所在目录并删除原包 — 嵌套包（包中包）迭代、WinError 32 占用重试、解压后全量验证。处理俄文图纸/招标压缩包批量解压清理时使用。
+description: 批量解压 7z/rar/zip 压缩包 — 两种模式（就地解压到同名文件夹 / 解压后删原包到回收站）、嵌套包（包中包）迭代、WinError 32 占用重试、加密包与外部移库判定。处理俄文图纸/招标压缩包批量解压清理时使用。
+when_to_use:
+  - 用户有一批 .7z/.rar/.zip/.gz 要解压到各自所在目录，或要求「解压完把原包删掉」
+  - 压缩包是招标下载产物（俄文图纸），常出现包中包多层嵌套
+  - 解压报 WinError 32 文件占用，或解压后要按编号归组归档
+  - 遇到加密压缩包（7zAES）需要判断能否本地校验
+  - 不要用于：下载压缩包（用 b2b-tender-download）；压缩包内容识别与翻译（用 b2b-bilingual-doc-workflow）
 triggers:
   - 批量解压
   - 7z 解压
   - 压缩包解压
   - 嵌套压缩包
   - 解压后删包
+  - 就地解压
+  - 加密压缩包
   - WinError 32
   - 归档整理
 category: 自动化
-version: 1.0.0
+version: 1.1.0
 author: Foreign Trade Assistant
 ---
 
@@ -19,11 +27,19 @@ author: Foreign Trade Assistant
 ## 触发场景
 - 用户有一批压缩包（.7z/.rar/.zip/.gz）需要解压到**各自所在目录**（原文件对应地址），完成后**删除原压缩包到回收站**释放空间
 - 压缩包是俄文图纸数据（招标下载产物），常见"包中包"多层嵌套
-- 典型路径：`...\\报价单\\КФ_解压` / `БФ_解压` 下按 kf_*/bf_* 分类存放，或 `...\\报价单\\周家同\\<项目号>归档`
+- 典型路径：`...\\报价单\\КФ_解压` / `БФ_解压` 下按 kf_*/bf_* 分类存放，或 `...\\报价单\\用户\\<项目号>归档`
 - **解压后常需后续处理**：将非纯数字文件夹名统一改为纯数字编号（如 `1007-Ролик...` → `1007`），冲突时合并——详见 `references/post-extraction-renaming.md`
 - **解压后常需完整归档流程**：将平放文件按编号前缀归入对应数字文件夹、处理非标准命名文件、按零件名归组——详见 `references/complete-archiving-workflow.md`
 
 ## 核心流程
+
+**先选模式**（用户没明说时按模式 A）：
+
+| 模式 | 语义 | 用哪个脚本 | 适用 |
+|:--|:--|:--|:--|
+| A 删包归档 | 每个包解压到**所在目录**，成功后**把原包删到回收站** | `extract_7z.py` + `extract_nested_7z.py` | 招标下载产物，要腾空间 |
+| B 就地解压不删包 | 每个包解压到**同名文件夹**（`X.7z` → `X/`），目标已存在且非空则跳过（断点续解） | `batch_extract.py` | 源包要留底、或分批慢慢解 |
+
 1. **统计摸底**（先只读不动作）：遍历所有压缩包（.7z/.rar/.zip/.gz），输出总数 / 总大小 / 0字节损坏数
    - 不要只搜 .7z——招标归档中 .rar 和 .zip 同样常见，7z CLI 均可处理
 2. **第一轮解压**：对每个包 `7z x -y -o<所在目录> -- <包路径>`，rc 0/1 视为成功 → **立即删除原包到回收站**
@@ -46,11 +62,13 @@ author: Foreign Trade Assistant
 5. **操作中监控**：处理期间若发现条目数骤降/目录消失，立即中止写入、先汇报用户再继续
 
 ## 可复用脚本（smart-trade-ai/scripts/，已生产验证；本 skill 的 scripts/ 目录内嵌同款副本，可直接复制使用）
-- `extract_7z.py` — 顶层批量：`python extract_7z.py --roots DIR... --limit N`（默认指向山泰报价单两目录）
-- `extract_nested_7z.py` — 嵌套迭代：每轮扫描解压全部并删包，最多 15 轮防死循环
+- `extract_7z.py` — 模式 A 顶层批量：`python extract_7z.py --roots DIR... --limit N`（默认指向山泰报价单两目录）
+- `extract_nested_7z.py` — 模式 A 嵌套迭代：每轮扫描解压全部并删包，最多 15 轮防死循环
+- `batch_extract.py` — 模式 B 就地解压（不删包）：`X.7z` → `X/`，已存在非空跳过；7z CLI + Python zipfile 双通道，嵌套重扫，日志 `utf-8-sig`
 - `retry_delete_7z.py` — 删除重试：`--fail-file --delay --rounds`，从失败清单文件读路径
 - `test_extract_7z_scripts.py` — 冒烟测试（4 项，用 7z CLI 真实创建小包验证），复制到项目 tests/ 后运行
 - `references/post-extraction-renaming.md` — 解压后文件夹改名：非纯数字→纯数字编号、冲突合并策略
+- `references/batch-extraction.md` — 模式 B 实战记录：7z 退出码逐项含义、乱码名用 zipfile 兜底、点结尾目录、嵌套重扫
 
 ## 坑与要点
 - **7z 路径**：`/c/Program Files/7-Zip/7z.exe`（Windows 标准安装位）
@@ -60,6 +78,9 @@ author: Foreign Trade Assistant
 - **同名自嵌套**：如 `Тележка.7z` → `Тележка\\Тележка.7z` 三层同名嵌套，迭代脚本必须有轮数上限防无限循环
 - **嵌套包在子目录**：第一轮解压后，嵌套压缩包常出现在已解压出的**子目录**内（如 `222/222-Гайка.rar`），而非顶层——扫描必须用 `os.walk` 递归，不能只搜顶层
 - **WinError 32**：Windows 文件锁（杀毒/搜索索引），不是脚本 bug；延迟重试是标准解法，重试脚本要记录"仍锁定"清单
+- **目标目录名以点结尾时 Windows 会拒绝**（`...2019г..zip` → 目标 `...2019г.` 变成空目录）→ 改用 Python `zipfile` 解到去掉尾点的目录名
+- **加密包（7zAES）无法本地校验**：`7z t` 会卡在 `Enter password` 等输入 → 只能核大小 == ContentLength，解压校验需用户提供密码；汇报时明说「加密压缩包，本地无法校验」
+- **终态验证要认「外部移库」，别把源包消失当失败**：本环境有外部流程（微信/其他会话/归档脚本）会边解压边把源包移走。判据 = **所有现存压缩包都有非空同名目录**，而不是「源包还在」；批量收尾时重新 `os.walk`，对每个现存包检查目标目录非空，剩下的逐个补解（实测首轮 578 个 [OK] 里源文件只剩 42/200，但 576/578 目标非空，结论仍正确）
 - **pytest 环境**：项目 pytest 用 `smart-trade-ai/.venv/Scripts/python.exe -m pytest`（hermes venv 无 pytest）；按用户测试铁律只跑针对性冒烟单文件，不重跑全量
 - 日志写 `scripts/logs/`，失败清单落盘（tab 分隔：路径\t原因）便于重试脚本复用
 

@@ -215,10 +215,17 @@ def download_file(client, key, dest_dir, log_path, milestone=False, marker="MILE
 
 
 def main():
+    global WORKERS, BLOCK
     ap = argparse.ArgumentParser()
     ap.add_argument("--targets", required=True)
     ap.add_argument("--dir", required=True)
+    ap.add_argument("--workers", type=int, default=WORKERS,
+                    help="并发线程数；实测 16 最优，32+ 会触发远端限流（默认 8）")
+    ap.add_argument("--block-mb", type=int, default=BLOCK // (1024 * 1024),
+                    help="分块大小 MB；选定后中途不可改，否则已下分块作废（默认 8）")
     args = ap.parse_args()
+    WORKERS = args.workers
+    BLOCK = args.block_mb * 1024 * 1024
 
     cfg = json.load(open(args.targets, encoding="utf-8"))
     keys = cfg["keys"]

@@ -95,3 +95,14 @@ boto3.client("s3", endpoint_url="http://minio.pc1.tender.pro:9000",
 
 - 带 boto3 的 venv：`<项目>/.venv/Scripts/python.exe`
 - 安装：`uv pip install --python <该venv> boto3`（系统 python 是 uv 托管，`--system` 会被拒）
+
+## 调优与误诊（原 tender-info 记录，2026-08 实测）
+
+- **并发参数**：16 线程 × 32MB 分块最优（8 线程约 1MB/s；32 线程触发远端限流反而只有 ~2MB/s）。`part_size` 一旦选定**中途不可改**，否则已下分块全部作废重下
+- **`region="us-east-1"` 必带**：minio 客户端漏了它，只读凭证会在 `?location=` 检查处 AccessDenied；minio 7.2.20 的 `fget_object()` 不支持 `num_threads` 参数
+- **单进程铁律**：同一脚本只允许一个进程。`terminal(background=true)` 在本机每次会拉起 2 个 python（hermes venv + uv 托管各一），多轮启动叠加成 4+ 实例同写 `.blocks/` → 分片互踩、进度卡 0、分片变 0 字节。启动前用 `wmic process where "name='python.exe'" get ProcessId,CommandLine` 数 minio 相关进程；要保证单实例用 `subprocess.Popen(..., creationflags=0x00000008|0x00000200)`（DETACHED）拉起，别用 background 叠
+- **假完成验证**：日志里的 `[DONE]/[COMPLETE]` **不等于文件存在**，多进程互踩会产生「报完成但文件丢失」。任何结果都要 `os.path.exists + size == 清单 size` 复核；不同目标目录并发只是共享带宽（安全但慢），同文件并发才损坏数据
+- **最强完整性验证 = 本地 MD5 对比桶 etag**（单段上传 etag 即 MD5，实测精确匹配）；加密 7z 的 `7z t` 会卡在密码提示（非交互下 Break signaled）→ 加密包跳过 7z t，**MD5 == etag 是唯一可靠判据**
+- **「并发卡死」多半是慢，不是挂起**：先用测速（连续两次 `du -sb` 算增量）判定是否在下载，再决定杀进程；误杀会丢掉已完成分块
+- **取证顺序**：先读目标目录内两份日志按时间还原会话史（多代脚本会 append 同一文件），再限定 Desktop/Temp/Downloads 分目录搜（全盘 find C 盘会超时），最后 `du -sb` 两次验证下载器是否存活
+- **`uv run --with minio` 在含中文的用户目录会炸**（`UnicodeDecodeError: 'gbk' codec ... init_import_site`，`PYTHONUTF8=1` 也救不了）→ 用带 boto3 的项目 venv

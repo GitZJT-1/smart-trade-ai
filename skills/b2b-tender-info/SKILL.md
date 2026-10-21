@@ -7,8 +7,8 @@ when_to_use:
   - "用户粘贴招标链接要求提取关键信息并评估匹配度"
   - "用户要求定期监控某品类/地区的招标动态"
   - "用户想对比多个招标项目的优劣、预算范围、截止时间"
+  - "用户要求下载招标附件/文件包（tender.pro MinIO 云存储等）"
   - "不要用于：投标文件/标书撰写（那属于文档生成，建议用其他 combo）"
-  - 不要用于：整理已收到的招标邮件、生成询价单（用 b2b-tender-processing）；抓取招标邮件附件（用 b2b-mail-capture）
 triggers:
   - 招标
   - 投标
@@ -29,6 +29,11 @@ triggers:
   - 有什么招标
   - 招标项目
   - 标的
+  - 整理新标
+  - 新标需要整理
+  - 招标入库
+  - 招标邮件
+  - 整理到报价单
   - tender
   - bidding
   - tender info
@@ -44,7 +49,7 @@ triggers:
   - bid
   - tender opportunity
 category: 客户开发
-version: 1.1.1
+version: 1.2.0
 author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-tender-info 技能。用于**查询、筛选、整理 B2B 线上招标信息**，帮助外贸业务员发现并评估投标机会。
@@ -234,3 +239,18 @@ injection_prompt: |
 - 每条含来源 URL + 发布日期 + [确切]/[推断] 标注
 - 投标机会评估（高/中/低匹配度 + 紧迫性 + 可行性提示）
 - 建议行动（优先跟进 / 关注备选 / 设置定期监控）
+
+## NLMK SAP SRM 招标邮件入库
+
+当用户说「新标需要整理」「把邮件里的招标整理一下」或直接给招标编号要求「整理到报价单」时，这些招标来自 NLMK 的 SAP SRM 系统，通过邮件转发到业务邮箱。
+
+**完整入库流程不在本技能**（提取 0.PDF → 核对版本 → 映射附件 → 建文件夹 → 生成清单 xlsx → 一致性报告）→ 见 `b2b-tender-processing/references/nlmk-srm-tender-intake.md`；抓取与下载邮件附件见 skill `b2b-mail-capture`。
+
+
+## 招标文件包下载（MinIO 云存储）
+
+招标平台（tender.pro / iso-* 等）把招标文件包放在 MinIO，给出 Console 链接 + 只读账号，单个 `.7z` 常 0.1~3.5GB。
+
+**下载不在本技能**：端点探测、并发调优（16 线程 × 32MB）、断点续传、单进程铁律、假完成判定与 MD5==etag 验证、Nextcloud 分享链接下载，全部见 skill `b2b-tender-download`（含现成脚本 `b2b-tender-download/scripts/download_s3.py`、`b2b-tender-download/scripts/minio_console_dl.py`）。
+
+本技能只负责判断「这个标值不值得投、清单里有什么」，拿到文件后交给 `b2b-tender-drawing-match` / `b2b-archive-extraction` 继续处理。

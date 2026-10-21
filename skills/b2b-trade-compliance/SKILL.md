@@ -9,6 +9,18 @@ when_to_use:
   - "用户提到「合规」「翻译二审」「ICC 术语」"
   - "不要用于：关税 / HS Code（用 b2b-customs-data）"
 triggers:
+  - 合规
+  - 合规检查
+  - 文化禁忌
+  - 缩写规范
+  - ICC 术语
+  - 贸易术语
+  - 翻译二审
+  - 投标合规
+  - 供应商注册
+  - 客户门户
+  - 电商上架
+  - 上架合规
 category: compliance
 version: 1.0.0
 author: Foreign Trade Assistant

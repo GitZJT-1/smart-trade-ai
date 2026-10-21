@@ -2,7 +2,7 @@
 
 > 本规范参考 [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) 与 [agentskills.io/specification](https://agentskills.io/specification) 的目录结构，同时保留 smart-trade-ai 的项目惯例。
 
-**适用范围**：smart-trade-ai 仓库下 `skills/` 目录的 49 个 skill。
+**适用范围**：smart-trade-ai 仓库下 `skills/` 目录的 46 个 skill。
 
 ---
 
@@ -149,14 +149,14 @@ injection_prompt: |
 
 | 项 | 状态 |
 |----|------|
-| 49 个 skill 目录 | ✅ |
-| 49 个 `SKILL.md` frontmatter 完整（name/description/triggers/category/version/author） | ✅ |
-| 34 个含 `injection_prompt` | ✅ |
-| 15 个 body 直接是文档（无 injection_prompt） | ✅ |
-| 49 个含 `when_to_use`（Anthropic 推荐） | ✅ |
+| 46 个 skill 目录 | ✅ |
+| 46 个 `SKILL.md` frontmatter 完整（name/description/triggers/category/version/author） | ✅ |
+| 32 个含 `injection_prompt` | ✅ |
+| 14 个 body 直接是文档（无 injection_prompt） | ✅ |
+| 46 个含 `when_to_use`（Anthropic 推荐） | ✅ |
 
 ---
 
 **修订历史**
 - 2026-07-27: 首次发布（v0.6.8）
-- 2026-10-21: 覆盖 49 个 skill，frontmatter / when_to_use 全覆盖
+- 2026-10-21: 覆盖 46 个 skill，frontmatter / when_to_use 全覆盖；合并重复技能（MinIO 下载两合一、供应商询价并入寻源），归档技能收敛解压链路

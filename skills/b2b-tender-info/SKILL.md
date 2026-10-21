@@ -8,6 +8,7 @@ when_to_use:
   - "用户要求定期监控某品类/地区的招标动态"
   - "用户想对比多个招标项目的优劣、预算范围、截止时间"
   - "不要用于：投标文件/标书撰写（那属于文档生成，建议用其他 combo）"
+  - 不要用于：整理已收到的招标邮件、生成询价单（用 b2b-tender-processing）；抓取招标邮件附件（用 b2b-mail-capture）
 triggers:
   - 招标
   - 投标
@@ -43,7 +44,7 @@ triggers:
   - bid
   - tender opportunity
 category: 客户开发
-version: 1.1.0
+version: 1.1.1
 author: Foreign Trade Assistant
 injection_prompt: |
   你是 b2b-tender-info 技能。用于**查询、筛选、整理 B2B 线上招标信息**，帮助外贸业务员发现并评估投标机会。

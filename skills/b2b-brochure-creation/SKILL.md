@@ -799,7 +799,7 @@ rels.append('</Relationships>')
 
 ## 布局模式参考
 
-详见 `b2b-doc-generation` skill 的 `references/brochure-layout-patterns.md`，包含6种标准布局模式（中英双栏/图片网格/表格+缩略图/信息卡片/区域分布/优势卡）。
+详见 `b2b-doc-generation` skill 的 `references/brochure-layout-patterns.md`（跨技能引用，本技能不存副本），包含6种标准布局模式（中英双栏/图片网格/表格+缩略图/信息卡片/区域分布/优势卡）。
 
 ## 页面填充技巧（消除空白）
 
@@ -830,8 +830,8 @@ rels.append('</Relationships>')
 ## HTML→PPTX 转换参考
 
 详见 `b2b-doc-generation` skill 的：
-- `references/html-to-pptx-session-20260715.md` — 转换注意事项
-- `scripts/html_to_pptx.py` — 完整转换脚本
+- `b2b-doc-generation/references/html-to-pptx-session-20260715.md` — 转换注意事项
+- `b2b-doc-generation/scripts/html_to_pptx.py` — 完整转换脚本
 
 ## 相关Skills
 

@@ -1,6 +1,17 @@
 ---
 name: b2b-archive-extraction
 description: 批量解压 7z 压缩包到各自所在目录并删除原包 — 嵌套包（包中包）迭代、WinError 32 占用重试、解压后全量验证。处理俄文图纸/招标压缩包批量解压清理时使用。
+triggers:
+  - 批量解压
+  - 7z 解压
+  - 压缩包解压
+  - 嵌套压缩包
+  - 解压后删包
+  - WinError 32
+  - 归档整理
+category: 自动化
+version: 1.0.0
+author: Foreign Trade Assistant
 ---
 
 # 批量解压与归档清理（7z）

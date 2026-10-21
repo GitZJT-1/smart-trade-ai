@@ -35,7 +35,7 @@ except Exception:
 def _resolve_cache_home() -> str:
     """模型缓存目录解析（必须在 import paddleocr/paddlex 之前调用）。
 
-    paddle 的 C++ 推理层用窄字符 API，打不开含中文的路径（如 C:\\Users\\周家同\\.paddlex），
+    paddle 的 C++ 推理层用窄字符 API，打不开含中文的路径（如 C:/Users/<user>\\.paddlex），
     表现为 RuntimeError: Cannot open file .../inference.json（文件明明存在）。
     中文用户名下必须把 PADDLE_PDX_CACHE_HOME 重定向到无中文的可写目录。
     """

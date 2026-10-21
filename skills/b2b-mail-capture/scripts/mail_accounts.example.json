@@ -1,0 +1,13 @@
+{
+  "output_dir": "",
+  "state_file": "mail_monitor_state.json",
+  "accounts": [
+    {
+      "name": "业务邮箱1",
+      "email": "buyer@example.com",
+      "imap_host": "imap.example.com",
+      "imap_port": 993,
+      "auth_code": ""
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# 真实邮箱凭据配置（由 mail_accounts.example.json 复制后填写），禁止入库
+scripts/mail_accounts.json
+__pycache__/
+*.pyc

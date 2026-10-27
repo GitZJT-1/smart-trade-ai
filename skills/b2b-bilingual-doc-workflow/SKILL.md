@@ -314,7 +314,7 @@ img.save("drawing.png", "PNG")
 **② OCR.space（PP-OCRv5 不可用时兜底）**：
 - 图缩到 max 1600px、JPEG q85 压到 <1.5MB（免费限额），`urllib.parse.urlencode` 构造 POST；超时 120s；混排默认 `language=\"eng\"`，纯西里尔换 `\"rus\"`
 
-**③ RapidOCR（离线最后备选）**：全离线 ONNX 推理，俄语数字可用但汉字易误读（`7`→`了`），仅在前两种都不可用时启用。
+**③ RapidOCR（离线最后备选）**：全离线 ONNX 推理，仅有中英模型、**不支持西里尔**——俄文会被转写成拉丁同形字（`Сталь 45 ГОСТ 1050-74` → `CTaNb 45 FOCT 1050-74`），汉字也易误读（`7`→`了`）。只能用于取行级 bbox 与数字/拉丁字段，俄文正文仍须换 PP-OCRv5 重读，仅在前两种都不可用时启用。
 
 **OCR 参数**（工程图纸，PP-OCRv5）：
 

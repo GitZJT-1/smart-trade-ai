@@ -14,8 +14,12 @@ PaddleOCR-VL 与 PP-OCRv5 均为本地 + Apache 2.0 开源，符合此铁律。
 工程图纸线级文字（标题栏/BOM/尺寸标注/技术要求）
   → PP-OCRv5（本地 GPU 检测+识别，ru/uk 西里尔，每行带置信度+坐标）
 
-兜底 → OCR.space（在线免费）→ RapidOCR（离线 ONNX）
+兜底 → OCR.space（在线免费）→ RapidOCR（离线 ONNX，仅中英模型，不支持西里尔）
 ```
+
+> **RapidOCR 的定位（勿当西里尔引擎）**：`rapidocr-onnxruntime` 只带中英识别模型，俄/乌文会被转写成拉丁同形字
+> （实测 `Сталь 45 ГОСТ 1050-74` → `CTaNb 45 FOCT 1050-74`，2026-10-27 复测）。它可用来取文字行 bbox 与数字/拉丁字段，
+> 但西里尔正文必须回到 PP-OCRv5；不得用它的西里尔结果做交付。
 
 ## 两引擎定位
 

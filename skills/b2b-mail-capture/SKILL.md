@@ -15,7 +15,8 @@ triggers:
   - 抓进文件夹
 category: 自动化
 version: 1.1.1
-author: Hermes---
+author: Hermes
+---
 
 # B2B 询价/招标邮件批量抓取与归档（通用模板）
 

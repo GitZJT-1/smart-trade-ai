@@ -539,9 +539,14 @@ def main() -> None:
     if not args.no_gateway:
         _ensure_gateway_running()
 
-    # 后台静默从 GitHub 同步 skills，不阻塞服务启动
-    from trade.bootstrap import background_github_skills_sync
-    background_github_skills_sync()
+    # 【本地改动 2026-10-14 / 2026-10-27】启动时不做在线 skills 同步（默认关）。
+    #   原因：无更新需求时纯属浪费（每个 skill 一次请求 × 15s×3 重试），raw.githubusercontent.com 还常被墙；
+    #        也不需要开机就去核对线上技能库是否最新。
+    #   需要时手动触发：页面「🔄 Skills」按钮，或命令行 `trade-skills-update`。
+    #   若要恢复开机自动同步：设环境变量 TRADE_SKILLS_SYNC=1。全程强制直连，不走系统代理。
+    if os.environ.get("TRADE_SKILLS_SYNC", "").strip() == "1":
+        from trade.bootstrap import background_github_skills_sync
+        background_github_skills_sync()
 
     url = f"http://{args.host}:{args.port}/trade"
     print(f"\n  Foreign Trade Assistant → {url}")

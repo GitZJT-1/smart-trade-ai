@@ -17,6 +17,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# 强制直连：显式清空 ProxyHandler，避免走系统代理/HTTP(S)_PROXY（代理会把 GitHub 拉到超时）
+_PROXYLESS_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 
 def _get_hermes_home() -> Path:
     """解析 Hermes 安装根目录（HERMES_HOME 环境变量 → 平台默认路径）。
@@ -332,7 +335,7 @@ def update_skills() -> None:
                 )
                 # 限制下载大小：1MB（实际 SKILL.md 仅需数 KB）
                 _MAX_SKILL_BYTES = 1 * 1024 * 1024
-                with urllib.request.urlopen(req, timeout=15) as resp:
+                with _PROXYLESS_OPENER.open(req, timeout=15) as resp:
                     remote_raw = resp.read(_MAX_SKILL_BYTES + 1)
                     if len(remote_raw) > _MAX_SKILL_BYTES:
                         print(
@@ -374,7 +377,7 @@ def update_skills() -> None:
                         qa_url,
                         headers={"User-Agent": "Trade-Skills-Updater/1.0"},
                     )
-                    with urllib.request.urlopen(qa_req, timeout=10) as qa_resp:
+                    with _PROXYLESS_OPENER.open(qa_req, timeout=10) as qa_resp:
                         qa_raw = qa_resp.read(_MAX_SKILL_BYTES + 1)
                         if len(qa_raw) <= _MAX_SKILL_BYTES:
                             qa_dest = dest_dir / "references" / "qa_pairs.md"

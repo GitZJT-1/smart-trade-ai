@@ -413,10 +413,14 @@ def sync_b2b_skills():
 
 
 def background_github_skills_sync():
-    """后台线程：服务启动后从 GitHub 静默拉取最新 SKILL.md。
+    """后台线程：从 GitHub 静默拉取最新 SKILL.md（**默认不启用**）。
 
-    失败不影响服务运行，仅记录日志。
+    开关：环境变量 TRADE_SKILLS_SYNC=1 才真正执行；否则直接返回。
+    启动时不再核对线上技能库（用户 2026-10 要求），需要更新时用页面按钮或
+    `trade-skills-update` 手动触发。失败不影响服务运行，仅记录日志。
     """
+    if os.environ.get("TRADE_SKILLS_SYNC", "").strip() != "1":
+        return
     import threading
     import time as _time
 

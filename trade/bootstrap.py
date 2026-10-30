@@ -376,7 +376,15 @@ def _local_skills_sync():
     _hermes_skills = get_hermes_home() / "skills"
     _hermes_skills.mkdir(parents=True, exist_ok=True)
 
+    # 先扫一遍已存在的技能（含放在分类子目录里的，如 skills/b2b/b2b-xxx）。
+    # 同名技能只要在子目录里已存在，就跳过、不再往顶层复制 —— 否则顶层 + 分类目录各一份，
+    # 同一技能会被 Hermes 加载两次（2026-10-29 修复）。
+    _existing: dict[str, list[Path]] = {}
+    for _md in _hermes_skills.rglob("SKILL.md"):
+        _existing.setdefault(_md.parent.name, []).append(_md.parent)
+
     synced = 0
+    skipped_nested = 0
     for skill_dir in sorted(_project_skills.iterdir()):
         if not skill_dir.is_dir() or not (
             skill_dir.name.startswith("b2b-") or skill_dir.name.startswith("auto-") or skill_dir.name == "chat-memory"
@@ -387,6 +395,13 @@ def _local_skills_sync():
             continue
         dst_dir = _hermes_skills / skill_dir.name
         dst = dst_dir / "SKILL.md"
+
+        # 分类子目录里已有同名技能 → 以子目录那份为准，不新建顶层副本
+        _nested = [p for p in _existing.get(skill_dir.name, []) if p.resolve() != dst_dir.resolve()]
+        if _nested:
+            skipped_nested += 1
+            continue
+
         src_hash = hashlib.sha256(src.read_bytes()).hexdigest()
         if dst.is_file():
             dst_hash = hashlib.sha256(dst.read_bytes()).hexdigest()
@@ -400,6 +415,8 @@ def _local_skills_sync():
         print(f"  Skills synced: {synced} updated (local)")
     else:
         print("  Skills: up-to-date")
+    if skipped_nested:
+        print(f"  Skills: {skipped_nested} kept in category folders (no duplicate copy)")
 
 
 def sync_b2b_skills():

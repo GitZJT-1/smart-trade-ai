@@ -183,9 +183,9 @@ def _parse_frontmatter(content: str) -> tuple[dict, str]:
         try:
             import io as _io
 
-            from ruamel.yaml import YAML as _RuamelYAML
+            from ruamel.yaml import YAML
 
-            parsed = _RuamelYAML(typ="safe").load(_io.StringIO(fm_text))
+            parsed = YAML(typ="safe").load(_io.StringIO(fm_text))
         except Exception:
             parsed = _mini_yaml_load(fm_text)
 

@@ -74,39 +74,126 @@ def _get_skill_dir(skill_name: str) -> Path | None:
     return None
 
 
+def _mini_yaml_load(text: str) -> dict:  # [trade-yaml500-fix]
+    """极简 YAML 解析：只覆盖 skill frontmatter 实际用到的写法。
+
+    支持 `key: value`、`key: |` / `key: >` 块标量、缩进列表与单层嵌套字典。
+    PyYAML / ruamel 都不可用时（例如服务进程的 sys.path 里看不到 yaml）用它兜底，
+    保证一次 import 失败不会把 /api/trade/chat 打成 500。
+    """
+    result: dict = {}
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        if not line.strip() or line.lstrip().startswith("#") or line[:1].isspace() or ":" not in line:
+            continue
+        key, _, rest = line.partition(":")
+        key = key.strip()
+        rest = rest.strip()
+
+        # 块标量：| |+ |- > >+ >-
+        if rest[:1] in ("|", ">"):
+            block: list[str] = []
+            while i < len(lines) and (not lines[i].strip() or lines[i][:1] in (" ", "\t")):
+                block.append(lines[i])
+                i += 1
+            indents = [len(b) - len(b.lstrip()) for b in block if b.strip()]
+            cut = min(indents) if indents else 0
+            body = [b[cut:] if len(b) >= cut else "" for b in block]
+            if rest[0] == ">":
+                result[key] = " ".join(b.strip() for b in body if b.strip())
+            else:
+                result[key] = "\n".join(body).rstrip("\n")
+            continue
+
+        # key 后无值：列表或单层嵌套
+        if not rest:
+            items: list[str] = []
+            nested: dict = {}
+            while i < len(lines) and (not lines[i].strip() or lines[i][:1] in (" ", "\t")):
+                sub = lines[i].strip()
+                i += 1
+                if not sub:
+                    continue
+                if sub.startswith("- "):
+                    items.append(sub[2:].strip().strip("\"'"))
+                elif ":" in sub:
+                    k2, _, v2 = sub.partition(":")
+                    nested[k2.strip()] = v2.strip().strip("\"'")
+            result[key] = items if items else (nested if nested else "")
+            continue
+
+        if rest.startswith("[") and rest.endswith("]"):
+            result[key] = [x.strip().strip("\"'") for x in rest[1:-1].split(",") if x.strip()]
+        else:
+            result[key] = rest.strip("\"'")
+    return result
+
+
 def _parse_frontmatter(content: str) -> tuple[dict, str]:
     """解析 markdown YAML frontmatter。
 
-    使用 PyYAML safe_load 解析，正确处理 | block scalar 格式。
+    解析链：PyYAML → ruamel.yaml → 内置极简解析器。
+    任何一级不可用都只是降级，绝不向上抛异常（曾导致 chat 500：
+    服务进程里 import yaml 失败 → ModuleNotFoundError → FastAPI 未捕获）。
 
     返回结果：
         (frontmatter_dict, body_content)。无有效 frontmatter 时返回 ({}, content)。
     """
+    # CRLF → LF 归一化（幂等）：read_text 会翻译换行，但直接传入原始字符串的
+    # 调用方（上传/同步链路）不会，CRLF 下 startswith/find 会全部失配。
+    if "\r\n" in content:
+        content = content.replace("\r\n", "\n")
+
     # 没有 YAML frontmatter 标记，返回原始内容
     if not content.startswith("---\n"):
         return {}, content
 
-    import yaml
-
-    try:
-        # 定位第二个 --- 作为 frontmatter 结束标记
-        second_dash = content.find("\n---\n", 4)
-        # 没有找到结束标记，说明 frontmatter 不完整，返回原始内容
-        if second_dash == -1:
-            return {}, content
-
-        fm_text = content[4:second_dash]
-        body = content[second_dash + 5:]
-
-        parsed = yaml.safe_load(fm_text)
-        # safe_load 返回 None 或非字典时视为无效 frontmatter
-        if parsed is None or not isinstance(parsed, dict):
-            return {}, body
-
-        return parsed, body
-    except yaml.YAMLError:
-        # YAML 解析异常时返回原始内容，避免因 frontmatter 格式问题阻塞整体流程
+    # 定位第二个 --- 作为 frontmatter 结束标记
+    second_dash = content.find("\n---\n", 4)
+    # 没有找到结束标记，说明 frontmatter 不完整，返回原始内容
+    if second_dash == -1:
         return {}, content
+
+    fm_text = content[4:second_dash]
+    body = content[second_dash + 5:]
+
+    parsed = None
+    try:
+        import yaml  # type: ignore
+    except Exception as exc:  # ImportError / 依赖损坏
+        yaml = None  # type: ignore
+        import logging as _logging
+        import sys as _sys
+
+        _logging.getLogger(__name__).warning(
+            "PyYAML 不可用（%s），frontmatter 改用降级解析；sys.path=%s",
+            exc, [p for p in _sys.path if p][:6],
+        )
+
+    if yaml is not None:
+        try:
+            parsed = yaml.safe_load(fm_text)
+        except Exception:
+            # YAML 解析异常时返回原始内容，避免因 frontmatter 格式问题阻塞整体流程
+            return {}, content
+    else:
+        try:
+            import io as _io
+
+            from ruamel.yaml import YAML as _RuamelYAML
+
+            parsed = _RuamelYAML(typ="safe").load(_io.StringIO(fm_text))
+        except Exception:
+            parsed = _mini_yaml_load(fm_text)
+
+    # safe_load 返回 None 或非字典时视为无效 frontmatter
+    if parsed is None or not isinstance(parsed, dict):
+        return {}, body
+
+    return parsed, body
 
 
 def load_injection_prompt(skill_name: str) -> str | None:

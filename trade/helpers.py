@@ -445,9 +445,15 @@ def build_query(
             f"[SKILL AUGMENTATION]"
         )
     else:
-        augmented_query = _skill_router.augment_query(
-            query, company_id=company_id
-        )
+        try:  # [trade-yaml500-fix] skill 注入是可选项，绝不能把聊天打成 500
+            augmented_query = _skill_router.augment_query(
+                query, company_id=company_id
+            )
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning("skill 注入失败，按原始 query 继续：%s", exc)
+            augmented_query = query
 
     # 1. Company identity — 根据场景选择不同深度的 system prompt
     company_slug = _company.slug_from_id(company_id) if company_id else None
